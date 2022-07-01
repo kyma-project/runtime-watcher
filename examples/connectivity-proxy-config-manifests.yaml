@@ -1,0 +1,62 @@
+---
+kind: CustomResourceDefinition
+apiVersion: apiextensions.k8s.io/v1
+metadata:
+  name: connectivityproxyconfigs.kyma.kyma-project.io
+spec:
+  group: kyma.kyma-project.io
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                skrConfigMapName:
+                  type: string
+                image:
+                  type: string
+  scope: Namespaced
+  names:
+    plural: connectivityproxyconfigs
+    singular: connectivityproxyconfig
+    kind: ConnectivityProxyConfig
+    shortNames:
+    - cpc
+---
+kind: Kyma
+apiVersion: operator.kyma-project.io/v1alpha1
+metadata:
+  name: kyma-sample
+  namespace: default
+  labels:
+    "skr.events.kyma-project.io/cluster-name": "skr-1"
+spec:
+  channel: stable
+  components:
+    - name: connectivity-proxy
+---
+kind: ModuleTemplate
+apiVersion: operator.kyma-project.io/v1alpha1
+metadata:
+  name: moduletemplate-sample-connectivity-proxy-stable
+  namespace: default
+  labels:
+    "operator.kyma-project.io/managed-by": "kyma-operator"
+    "operator.kyma-project.io/controller-name": "connectivity-proxy"
+spec:
+  channel: stable
+  data:
+    kind: ConnectivityProxyConfig
+    resource: connectivityproxyconfigs
+    apiVersion: kyma.kyma-project.io/v1alpha1
+#    metadata:
+#      name: connectivity-proxy/kyma-sample
+    spec: 
+      skrConfigMapName: "connectivity-proxy-cm"
+      image: "nginx"
+---
