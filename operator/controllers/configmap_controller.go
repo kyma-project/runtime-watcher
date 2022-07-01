@@ -53,7 +53,6 @@ type ConfigMapReconciler struct {
 	Logger  logr.Logger
 	KcpIp   string
 	KcpPort string
-	SkrId   string
 }
 
 //+kubebuilder:rbac:groups="*",resources="*",verbs=get;list;watch
@@ -121,7 +120,7 @@ func (r *ConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	informers := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c, time.Minute*30, "", func(options *metav1.ListOptions) {
-		labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{"kyma-watchable": "true"}}
+		labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{"operator.kyma-project.io/managed-by": "kyma"}}
 		options.LabelSelector = labels.Set(labelSelector.MatchLabels).String() // TODO: Check if it is possible to select from a given set (with OR condition)
 
 	})

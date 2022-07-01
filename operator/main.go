@@ -52,7 +52,7 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
-	var kcpIp, kcpPort, skrClusterId string
+	var kcpIp, kcpPort string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8083", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8084", "The address the probe endpoint binds to.")
@@ -61,7 +61,6 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&kcpIp, "kcp-ip", config.KcpIp, "IP-Adress of KCP")
 	flag.StringVar(&kcpPort, "kcp-port", config.KcpPort, "Exposed event port of KCP")
-	flag.StringVar(&skrClusterId, "cluster-id", config.SkrClusterId, "ID of watched cluster -> Will always use the specified as Cluster ID")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -89,7 +88,6 @@ func main() {
 		Logger:  mgr.GetLogger(),
 		KcpIp:   kcpIp,
 		KcpPort: kcpPort,
-		SkrId:   skrClusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConfigMap")
 		os.Exit(1)

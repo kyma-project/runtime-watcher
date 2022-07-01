@@ -14,14 +14,6 @@ const SkrClusterId = "skr-1"
 // Gvs which will be watched
 var Gvs = []schema.GroupVersion{
 	{
-		Group:   "apiextensions.k8s.io",
-		Version: "v1",
-	},
-	{
-		Group:   "",
-		Version: "v1",
-	},
-	{
 		Group:   "operator.kyma-project.io",
 		Version: "v1alpha1",
 	},
