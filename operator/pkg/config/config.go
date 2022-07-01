@@ -3,7 +3,7 @@ package config
 import "k8s.io/apimachinery/pkg/runtime/schema"
 
 const ComponentLabel = "operator.kyma-project.io/controller-name"
-const KymaCrLabel = "operator.kyma-project.io/kyma-name: kyma-sample"
+const KymaCrLabel = "operator.kyma-project.io/kyma-name"
 
 const KcpIp = "http://localhost"
 const KcpPort = "8082"

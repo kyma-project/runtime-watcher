@@ -35,10 +35,12 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	"strings"
 	"time"
@@ -120,7 +122,7 @@ func (r *ConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	informers := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c, time.Minute*30, "", func(options *metav1.ListOptions) {
-		labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{"operator.kyma-project.io/managed-by": "kyma"}}
+		labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{"operator.kyma-project.io/managed-by": "Kyma"}}
 		options.LabelSelector = labels.Set(labelSelector.MatchLabels).String() // TODO: Check if it is possible to select from a given set (with OR condition)
 
 	})
@@ -164,7 +166,8 @@ func (r *ConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 						UpdateFunc:  r.UpdateFunc,
 						DeleteFunc:  r.DeleteFunc,
 						GenericFunc: r.GenericFunc,
-					})
+					},
+						builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 				r.Logger.Info("initialized dynamic watching", "source", gvr)
 			}
 		}
