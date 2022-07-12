@@ -5,7 +5,8 @@ Listener component that listens to events sent by the Kyma [watcher](https://git
 
 ## Overview
 
-The listener module is typically used with operators built using kube-builder but its use is not resticted only to that.
+The listener module is typically used with operators built using Kubebuilder, but its use is not restricted only to that.
+
 ### Use
 
 1. For operators built using the kube-builder framework, you might leverage your `SetupWithManager()` method to initialize the listener by calling `RegisterListenerComponent()`.
