@@ -5,7 +5,7 @@ Listener component that listens to events sent by the Kyma [watcher](https://git
 
 ## Overview
 
-The listener module is typically used with operators built using Kubebuilder, but its use is not restricted only to that.
+Typically, we use the listener module with operators built using Kubebuilder, but we can use it for other operators as well.
 
 ### Use
 
