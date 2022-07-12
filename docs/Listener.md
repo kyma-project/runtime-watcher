@@ -11,7 +11,7 @@ Typically, we use the Listener module with operators built using Kubebuilder, bu
 
 1. For operators built using the Kubebuilder framework, you might leverage your `SetupWithManager()` method to initialize the Listener by calling `RegisterListenerComponent()`.
 
-2. You might also setup your controller to watch for changes sent through the `source.Channel{}` returned by the Listener module and react to them calling the `(blder *Builder) Watches()` method and providing your `handler.EventHandler` implementation.
+2. You might also setup your controller to watch for changes sent through the `source.Channel{}` returned by the Listener module, and to react to them by calling the `(blder *Builder) Watches()` method and providing your `handler.EventHandler` implementation.
 
 3. The last step is to start the Listener, which is accomplished by adding the Listener as a runnable to your controller-manager. This is done by calling `mgr.Add()` and passing the Listener returned by `RegisterListenerComponent()`.
 
