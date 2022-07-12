@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/kyma-project/kyma-watcher/pkg/contract"
+	"github.com/kyma-project/kyma-watcher/operator/pkg/contract"
 	"github.com/stretchr/testify/require"
 )
 

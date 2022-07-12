@@ -21,10 +21,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/kyma-project/kyma-watcher/pkg/config"
-	"github.com/kyma-project/kyma-watcher/pkg/contract"
 	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/kyma-project/kyma-watcher/operator/pkg/config"
+	"github.com/kyma-project/kyma-watcher/operator/pkg/contract"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -33,7 +37,6 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/workqueue"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,8 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strings"
-	"time"
 )
 
 type EventType string

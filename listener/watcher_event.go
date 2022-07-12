@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kyma-project/kyma-watcher/pkg/contract"
+	"github.com/kyma-project/kyma-watcher/operator/pkg/contract"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

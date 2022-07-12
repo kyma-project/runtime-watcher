@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/kyma-project/kyma-watcher/pkg/contract"
+	"github.com/kyma-project/kyma-watcher/operator/pkg/contract"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/event"
