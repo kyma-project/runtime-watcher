@@ -9,7 +9,7 @@ Typically, we use the listener module with operators built using Kubebuilder, bu
 
 ### Use
 
-1. For operators built using the kube-builder framework, you might leverage your `SetupWithManager()` method to initialize the listener by calling `RegisterListenerComponent()`.
+1. For operators built using the Kubebuilder framework, you might leverage your `SetupWithManager()` method to initialize the listener by calling `RegisterListenerComponent()`.
 
 2. You might also setup your controller to watch for changes sent through the `source.Channel{}` returned by the listener component and react to them calling the `(blder *Builder) Watches()` method and providing your `handler.EventHandler` implementation.
 
@@ -19,12 +19,12 @@ Typically, we use the listener module with operators built using Kubebuilder, bu
 ### Sample code
 
 ```golang
-    //register listener component
-	runnableListener, eventChannel := listener.RegisterListenerComponent(listenerAddr, strings.ToLower(v1alpha1.KymaKind))
+//register listener component
+runnableListener, eventChannel := listener.RegisterListenerComponent(listenerAddr, strings.ToLower(v1alpha1.KymaKind))
 
-	//watch event channel
-	controllerBuilder.Watches(eventChannel, &handler.EnqueueRequestForObject{})
-	
-    //start listener as a manager runnable
-	mgr.Add(runnableListener)
+//watch event channel
+controllerBuilder.Watches(eventChannel, &handler.EnqueueRequestForObject{})
+
+//start listener as a manager runnable
+mgr.Add(runnableListener)
 ```
