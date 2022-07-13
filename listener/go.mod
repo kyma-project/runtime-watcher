@@ -2,12 +2,10 @@ module github.com/kyma-project/kyma-watcher/listener
 
 go 1.18
 
-replace github.com/kyma-project/kyma-watcher/operator => ../operator
-
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
-	github.com/kyma-project/kyma-watcher/operator v0.0.0-00010101000000-000000000000
+	github.com/kyma-project/kyma-watcher/operator v0.0.0-20220713095302-e33dd55737bd
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.21.0
 	k8s.io/apimachinery v0.24.2
