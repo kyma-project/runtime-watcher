@@ -6,24 +6,18 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const paramContractVersion = "contractVersion"
 
-func RegisterListenerComponent(addr, componentName string) (*SKREventsListener, *source.Channel) {
+func RegisterListenerComponent(addr, componentName string, opts *zap.Options) (*SKREventListener, *source.Channel) {
 
-	var log logr.Logger
-	zapLog, err := zap.NewDevelopment()
-	if err != nil {
-		panic(fmt.Sprintf("failed to initialize zap logger: %v?", err))
-	}
-	log = zapr.NewLogger(zapLog)
+	log := zap.New(zap.UseFlagOptions(opts))
 	eventSource := make(chan event.GenericEvent)
-	return &SKREventsListener{
+	return &SKREventListener{
 		addr:           addr,
 		logger:         log,
 		componentName:  componentName,
@@ -32,21 +26,21 @@ func RegisterListenerComponent(addr, componentName string) (*SKREventsListener, 
 
 }
 
-type SKREventsListener struct {
+type SKREventListener struct {
 	addr           string
 	logger         logr.Logger
 	componentName  string
 	receivedEvents chan event.GenericEvent
 }
 
-func (l *SKREventsListener) ReceivedEvents() chan event.GenericEvent {
+func (l *SKREventListener) ReceivedEvents() chan event.GenericEvent {
 	if l.receivedEvents == nil {
 		l.receivedEvents = make(chan event.GenericEvent)
 	}
 	return l.receivedEvents
 }
 
-func (l *SKREventsListener) Start(ctx context.Context) error {
+func (l *SKREventListener) Start(ctx context.Context) error {
 
 	router := http.NewServeMux()
 
@@ -70,7 +64,7 @@ func (l *SKREventsListener) Start(ctx context.Context) error {
 
 }
 
-func (l *SKREventsListener) handleSKREvent() http.HandlerFunc {
+func (l *SKREventListener) handleSKREvent() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -82,7 +76,7 @@ func (l *SKREventsListener) handleSKREvent() http.HandlerFunc {
 			return
 		}
 
-		l.logger.Info("received event from SKR")
+		l.logger.V(1).Info("received event from SKR")
 
 		//unmarshal received event
 		genericEvtObject, unmarshalErr := unmarshalSKREvent(r)

@@ -3,7 +3,6 @@ package listener
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,11 +14,12 @@ import (
 	"github.com/kyma-project/kyma-watcher/operator/pkg/contract"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-func newTestListener(addr, component string, log logr.Logger) *SKREventsListener {
-	return &SKREventsListener{
+func newTestListener(addr, component string, log logr.Logger) *SKREventListener {
+	return &SKREventListener{
 		addr:           addr,
 		logger:         log,
 		componentName:  component,
@@ -28,10 +28,8 @@ func newTestListener(addr, component string, log logr.Logger) *SKREventsListener
 }
 
 func setupLogger() logr.Logger {
-	zapLog, err := zap.NewDevelopment()
-	if err != nil {
-		panic(fmt.Sprintf("failed to initialize zap logger: %v?", err))
-	}
+	option := zap.AddStacktrace(zapcore.DebugLevel)
+	zapLog := zap.NewExample(option)
 	return zapr.NewLogger(zapLog)
 }
 
