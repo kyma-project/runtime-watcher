@@ -7,19 +7,17 @@ import (
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const paramContractVersion = "contractVersion"
 
-func RegisterListenerComponent(addr, componentName string, opts *zap.Options) (*SKREventListener, *source.Channel) {
+func RegisterListenerComponent(addr, componentName string) (*SKREventListener, *source.Channel) {
 
-	log := zap.New(zap.UseFlagOptions(opts))
 	eventSource := make(chan event.GenericEvent)
 	return &SKREventListener{
 		addr:           addr,
-		logger:         log,
 		componentName:  componentName,
 		receivedEvents: eventSource,
 	}, &source.Channel{Source: eventSource}
@@ -41,6 +39,8 @@ func (l *SKREventListener) ReceivedEvents() chan event.GenericEvent {
 }
 
 func (l *SKREventListener) Start(ctx context.Context) error {
+
+	l.logger = ctrlLog.FromContext(ctx, "Module", "Listener")
 
 	router := http.NewServeMux()
 
