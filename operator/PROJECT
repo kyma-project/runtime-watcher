@@ -8,4 +8,8 @@ resources:
   domain: my.domain
   kind: ConfigMap
   version: v1
+- controller: true
+  domain: my.domain
+  kind: Secrets
+  version: v1
 version: "3"
