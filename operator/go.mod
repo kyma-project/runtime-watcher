@@ -1,4 +1,4 @@
-module github.com/kyma-project/kyma-watcher
+module github.com/kyma-project/kyma-watcher/operator
 
 go 1.17
 

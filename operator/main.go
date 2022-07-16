@@ -18,8 +18,10 @@ package main
 
 import (
 	"flag"
-	v1 "k8s.io/api/core/v1"
 	"os"
+
+	v1 "k8s.io/api/core/v1"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -31,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kyma-project/kyma-watcher/controllers"
-	"github.com/kyma-project/kyma-watcher/pkg/config"
+	"github.com/kyma-project/kyma-watcher/operator/controllers"
+	"github.com/kyma-project/kyma-watcher/operator/pkg/config"
 	//+kubebuilder:scaffold:imports
 )
 
