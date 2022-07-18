@@ -1,0 +1,41 @@
+apiVersion: component.kyma-project.io/v1alpha1
+kind: Manifest
+metadata:
+  labels:
+    operator.kyma-project.io/channel: stable
+    operator.kyma-project.io/controller-name: manifest
+    operator.kyma-project.io/kyma-name: kyma-sample
+  name: manifestkyma-sample
+  namespace: default
+spec:
+  defaultConfig:
+    ref: sha256:413dd44468f786d6b7cec5ad7102452b87a30b8094345b93f5dbb87ba82ea6ea
+    name: example.org/sample-module-config
+    repo: k3d-registry.localhost:4000
+    type: oci-ref
+  installs:
+    - source:
+        name: example.org/sample-module
+        repo: k3d-registry.localhost:4000
+        ref: sha256:413dd44468f786d6b7cec5ad7102452b87a30b8094345b93f5dbb87ba82ea6ea
+        type: oci-ref
+      name: watcher-example
+      # overrideSelector:
+      #   matchLabels:
+      #     extension.kyma-project.io/config-override: override-me
+  sync:
+    enabled: false
+---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: sample-module
+#   namespace: default
+#   labels:
+#     extension.kyma-project.io/config-override: override-me
+#     operator.kyma-project.io/managed-by: manifest-operator
+# data:
+#   configs: |
+#     - name: example.org/sample-module
+#       clientConfig: "CreateNamespace=true,Namespace=override-ns"
+#       overrides: "override=1"

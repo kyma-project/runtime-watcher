@@ -21,3 +21,6 @@
 *.swo
 *~
 operator/.vscode/
+ocm/blobs
+ocm/.DS_Store
+ocm/bin

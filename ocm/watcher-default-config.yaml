@@ -1,0 +1,3 @@
+configs:
+  - name: example.org/sample-module
+    clientConfig: "CreateNamespace=true,Namespace=kyma-watcher"
