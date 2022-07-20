@@ -4,7 +4,7 @@
 # Image URL to use all building/pushing image targets
 IMG ?= k3d-registry.localhost:4000/kyma-watcher:latest
 
-HELM_CHART_TEMPLATES_DIR=$(shell pwd)/ocm/chart/kyma-watcher/templates
+HELM_CHART_TEMPLATES_DIR=$(shell pwd)/../ocm/charts/kyma-watcher/templates
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23

@@ -1,7 +1,0 @@
-name: 'kyma-watcher'
-type: 'helm-chart'
-relation: 'local'
-input:
-  type: 'dir'
-  compress: true
-  path: "./chart/kyma-watcher" # path is relative to the current resource file

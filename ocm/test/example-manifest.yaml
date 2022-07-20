@@ -9,33 +9,16 @@ metadata:
   namespace: default
 spec:
   defaultConfig:
-    ref: sha256:413dd44468f786d6b7cec5ad7102452b87a30b8094345b93f5dbb87ba82ea6ea
-    name: example.org/sample-module-config
+    ref: sha256:9b90e88287ac7ba099d84d70541b416d885679eaea2e6616dfad2caaf1ae67ca
+    name: watcher-default-config
     repo: k3d-registry.localhost:4000
     type: oci-ref
   installs:
     - source:
-        name: example.org/sample-module
+        name: watcher-chart
         repo: k3d-registry.localhost:4000
-        ref: sha256:413dd44468f786d6b7cec5ad7102452b87a30b8094345b93f5dbb87ba82ea6ea
+        ref: sha256:aaf84b776867b1ec520b0d1857cc761dc1f2f5d3e3839bca41b848c7f39be1f4
         type: oci-ref
       name: watcher-example
-      # overrideSelector:
-      #   matchLabels:
-      #     extension.kyma-project.io/config-override: override-me
   sync:
     enabled: false
----
-# apiVersion: v1
-# kind: ConfigMap
-# metadata:
-#   name: sample-module
-#   namespace: default
-#   labels:
-#     extension.kyma-project.io/config-override: override-me
-#     operator.kyma-project.io/managed-by: manifest-operator
-# data:
-#   configs: |
-#     - name: example.org/sample-module
-#       clientConfig: "CreateNamespace=true,Namespace=override-ns"
-#       overrides: "override=1"
