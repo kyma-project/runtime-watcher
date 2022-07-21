@@ -121,16 +121,18 @@ func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// Get resources to watch for configured GVs
-	resourcesMap, err := factory.GetResourceList(mgr, config.Gvs(context.TODO(), "default", "sample-secret", mgr.GetClient(), r.Logger))
+	gvs := config.GetGvs(context.TODO(), config.WatcherSecretNamespace, config.WatcherSecretName, mgr.GetClient(), r.Logger)
+	resourcesMap, err := factory.GetResourceList(mgr, gvs)
 	if err != nil {
 		return err
 	}
 
 	// Iterate over all configured labels
-	for label, value := range config.LabelsToWatch() {
-		r.Logger.Info(fmt.Sprintf("Creating informerFactory for resources with label: '%s':'%s''", label, value))
+	labelsToWatch := config.GetLabelsToWatch(context.TODO(), config.WatcherSecretNamespace, config.WatcherSecretName, mgr.GetClient(), r.Logger)
+	for _, lv := range labelsToWatch { // TODO: Umschreiben da labels jetzt nur noch optional
+		r.Logger.Info(fmt.Sprintf("Creating informerFactory for resources with label: '%s':'%s'", lv.Label, lv.Value))
 		// Create informerFactory for each configured label
-		informerFactory, err := factory.InformerFactoryWithLabel(client, mgr, label, value)
+		informerFactory, err := factory.InformerFactoryWithLabel(client, mgr, lv.Label, lv.Value)
 		if err != nil {
 			return err
 		}
@@ -154,7 +156,7 @@ func (r *KymaWatcherReconciler) triggerWatch(controllerBuilder *builder.Builder,
 				DeleteFunc:  r.DeleteFunc,
 				GenericFunc: r.GenericFunc,
 			},
-				builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+				builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
 		r.Logger.Info("Started dynamic watching", "source", gvr)
 	}
 }

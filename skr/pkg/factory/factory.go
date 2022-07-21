@@ -30,27 +30,6 @@ func InformerFactoryWithLabel(client dynamic.Interface, mgr ctrl.Manager, label,
 	return informerFactory, err
 }
 
-func GetResourceList(mgr ctrl.Manager, gvs []schema.GroupVersion) (map[schema.GroupVersion]*metav1.APIResourceList, error) {
-	// Create K8s-Client
-	cs, err := kubernetes.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		return nil, err
-	}
-	// Get Resources for configured GV
-	var resourcesMap = map[schema.GroupVersion]*metav1.APIResourceList{}
-	for _, gv := range gvs {
-		resources, err := cs.ServerResourcesForGroupVersion(gv.String())
-		if client.IgnoreNotFound(err) != nil {
-			// TODO: log error
-		}
-		// Resources found
-		if err == nil {
-			resourcesMap[gv] = resources
-		}
-	}
-	return resourcesMap, nil
-}
-
 func BuildInformerSet(gv schema.GroupVersion, resources *metav1.APIResourceList, informerFactory dynamicinformer.DynamicSharedInformerFactory) map[string]*source.Informer {
 	dynamicInformerSet := make(map[string]*source.Informer)
 	for _, resource := range resources.APIResources {
@@ -64,4 +43,25 @@ func BuildInformerSet(gv schema.GroupVersion, resources *metav1.APIResourceList,
 		dynamicInformerSet[gvr.String()] = &source.Informer{Informer: informerFactory.ForResource(gvr).Informer()}
 	}
 	return dynamicInformerSet
+}
+
+func GetResourceList(mgr ctrl.Manager, gvs []schema.GroupVersion) (map[schema.GroupVersion]*metav1.APIResourceList, error) {
+	// Create K8s-Client
+	cs, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return nil, err
+	}
+	// Get Resources for configured GV
+	var resourcesMap = map[schema.GroupVersion]*metav1.APIResourceList{}
+	for _, gv := range gvs {
+		resources, err := cs.ServerResourcesForGroupVersion(gv.String())
+		if client.IgnoreNotFound(err) != nil {
+			return nil, err
+		}
+		// Resources found
+		if err == nil {
+			resourcesMap[gv] = resources
+		}
+	}
+	return resourcesMap, nil
 }
