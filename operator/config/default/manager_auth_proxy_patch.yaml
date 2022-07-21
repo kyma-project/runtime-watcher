@@ -32,5 +32,5 @@ spec:
         - "--health-probe-bind-address=:8081"
         - "--metrics-bind-address=127.0.0.1:8080"
         - "--leader-elect"
-        - "--kcp-ip=http://<Add KCP IP here>"
+        - "--kcp-ip=http://34.77.19.73"
         - "--kcp-port=80"

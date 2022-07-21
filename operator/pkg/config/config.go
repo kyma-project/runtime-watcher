@@ -2,6 +2,8 @@ package config
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
@@ -14,68 +16,93 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-// Default values
-const ComponentLabel = "operator.kyma-project.io/controller-name"
-const KymaCrLabel = "operator.kyma-project.io/kyma-name"
+// JSON struct for labels to watch
+type LabelsToWatch struct {
+	LabelValueList []LabelValuePair `json:"labelValueList"`
+}
 
-const WatcherSecretLabel = "operator.kyma-project.io/task-name"
-const WatcherSecretLabelValue = "label-watching"
+type LabelValuePair struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
 
-const KcpIp = "http://localhost"
-const KcpPort = "8082"
-const ContractVersion = "v1"
-const EventEndpoint = "event"
+// JSON struct for GroupVersions to watch
+type gvToWatch struct {
+	GvrList []struct {
+		Group    string `json:"group"`
+		Version  string `json:"version"`
+		Resource string `json:"resource"`
+	} `json:"gvrList"`
+}
 
-// TODO: Replace it with a k8s secret
-func Gvs(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) []schema.GroupVersion {
-
-	var labelSecret = &v1.Secret{}
-	err := client.Get(ctx, types.NamespacedName{
-		Namespace: namespace,
-		Name:      name},
-		labelSecret)
-	cacheNotStartedError := cache.ErrCacheNotStarted{}
-	if err.Error() == cacheNotStartedError.Error() {
-		// cache has not been started, create temporary in-cluster config
-		log.Info("Watcher runs in in-cluster mode")
-		cl, err := config.GetConfig()
-		if err != nil {
-			panic("Application not running inside of K8s cluster")
-		} else if err != nil {
-			panic(fmt.Sprintf("Unable to get our client configuration: %s", err))
-		}
-
-		clientset, err := kubernetes.NewForConfig(cl)
-		if err != nil {
-			panic("Unable to create our clientset")
-		}
-		labelSecret, err = clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			log.Info("No Secret for label reference found: %s", err.Error())
-		}
-
+func GetGvs(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) []schema.GroupVersion {
+	// Fetch config secret
+	configSecret, err := getConfigSecret(ctx, namespace, name, client, log)
+	if err != nil {
+		log.Info(fmt.Sprintf("Error fetching config secret: %s", err.Error()))
+		return nil
 	}
-	// Gvs which will be watched
 
-	var gvs = []schema.GroupVersion{
-		{
-			Group:   "",
-			Version: "v1",
-		},
-		{
-			Group:   "operator.kyma-project.io",
-			Version: "v1alpha1",
-		},
-		{
-			Group:   "component.kyma-project.io",
-			Version: "v1alpha1",
-		},
+	// Get data from secret
+	data := gvToWatch{}
+	err = json.Unmarshal(configSecret.Data["gvToWatch"], &data)
+	if err != nil {
+		log.Info(fmt.Sprintf("Error unmarshalling data from secret: %s", err.Error()))
+		return nil
+	}
+
+	// GetGvs which will be watched
+	var gvs = []schema.GroupVersion{}
+	for _, gv := range data.GvrList {
+		gvs = append(gvs, schema.GroupVersion{Group: gv.Group, Version: gv.Version})
 	}
 	return gvs
 }
 
-// TODO: Replace it with a k8s secret
-func LabelsToWatch() map[string]string {
-	var labels = map[string]string{"operator.kyma-project.io/managed-by": "Kyma"}
-	return labels
+func GetLabelsToWatch(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) []LabelValuePair {
+	// Fetch config secret
+	configSecret, err := getConfigSecret(ctx, namespace, name, client, log)
+	if err != nil {
+		log.Info(fmt.Sprintf("Error fetching config secret: %s", err.Error()))
+		return nil
+	}
+
+	// Get data from secret
+	data := LabelsToWatch{}
+	err = json.Unmarshal(configSecret.Data["labelsToWatch"], &data)
+	if err != nil {
+		log.Info(fmt.Sprintf("Error unmarshalling data from secret: %s", err.Error()))
+		return nil
+	}
+
+	return data.LabelValueList
+}
+
+//TODO: In next iteration: mount secret instead of using kubeconfig
+func getConfigSecret(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) (*v1.Secret, error) {
+	// Get config secret
+	var configSecret = &v1.Secret{}
+	err := client.Get(ctx, types.NamespacedName{
+		Namespace: namespace,
+		Name:      name},
+		configSecret)
+	cacheNotStartedError := cache.ErrCacheNotStarted{}
+	if err.Error() == cacheNotStartedError.Error() {
+		// cache has not been started, create temporary in-cluster config
+		log.Info("Cluster cache not started, will create a temporary in-cluster client")
+		cl, err := config.GetConfig()
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Unable to get kube-config %s", err))
+		}
+
+		clientset, err := kubernetes.NewForConfig(cl)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Unable to create our clientset: %s", err))
+		}
+		configSecret, err = clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("No Secret for label reference found: %s", err.Error()))
+		}
+	}
+	return configSecret, nil
 }
