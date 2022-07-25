@@ -21,14 +21,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/kyma-project/kyma-watcher/operator/pkg/config"
-	"github.com/kyma-project/kyma-watcher/operator/pkg/contract"
+	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -202,7 +202,7 @@ func (r *ConfigMapReconciler) sendRequest(newEvent interface{}) (string, error) 
 	namespace = object.GetNamespace()
 	name = object.GetName()
 
-	watcherEvent := &contract.WatcherEvent{
+	watcherEvent := &types.WatcherEvent{
 		KymaCr:    kymaCr,
 		Namespace: namespace,
 		Name:      name,

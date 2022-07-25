@@ -1,9 +1,12 @@
-module github.com/kyma-project/kyma-watcher/operator
+module github.com/kyma-project/kyma-watcher/skr
 
 go 1.17
 
+replace github.com/kyma-project/kyma-watcher/kcp => ../kcp
+
 require (
 	github.com/go-logr/logr v1.2.0
+	github.com/kyma-project/kyma-watcher/kcp v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	k8s.io/api v0.23.5

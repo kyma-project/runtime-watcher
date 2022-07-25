@@ -1,4 +1,4 @@
-package contract
+package types
 
 type WatcherEvent struct {
 	KymaCr    string `json:"kyma"`

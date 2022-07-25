@@ -33,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kyma-project/kyma-watcher/operator/controllers"
-	"github.com/kyma-project/kyma-watcher/operator/pkg/config"
+	"github.com/kyma-project/kyma-watcher/skr/controllers"
+	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
 	//+kubebuilder:scaffold:imports
 )
 

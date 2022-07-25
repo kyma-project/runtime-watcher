@@ -1,7 +1,7 @@
 domain: my.domain
 layout:
 - go.kubebuilder.io/v3
-projectName: operator
+projectName: skr
 repo: github.com/kyma-project/kyma-watcher
 resources:
 - controller: true
