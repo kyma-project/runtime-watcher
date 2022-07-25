@@ -121,27 +121,32 @@ func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// Get resources to watch for configured GVs
-	gvs := config.GetGvs(context.TODO(), config.WatcherSecretNamespace, config.WatcherSecretName, mgr.GetClient(), r.Logger)
-	resourcesMap, err := factory.GetResourceList(mgr, gvs)
+	gvrList := config.GetGvr(context.TODO(), config.WatcherSecretNamespace, config.WatcherSecretName, mgr.GetClient(), r.Logger)
 	if err != nil {
 		return err
 	}
 
-	// Iterate over all configured labels
-	labelsToWatch := config.GetLabelsToWatch(context.TODO(), config.WatcherSecretNamespace, config.WatcherSecretName, mgr.GetClient(), r.Logger)
-	for _, lv := range labelsToWatch { // TODO: Umschreiben da labels jetzt nur noch optional
-		r.Logger.Info(fmt.Sprintf("Creating informerFactory for resources with label: '%s':'%s'", lv.Label, lv.Value))
-		// Create informerFactory for each configured label
-		informerFactory, err := factory.InformerFactoryWithLabel(client, mgr, lv.Label, lv.Value)
-		if err != nil {
-			return err
-		}
-		// Build InformerSet and trigger watch
-		for gv, resources := range resourcesMap {
-			dynamicInformerSet := factory.BuildInformerSet(gv, resources, informerFactory)
-			r.triggerWatch(controllerBuilder, dynamicInformerSet)
+	// InformerSet for GVR without labels
+	dynamicInformerSet := map[string]*source.Informer{}
+
+	informerFactory, err := factory.InformerFactory(client, mgr)
+	if err != nil {
+		return err
+	}
+	for _, gvr := range gvrList {
+		if len(gvr.Labels) == 0 {
+			dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{Informer: informerFactory.ForResource(gvr.Gvr).Informer()}
+		} else {
+			for label, value := range gvr.Labels {
+				filteredInformerFactory, err := factory.InformerFactoryWithLabel(client, mgr, label, value)
+				if err != nil {
+					return err
+				}
+				dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{Informer: filteredInformerFactory.ForResource(gvr.Gvr).Informer()}
+			}
 		}
 	}
+	r.triggerWatch(controllerBuilder, dynamicInformerSet)
 
 	return controllerBuilder.Complete(r)
 }

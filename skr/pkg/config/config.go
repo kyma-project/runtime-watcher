@@ -16,9 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-// JSON struct for labels to watch
-type LabelsToWatch struct {
-	LabelValueList []LabelValuePair `json:"labelValueList"`
+// JSON struct for GroupVersionResources to watch
+type gvrToWatch struct {
+	GvrList []struct {
+		Group          string           `json:"group"`
+		Version        string           `json:"version"`
+		Resource       string           `json:"resource"`
+		LabelValueList []LabelValuePair `json:"labelValueList"`
+	} `json:"gvrList"`
 }
 
 type LabelValuePair struct {
@@ -26,16 +31,12 @@ type LabelValuePair struct {
 	Value string `json:"value"`
 }
 
-// JSON struct for GroupVersions to watch
-type gvToWatch struct {
-	GvrList []struct {
-		Group    string `json:"group"`
-		Version  string `json:"version"`
-		Resource string `json:"resource"`
-	} `json:"gvrList"`
+type WatchItem struct {
+	Gvr    schema.GroupVersionResource
+	Labels map[string]string
 }
 
-func GetGvs(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) []schema.GroupVersion {
+func GetGvr(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) []WatchItem {
 	// Fetch config secret
 	configSecret, err := getConfigSecret(ctx, namespace, name, client, log)
 	if err != nil {
@@ -44,38 +45,33 @@ func GetGvs(ctx context.Context, namespace, name string, client client.Client, l
 	}
 
 	// Get data from secret
-	data := gvToWatch{}
-	err = json.Unmarshal(configSecret.Data["gvToWatch"], &data)
+	data := gvrToWatch{}
+	err = json.Unmarshal(configSecret.Data["gvrToWatch"], &data)
 	if err != nil {
 		log.Info(fmt.Sprintf("Error unmarshalling data from secret: %s", err.Error()))
 		return nil
 	}
 
-	// GetGvs which will be watched
-	var gvs = []schema.GroupVersion{}
-	for _, gv := range data.GvrList {
-		gvs = append(gvs, schema.GroupVersion{Group: gv.Group, Version: gv.Version})
+	// Construct GVR list with labels
+	var grvList []WatchItem
+	for _, gvr := range data.GvrList {
+		grvList = append(grvList,
+			WatchItem{
+				Gvr: schema.GroupVersionResource{
+					Group:    gvr.Group,
+					Version:  gvr.Version,
+					Resource: gvr.Resource},
+				Labels: labelsListToMap(gvr.LabelValueList)})
 	}
-	return gvs
+	return grvList
 }
 
-func GetLabelsToWatch(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) []LabelValuePair {
-	// Fetch config secret
-	configSecret, err := getConfigSecret(ctx, namespace, name, client, log)
-	if err != nil {
-		log.Info(fmt.Sprintf("Error fetching config secret: %s", err.Error()))
-		return nil
+func labelsListToMap(labelList []LabelValuePair) map[string]string {
+	lvMap := map[string]string{}
+	for _, lv := range labelList {
+		lvMap[lv.Label] = lv.Value
 	}
-
-	// Get data from secret
-	data := LabelsToWatch{}
-	err = json.Unmarshal(configSecret.Data["labelsToWatch"], &data)
-	if err != nil {
-		log.Info(fmt.Sprintf("Error unmarshalling data from secret: %s", err.Error()))
-		return nil
-	}
-
-	return data.LabelValueList
+	return lvMap
 }
 
 //TODO: In next iteration: mount secret instead of using kubeconfig
