@@ -1,0 +1,16 @@
+domain: kyma-project.io
+layout:
+- go.kubebuilder.io/v3
+projectName: kcp
+repo: github.com/kyma-project/kyma-watcher/kcp
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kyma-project.io
+  group: component
+  kind: Watcher
+  path: github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1
+  version: v1alpha1
+version: "3"
