@@ -1,2 +1,0 @@
-# Kyma watcher installation
-

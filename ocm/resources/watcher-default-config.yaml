@@ -1,3 +1,4 @@
 configs:
-  - name: example.org/sample-module
+  - name: watcher-chart # same name as chart for which the config will be applied
     clientConfig: "CreateNamespace=true,Namespace=kyma-watcher"
+    overrides: ""

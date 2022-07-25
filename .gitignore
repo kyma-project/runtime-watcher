@@ -26,3 +26,4 @@ ocm/.DS_Store
 ocm/bin
 ocm/ocm-descriptors/blobs
 ocm/charts/kyma-watcher/templates
+ocm/test

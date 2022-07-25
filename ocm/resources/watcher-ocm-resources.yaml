@@ -1,15 +1,24 @@
-name: 'watcher-chart'
-type: 'helm-chart'
-relation: 'local'
+name: "watcher-chart"
+type: "helm-chart"
+relation: "local"
 input:
-  type: 'dir'
+  type: "dir"
   compress: true
   path: "../charts/kyma-watcher" # path is relative to the current resource file
 ---
-name: 'watcher-default-config'
-type: 'yaml'
-relation: 'local'
+name: "watcher-default-config"
+type: "yaml"
+relation: "local"
 input:
-  type: 'file'
+  type: "file"
   path: "./watcher-default-config.yaml"
   mediaType: "application/yaml"
+#---
+# # crds are optional for watcher
+# name: 'crds'
+# type: 'crds'
+# relation: 'local'
+# input:
+#   type: 'dir'
+#   compress: true
+#   path: "./crds" # path is relative to the current resource file
