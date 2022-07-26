@@ -74,7 +74,7 @@ func labelsListToMap(labelList []LabelValuePair) map[string]string {
 	return lvMap
 }
 
-//TODO: In next iteration: mount secret instead of using kubeconfig
+//TODO: In next iteration: mount secret in deployment instead of using kubeconfig
 func getConfigSecret(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) (*v1.Secret, error) {
 	// Get config secret
 	var configSecret = &v1.Secret{}

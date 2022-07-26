@@ -166,6 +166,7 @@ func (r *KymaWatcherReconciler) triggerWatch(controllerBuilder *builder.Builder,
 	}
 }
 
+//TODO - Next Iteration: Implement Retry mechanism
 func (r *KymaWatcherReconciler) sendEventRequest(newEvent interface{}) (string, error) {
 	var component string
 	var kymaCr string
