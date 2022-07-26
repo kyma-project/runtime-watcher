@@ -84,17 +84,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ConfigMapReconciler{
+	if err = (&controllers.KymaWatcherReconciler{
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
 		Logger:  mgr.GetLogger(),
 		KcpIp:   kcpIp,
 		KcpPort: kcpPort,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ConfigMap")
+		setupLog.Error(err, "unable to create controller", "controller", "KymaWatcherReconciler")
 		os.Exit(1)
 	}
 
+	if err = (&controllers.SecretsReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Secrets")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
