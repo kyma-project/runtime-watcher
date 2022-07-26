@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const paramContractVersion = "contractVersion"
+const paramContractVersion = "1"
 
 func RegisterListenerComponent(addr, componentName string) (*SKREventListener, *source.Channel) {
 
@@ -44,15 +44,17 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 
 	router := http.NewServeMux()
 
-	router.HandleFunc(
-		fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.componentName),
-		l.handleSKREvent(),
-	)
+	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.componentName)
+
+	router.HandleFunc(listenerPattern, l.handleSKREvent())
 
 	//start web server
 	server := &http.Server{Addr: l.addr, Handler: router}
 	go func() {
-		l.logger.Info("SKR events listener is starting up...")
+		l.logger.WithValues(
+			"Addr", l.addr,
+			"ApiPath", listenerPattern,
+		).Info("Listener is starting up...")
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			l.logger.Error(err, "Webserver startup failed")
