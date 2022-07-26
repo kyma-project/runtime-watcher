@@ -1,0 +1,11 @@
+domain: my.domain
+layout:
+- go.kubebuilder.io/v3
+projectName: skr
+repo: github.com/kyma-project/kyma-watcher
+resources:
+- controller: true
+  domain: my.domain
+  kind: ConfigMap
+  version: v1
+version: "3"
