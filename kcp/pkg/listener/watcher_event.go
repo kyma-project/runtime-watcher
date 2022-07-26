@@ -50,10 +50,7 @@ func unmarshalSKREvent(r *http.Request) (*unstructured.Unstructured, *UnmarshalE
 	genericEvtObject := &unstructured.Unstructured{}
 	genericEvtObject.SetName(watcherEvent.Name)
 	genericEvtObject.SetNamespace(watcherEvent.Namespace)
-	labels := genericEvtObject.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string, 1)
-	}
+	labels := make(map[string]string, 1)
 	labels[kymaNameLabel] = watcherEvent.KymaCr
 	genericEvtObject.SetLabels(labels)
 
