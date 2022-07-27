@@ -111,7 +111,7 @@ undeploy: ## NOT SUPPORTED - Undeploy controller from the K8s cluster specified 
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: helm-prepare
-helm-prepare: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+helm-prepare: manifests kustomize ## Generates k8s manifests and writes them as a Helm template in the watcher helm-chart
 	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
 	$(KUSTOMIZE) build config/default > ${HELM_CHART_TEMPLATES_DIR}/kyma-watcher-manifests.yaml
 
