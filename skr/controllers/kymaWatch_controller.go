@@ -21,36 +21,33 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
+
+	"github.com/kyma-project/kyma-watcher/skr/pkg/factory"
+
 	"io/ioutil"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/dynamic/dynamicinformer"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 type EventType string
 
-// ConfigMapReconciler reconciles a ConfigMap object
-type ConfigMapReconciler struct {
+// KymaWatcherReconciler reconciles a ConfigMap object
+type KymaWatcherReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
 	Logger  logr.Logger
@@ -68,15 +65,15 @@ type ConfigMapReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
-func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *KymaWatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// logger := log.FromContext(ctx).WithName(req.NamespacedName.String())
 	// Should do nothing
 	return ctrl.Result{}, nil
 }
 
-func (r *ConfigMapReconciler) CreateFunc(e event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (r *KymaWatcherReconciler) CreateFunc(e event.CreateEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Create Event: %s", e.Object.GetName()))
-	_, err := r.sendRequest(e)
+	_, err := r.sendEventRequest(e)
 	if err != nil {
 		r.Logger.Error(err, "Error occured while sending request")
 		return
@@ -84,27 +81,27 @@ func (r *ConfigMapReconciler) CreateFunc(e event.CreateEvent, q workqueue.RateLi
 
 }
 
-func (r *ConfigMapReconciler) UpdateFunc(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (r *KymaWatcherReconciler) UpdateFunc(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Update Event: %s", e.ObjectNew.GetName()))
-	_, err := r.sendRequest(e)
+	_, err := r.sendEventRequest(e)
 	if err != nil {
 		r.Logger.Error(err, "Error occured while sending request")
 		return
 	}
 }
 
-func (r *ConfigMapReconciler) DeleteFunc(e event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (r *KymaWatcherReconciler) DeleteFunc(e event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Delete Event: %s", e.Object.GetName()))
-	_, err := r.sendRequest(e)
+	_, err := r.sendEventRequest(e)
 	if err != nil {
 		r.Logger.Error(err, "Error occured while sending request")
 		return
 	}
 }
 
-func (r *ConfigMapReconciler) GenericFunc(e event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (r *KymaWatcherReconciler) GenericFunc(e event.GenericEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Generic Event: %s", e.Object.GetName()))
-	_, err := r.sendRequest(e)
+	_, err := r.sendEventRequest(e)
 	if err != nil {
 		r.Logger.Error(err, "Error occured while sending request")
 		return
@@ -112,72 +109,65 @@ func (r *ConfigMapReconciler) GenericFunc(e event.GenericEvent, q workqueue.Rate
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// Create ControllerBuilder
 	controllerBuilder := ctrl.NewControllerManagedBy(mgr).For(&v1.ConfigMap{})
 
-	// Create Dynamic InformerFactory
-	c, err := dynamic.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		return err
-	}
-	informers := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c, time.Minute*30, "", func(options *metav1.ListOptions) {
-		labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{"operator.kyma-project.io/managed-by": "Kyma"}}
-		options.LabelSelector = labels.Set(labelSelector.MatchLabels).String() // TODO: Check if it is possible to select from a given set (with OR condition)
-
-	})
-	err = mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		informers.Start(ctx.Done())
-		return nil
-	}))
+	// Create Dynamic Client
+	client, err := dynamic.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err
 	}
 
-	// Create K8s-Client
-	cs, err := kubernetes.NewForConfig(mgr.GetConfig())
+	// Get resources to watch for configured GVs
+	gvrList := config.GetGvr(context.TODO(), config.WatcherSecretNamespace, config.WatcherSecretName, mgr.GetClient(), r.Logger)
 	if err != nil {
 		return err
 	}
 
-	for _, gv := range config.Gvs {
-		resources, err := cs.ServerResourcesForGroupVersion(gv.String())
-		if client.IgnoreNotFound(err) != nil {
-			return err
-		}
+	// InformerSet for GVR without labels
+	dynamicInformerSet := map[string]*source.Informer{}
 
-		// resources found
-		if err == nil {
-			dynamicInformerSet := make(map[string]*source.Informer)
-			for _, resource := range resources.APIResources {
-				if strings.Contains(resource.Name, "/") || !strings.Contains(resource.Verbs.String(), "watch") {
-					// Skip no listable resources, i.e. nodes/proxy
-					continue
+	informerFactory, err := factory.InformerFactory(client, mgr)
+	if err != nil {
+		return err
+	}
+	for _, gvr := range gvrList {
+		if len(gvr.Labels) == 0 {
+			dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{Informer: informerFactory.ForResource(gvr.Gvr).Informer()}
+		} else {
+			for label, value := range gvr.Labels {
+				filteredInformerFactory, err := factory.InformerFactoryWithLabel(client, mgr, label, value)
+				if err != nil {
+					return err
 				}
-				r.Logger.Info(fmt.Sprintf("Resource `%s` from GroupVersion `%s` will be watched", resource.Name, gv))
-				gvr := gv.WithResource(resource.Name)
-				dynamicInformerSet[gvr.String()] = &source.Informer{Informer: informers.ForResource(gvr).Informer()}
-			}
-
-			for gvr, informer := range dynamicInformerSet {
-				controllerBuilder = controllerBuilder.
-					Watches(informer, &handler.Funcs{
-						CreateFunc:  r.CreateFunc,
-						UpdateFunc:  r.UpdateFunc,
-						DeleteFunc:  r.DeleteFunc,
-						GenericFunc: r.GenericFunc,
-					},
-						builder.WithPredicates(predicate.GenerationChangedPredicate{}))
-				r.Logger.Info("initialized dynamic watching", "source", gvr)
+				dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{Informer: filteredInformerFactory.ForResource(gvr.Gvr).Informer()}
 			}
 		}
 	}
+	r.triggerWatch(controllerBuilder, dynamicInformerSet)
 
 	return controllerBuilder.Complete(r)
 }
 
-func (r *ConfigMapReconciler) sendRequest(newEvent interface{}) (string, error) {
+func (r *KymaWatcherReconciler) triggerWatch(controllerBuilder *builder.Builder, dynamicInformerSet map[string]*source.Informer) {
+	// Trigger watch for each informer
+	for gvr, informer := range dynamicInformerSet {
+		controllerBuilder = controllerBuilder.
+			Watches(informer, &handler.Funcs{
+				CreateFunc:  r.CreateFunc,
+				UpdateFunc:  r.UpdateFunc,
+				DeleteFunc:  r.DeleteFunc,
+				GenericFunc: r.GenericFunc,
+			},
+				builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
+		r.Logger.Info("Started dynamic watching", "source", gvr)
+	}
+}
+
+//TODO - Next Iteration: Implement Retry mechanism
+func (r *KymaWatcherReconciler) sendEventRequest(newEvent interface{}) (string, error) {
 	var component string
 	var kymaCr string
 	var namespace string
@@ -228,7 +218,7 @@ func (r *ConfigMapReconciler) sendRequest(newEvent interface{}) (string, error) 
 	return sb, nil
 }
 
-func (r *ConfigMapReconciler) getValueFromLabel(label string, object client.Object) string {
+func (r *KymaWatcherReconciler) getValueFromLabel(label string, object client.Object) string {
 	labels := object.GetLabels()
 	value, ok := labels[label]
 	if ok {
