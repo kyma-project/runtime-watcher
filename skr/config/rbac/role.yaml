@@ -13,3 +13,29 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - my.domain
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - my.domain
+  resources:
+  - secrets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - my.domain
+  resources:
+  - secrets/status
+  verbs:
+  - get
+  - patch
+  - update
