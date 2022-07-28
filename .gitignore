@@ -83,5 +83,4 @@ out.txt
 # ignore vscode delve debug binary
 */__debug_bin
 operator/.vscode/
-skr/skr-watcher-helm-chart/templates/*.yaml
 skr/bin
