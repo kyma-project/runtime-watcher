@@ -37,17 +37,6 @@ The Listener implementation is in the [kcp directory](./kcp).
 6.  `make docker-push`
 7.  `make deploy`
 
-### Steps to generate Manifest CR for the watcher
-
----
-1. Prepare Helm chart for the Watcher by executing the script under `ocm/scripts/prepare-watcher-chart.sh`
-2. Create OCM archive by executing the script: `ocm/scripts/watcher-ocm-create.sh`
-3. Push OCM archive to a local registry by executing the script: `ocm/scripts/watcher-ocm-push.sh`
-4. Generate manifest CR by executing the script: `ocm/scripts/gen-manifest-cr.sh`
-5. Run `kubectl apply -f samples/watcher-manifest-cr.yaml` to apply the manifest CR
-6. Execute the `ocm/scripts/gen-and-apply-kyma-sample-secret.sh` script after applying the generated Manifest CR in order to test if the Manifest operator deploys the Watcher chart to the k8s cluster.
-
----
 ## Development
 
 ---

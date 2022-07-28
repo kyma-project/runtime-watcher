@@ -17,4 +17,3 @@ images:
   newName: docker.io/jaythedevil666/kyma-watcher
 - name: kyma-watcher
   newName: k3d-registry.localhost:4000/kyma-watcher
-  newTag: latest

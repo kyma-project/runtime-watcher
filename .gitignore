@@ -83,9 +83,5 @@ out.txt
 # ignore vscode delve debug binary
 */__debug_bin
 operator/.vscode/
-ocm/blobs
-ocm/.DS_Store
-ocm/bin
-ocm/ocm-descriptors/blobs
-ocm/charts/kyma-watcher/templates
-ocm/test
+skr/skr-watcher-helm-chart/templates/*.yaml
+skr/bin

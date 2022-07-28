@@ -1,10 +1,8 @@
-# To make k3d-registry.localhost:4000/kyma-watcher:latest a valid image tag, you should do the following:
-# 1. Execute `k3d registry create registry.localhost --port=4000 --verbose`
-# 2. Add "127.0.0.1 k3d-registry.localhost" as a separate line in your /etc/hosts file
 # Image URL to use all building/pushing image targets
-IMG ?= k3d-registry.localhost:4000/kyma-watcher:latest
+# Include valid image value before executing any kustomize targets
+IMG ?= <your-own-skr-watcher-image>
 
-HELM_CHART_TEMPLATES_DIR=$(shell pwd)/../ocm/charts/kyma-watcher/templates
+HELM_CHART_TEMPLATES_DIR=$(shell pwd)/skr-watcher-helm-chart/templates
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
@@ -113,7 +111,7 @@ undeploy: ## NOT SUPPORTED - Undeploy controller from the K8s cluster specified 
 .PHONY: helm-prepare
 helm-prepare: manifests kustomize ## Generates k8s manifests and writes them as a Helm template in the watcher helm-chart
 	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
-	$(KUSTOMIZE) build config/default > ${HELM_CHART_TEMPLATES_DIR}/kyma-watcher-manifests.yaml
+	$(KUSTOMIZE) build config/default > ${HELM_CHART_TEMPLATES_DIR}/skr-watcher-manifests.yaml
 
 
 ##@ Build Dependencies
