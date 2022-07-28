@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
+	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -54,6 +58,29 @@ func main() {
 
 	http.HandleFunc("/validate", func(handler http.ResponseWriter, req *http.Request) {
 		fmt.Println("send web requests to kcp")
+
+		watcherEvent := &types.WatcherEvent{
+			KymaCr:    "kyma-sample",
+			Namespace: "default",
+			Name:      "manifestkyma-sample",
+		}
+		postBody, _ := json.Marshal(watcherEvent)
+
+		responseBody := bytes.NewBuffer(postBody)
+
+		kcpIp := os.Getenv("KCP_IP")
+		kcpPort := os.Getenv("KCP_PORT")
+		contract := os.Getenv("KCP_CONTRACT")
+		component := os.Getenv("COMPONENT")
+
+		url := fmt.Sprintf("http://%s:%s/%s/%s/%s", kcpIp, kcpPort, contract, component, config.EventEndpoint)
+		fmt.Println("url" + url)
+		resp, err := http.Post(url, "application/json", responseBody)
+
+		if err != nil {
+			fmt.Println("error" + err.Error())
+		}
+		fmt.Println(resp)
 		body, err := ioutil.ReadAll(req.Body)
 		err = ioutil.WriteFile("/tmp/request", body, 0644)
 		if err != nil {

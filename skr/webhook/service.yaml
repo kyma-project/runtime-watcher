@@ -47,7 +47,15 @@ spec:
               value: "/app/etc/ssl/tls.key"
             - name: TLS_CERT
               value: "/app/etc/ssl/tls.crt"
-          image: adityabhatia/webhook
+            - name: KCP_IP
+              value: "<load-balancer-ip-here>"
+            - name: KCP_PORT
+              value: "80"
+            - name: KCP_CONTRACT
+              value: "vcontractVersion"
+            - name: COMPONENT
+              value: "manifest"
+          image: adityabhatia/webhook:0.1.1
           imagePullPolicy: Always
           ports:
             - containerPort: 8443

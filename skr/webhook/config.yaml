@@ -3,7 +3,33 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: skr-webhook
 webhooks:
-  - name: skr.operator.kyma-project.io
+  - name: label.operator.kyma-project.io
+    objectSelector:
+      matchLabels:
+        app: kyma
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      # ca bundle should be filled from deployment
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURkakNDQWw2Z0F3SUJBZ0lVZVZsQTRzblZKWk9SWDdpa3VlaEhESU9jNm04d0RRWUpLb1pJaHZjTkFRRUwKQlFBd1V6RUxNQWtHQTFVRUJoTUNSRVV4RkRBU0JnTlZCQWdUQzFOTFVpMVhaV0pvYjI5ck1SRXdEd1lEVlFRSApFd2hYWVd4c1pHOXlaakVNTUFvR0ExVUVDaE1EUWxSUU1RMHdDd1lEVlFRTEV3UkxlVzFoTUI0WERUSXlNRGN5Ck5URTBNekV3TUZvWERUSTNNRGN5TkRFME16RXdNRm93VXpFTE1Ba0dBMVVFQmhNQ1JFVXhGREFTQmdOVkJBZ1QKQzFOTFVpMVhaV0pvYjI5ck1SRXdEd1lEVlFRSEV3aFhZV3hzWkc5eVpqRU1NQW9HQTFVRUNoTURRbFJRTVEwdwpDd1lEVlFRTEV3UkxlVzFoTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF4NnRXClVYWXBmQmtwSVBtNjFheE8zVGREaGJQNVVKekJJRzFMWlVpTFdiMVoxb1NIS2lnRHBlSWQyMUdIRGV0bFkySHYKb2tzeE1YNnJmbUlITEVlSEEyVDk1ZHpDYlgyd0ltN0h6ZEg0RUtQcWN6dGV0OFhXN3Y5cDVkV2FTeEprV295TQpYWWVFeksvbmltMnRzSmZETmdjWTFVQVk2Q2ZKSnNJeGl5QW1qWktBcHFGTVk2UTZHSUdJazVXdjJBcDZuZ1BUCjduODRaWXVkMFZ6RXpHYWFQWTd2NXFqZFVDd0IyQy9CZFM5UHVpUDRkREh4OVh6eW9Td2RtVVJISG1PZFNWZDgKVlZSMmJMVlZwZEwzb0w4b1pDYzNkaXNxMTBpdEw4RkJXTzN1dE9ZQ0Z0WjZ6UjAwSjBpUFh2NTh2VmJwTTdaUwoxMTdWa2FiZnBZV2pGbG84QlFJREFRQUJvMEl3UURBT0JnTlZIUThCQWY4RUJBTUNBUVl3RHdZRFZSMFRBUUgvCkJBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVWkvVy9vcTFVOWk3VHk4Lzl4Wmhmc1d3WFdzc3dEUVlKS29aSWh2Y04KQVFFTEJRQURnZ0VCQUhzS3A3djVQcEhVaitQVCtqeVd2OXVDRkx3MGl2RnloYy8xS2NpWGdlMFVCa0p6RlJKRgpyMFhBSEdZcW1JNjUxQ2liRHpnVENKRXY1SVhPUTM3dWI1bVBGejZCcFh0MnNHdXAxMlh0WUdoalZuZm56dTFhClEyTHNrYzZpYW05NEUwUW9keEd4UmhSd08wR0ZuQW1NdGozeVFlSmI0SVBpeXBhYlJReFlTT294eEZhaEMrbCsKUUhuSHdLMGNOeHhpTHJSa09aMXFGTmJkT2ZnTVJkSjJKM1NYTUJuM1lhTm5BUzNxUDgrRDZ0TGVXRHpkaXgrMwpURVNRSFZyL2g0bnhJQlo4WEJueWVxYkMzS0pLem5rbUhJU3hZaXU3TWx1TUhqM3QzdHBYVUxnSHIxSDNMbm13Ck5mVFlSenBWMjFiM0kvcWNPaUFDZmNNNUlIS1RiRWxRMmNRPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+      service:
+        name: skr-webhook
+        namespace: default
+        path: /validate
+    rules:
+      - apiGroups:
+          - "*"
+        apiVersions:
+          - "*"
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - "*"
+    sideEffects: NoneOnDryRun
+    timeoutSeconds: 30
+    failurePolicy: Fail
+  - name: gvr.operator.kyma-project.io
     admissionReviewVersions:
       - v1
     clientConfig:
@@ -17,7 +43,7 @@ webhooks:
       - apiGroups:
           - operator.kyma-project.io
         apiVersions:
-          - v1alpha
+          - v1alpha1
         operations:
           - CREATE
           - UPDATE
