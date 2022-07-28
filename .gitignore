@@ -79,7 +79,4 @@ out.txt
 
 # ignore vscode delve debug binary
 */__debug_bin
-ocm/bin
-ocm/blobs
-ocm/charts/kyma-watcher/templates
-ocm/ocm-descriptors/blobs
+skr/bin
