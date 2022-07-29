@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+
 	"github.com/kyma-project/manifest-operator/operator/pkg/custom"
 	manifestLib "github.com/kyma-project/manifest-operator/operator/pkg/manifest"
 	"helm.sh/helm/v3/pkg/cli"
@@ -53,6 +54,9 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	_, err = manifestLib.NewOperations(&logger, restConfig, "release-name",
 		cli.New(), map[string]map[string]interface{}{})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// TODO: add Watcher control loop logic here
 	// TODO: pass kyma name and namespace as chart values to SKR
