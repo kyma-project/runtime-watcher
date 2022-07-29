@@ -16,6 +16,8 @@ limitations under the License.
 
 package controllers
 
+//TODO:test pipeline
+
 import (
 	"path/filepath"
 	"testing"
