@@ -82,5 +82,5 @@ out.txt
 
 # ignore vscode delve debug binary
 */__debug_bin
-skr/bin
-kcp/bin
+# skr/bin/**
+# kcp/bin/**
