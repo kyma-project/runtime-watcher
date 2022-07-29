@@ -2,7 +2,7 @@
 # Include valid image value before executing any kustomize targets
 IMG ?= <your-own-skr-watcher-image>
 
-HELM_CHART_TEMPLATES_DIR=$(shell pwd)/skr-watcher-helm-chart/templates
+HELM_CHART_TEMPLATES_DIR=$(shell pwd)/chart/templates
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
