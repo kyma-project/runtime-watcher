@@ -5,9 +5,14 @@
 
 ## Overview
 
-Kyma is the opinionated set of Kubernetes based modular building blocks that includes the necessary capabilities to develop and run enterprise-grade cloud-native applications. This repository is the PoC (proof of Concept) for the `Kyma Watcher` (short: `Watcher`). The Watcher is an operator watching for events (`ADDED`, `DELETED`, `MODIFIED`) of ConfigMaps inside a Kyma-Cluster in specific namespaces. The observed events will then be processed and communicated to {...}.
+Kyma is the opinionated set of Kubernetes based modular building blocks that includes the necessary capabilities to develop and run enterprise-grade cloud-native applications. This repository is the PoC (proof of Concept) for the `Kyma Watcher`. The Watcher is an operator watching for events (`ADDED`, `DELETED`, `MODIFIED`) of configured GVRs (Group Version Resources)inside a Kyma-Cluster in specific namespaces. The observed events will then be processed and communicated to the KCP (Kyma-Control-Plane).
 
-TODO
+The Watcher implementation is in the [skr directory](./skr).
+
+The Listener package implements a listener endpoint which triggers a reconciliation for the received events. This package is used by the different operators in the KCP which are responsible for the lifecycle managemnt of a Kyma runtime.
+
+The Listener implementation is in the [kcp directory](./kcp).
+
 
 ![](./docs/assets/watcher_workflow_network_arc.svg)
 
@@ -31,14 +36,10 @@ TODO
 5.  `make docker-build`
 6.  `make docker-push`
 7.  `make deploy`
+
 ## Development
 
-> Add instructions on how to develop the project or example. It must be clear what to do and, for example, how to trigger the tests so that other contributors know how to make their pull requests acceptable. Include the instructions or provide links to related documentation.
+---
+TODO
 
-## Troubleshooting
-
-> List potential issues and provide tips on how to avoid or solve them. To structure the content, use the following sections:
->
-> - **Symptom**
-> - **Cause**
-> - **Remedy**
+---
