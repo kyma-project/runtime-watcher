@@ -3,8 +3,8 @@ package config
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,16 +88,16 @@ func getConfigSecret(ctx context.Context, namespace, name string, client client.
 		log.Info("Cluster cache not started, will create a temporary in-cluster client")
 		cl, err := config.GetConfig()
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Unable to get kube-config %s", err))
+			return nil, fmt.Errorf("unable to get kube-config %s", err)
 		}
 
 		clientset, err := kubernetes.NewForConfig(cl)
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Unable to create our clientset: %s", err))
+			return nil, fmt.Errorf("unable to create our clientset: %s", err)
 		}
 		configSecret, err = clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("No Secret for label reference found: %s", err.Error()))
+			return nil, fmt.Errorf("no Secret for label reference found: %s", err)
 		}
 	}
 	return configSecret, nil

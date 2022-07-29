@@ -174,15 +174,15 @@ func (r *KymaWatcherReconciler) sendEventRequest(newEvent interface{}) (string, 
 	var name string
 	var object client.Object
 
-	switch newEvent.(type) {
+	switch newEvent := newEvent.(type) {
 	case event.CreateEvent:
-		object = newEvent.(event.CreateEvent).Object
+		object = newEvent.Object
 	case event.UpdateEvent:
-		object = newEvent.(event.UpdateEvent).ObjectNew
+		object = newEvent.ObjectNew
 	case event.DeleteEvent:
-		object = newEvent.(event.DeleteEvent).Object
+		object = newEvent.Object
 	case event.GenericEvent:
-		object = newEvent.(event.GenericEvent).Object
+		object = newEvent.Object
 	default:
 		r.Logger.Info(fmt.Sprintf("Undefined eventType: %#v", newEvent))
 	}
