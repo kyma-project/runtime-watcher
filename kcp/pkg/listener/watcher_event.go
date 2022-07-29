@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 	"io"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"net/http"
 	"strings"
+
+	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+const kymaNameLabel = "operator.kyma-project.io/kyma-name"
 
 type UnmarshalError struct {
 	Message       string
@@ -47,6 +50,9 @@ func unmarshalSKREvent(r *http.Request) (*unstructured.Unstructured, *UnmarshalE
 	genericEvtObject := &unstructured.Unstructured{}
 	genericEvtObject.SetName(watcherEvent.Name)
 	genericEvtObject.SetNamespace(watcherEvent.Namespace)
+	labels := make(map[string]string, 1)
+	labels[kymaNameLabel] = watcherEvent.KymaCr
+	genericEvtObject.SetLabels(labels)
 
 	return genericEvtObject, nil
 }
