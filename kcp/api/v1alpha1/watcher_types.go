@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -34,6 +35,20 @@ type WatcherSpec struct {
 
 	// ServiceInfo describes the service information of the operator
 	ServiceInfo ServiceInfo `json:"serviceInfo"`
+
+	// LabelsToWatch describes the labels that should be watched
+	LabelsToWatch map[string]string `json:"labelsToWatch"`
+
+	// GvrsToWatch describes the gvr and their labels that should be watched
+	GvrsToWatch []WatchableGvr `json:"gvrToWatch"`
+}
+
+type WatchableGvr struct {
+	// Gvr describes the gvr that should be watched
+	Gvr schema.GroupVersionResource `json:"gvr"`
+
+	// LabelsToWatch describes the labels that should be watched from the gvr
+	LabelsToWatch map[string]string `json:"labelsToWatch"`
 }
 
 type ServiceInfo struct {
@@ -78,7 +93,7 @@ type WatcherStatus struct {
 type WatcherCondition struct {
 	// Type is used to reflect what type of condition we are dealing with. Most commonly ConditionTypeReady it is used
 	// as extension marker in the future
-	Type WatcherConditionStatus `json:"type"`
+	Type WatcherConditionType `json:"type"`
 
 	// Status of the Watcher Condition.
 	// Value can be one of ("True", "False", "Unknown").
