@@ -78,11 +78,6 @@ spec:
                   - labelsToWatch
                   type: object
                 type: array
-              labelsToWatch:
-                additionalProperties:
-                  type: string
-                description: LabelsToWatch describes the labels that should be watched
-                type: object
               serviceInfo:
                 description: ServiceInfo describes the service information of the
                   operator
@@ -103,7 +98,6 @@ spec:
             - componentName
             - contractVersion
             - gvrsToWatch
-            - labelsToWatch
             - serviceInfo
             type: object
           status:

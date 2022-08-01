@@ -35,9 +35,6 @@ type WatcherSpec struct {
 	// ServiceInfo describes the service information of the operator
 	ServiceInfo ServiceInfo `json:"serviceInfo"`
 
-	// LabelsToWatch describes the labels that should be watched
-	LabelsToWatch map[string]string `json:"labelsToWatch"`
-
 	// GvrsToWatch describes the gvr and their labels that should be watched
 	GvrsToWatch []WatchableGvr `json:"gvrsToWatch"`
 }
