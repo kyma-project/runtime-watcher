@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -40,12 +39,23 @@ type WatcherSpec struct {
 	LabelsToWatch map[string]string `json:"labelsToWatch"`
 
 	// GvrsToWatch describes the gvr and their labels that should be watched
-	GvrsToWatch []WatchableGvr `json:"gvrToWatch"`
+	GvrsToWatch []WatchableGvr `json:"gvrsToWatch"`
+}
+
+type Gvr struct {
+	// Group describes the group of the watchable resource
+	Group string `json:"group"`
+
+	// Version describes the version of the watchable resource
+	Version string `json:"version"`
+
+	// Resource describes the resource should be watched
+	Resource string `json:"resource"`
 }
 
 type WatchableGvr struct {
 	// Gvr describes the gvr that should be watched
-	Gvr schema.GroupVersionResource `json:"gvr"`
+	Gvr Gvr `json:"gvr"`
 
 	// LabelsToWatch describes the labels that should be watched from the gvr
 	LabelsToWatch map[string]string `json:"labelsToWatch"`
