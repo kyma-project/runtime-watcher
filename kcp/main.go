@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -47,8 +48,8 @@ const (
 
 func init() { //nolint:gochecknoinits
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(componentv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kyma.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -82,11 +83,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.WatcherReconciler{
+	//if err = (&controllers.WatcherReconciler{
+	//	Client: mgr.GetClient(),
+	//	Scheme: mgr.GetScheme(),
+	//}).SetupWithManager(mgr); err != nil {
+	//	setupLog.Error(err, "unable to create controller", "controller", "Watcher")
+	//	os.Exit(1)
+	//}
+	if err = (&controllers.KymaReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
+		setupLog.Error(err, "unable to create controller", "controller", "Kyma")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

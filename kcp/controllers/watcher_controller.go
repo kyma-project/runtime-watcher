@@ -47,7 +47,7 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// evaluate rest config
 	clusterClient := &custom.ClusterClient{DefaultClient: r.Client}
-	restConfig, err := clusterClient.GetRestConfig(ctx, "kyma-sample", "default", r.RestConfig)
+	restConfig, err := clusterClient.GetRestConfig(ctx, "kyma-sample", "default")
 	if err != nil {
 		return ctrl.Result{}, err
 	}
