@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -21,7 +20,6 @@ type UnmarshalError struct {
 }
 
 func unmarshalSKREvent(r *http.Request) (*unstructured.Unstructured, *UnmarshalError) {
-
 	pathVariables := strings.Split(r.URL.Path, "/")
 
 	var contractVersion string
@@ -35,7 +33,7 @@ func unmarshalSKREvent(r *http.Request) (*unstructured.Unstructured, *UnmarshalE
 		return nil, &UnmarshalError{"contract version cannot be empty", http.StatusBadRequest}
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, &UnmarshalError{"could not read request body", http.StatusInternalServerError}
 	}

@@ -21,12 +21,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 
 	"github.com/kyma-project/kyma-watcher/skr/pkg/factory"
 
-	"io/ioutil"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -51,7 +51,7 @@ type KymaWatcherReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
 	Logger  logr.Logger
-	KcpIp   string
+	KcpIP   string
 	KcpPort string
 }
 
@@ -75,17 +75,16 @@ func (r *KymaWatcherReconciler) CreateFunc(e event.CreateEvent, q workqueue.Rate
 	r.Logger.Info(fmt.Sprintf("Create Event: %s", e.Object.GetName()))
 	_, err := r.sendEventRequest(e)
 	if err != nil {
-		r.Logger.Error(err, "Error occured while sending request")
+		r.Logger.Error(err, "Error occurred while sending request")
 		return
 	}
-
 }
 
 func (r *KymaWatcherReconciler) UpdateFunc(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Update Event: %s", e.ObjectNew.GetName()))
 	_, err := r.sendEventRequest(e)
 	if err != nil {
-		r.Logger.Error(err, "Error occured while sending request")
+		r.Logger.Error(err, "Error occurred while sending request")
 		return
 	}
 }
@@ -94,7 +93,7 @@ func (r *KymaWatcherReconciler) DeleteFunc(e event.DeleteEvent, q workqueue.Rate
 	r.Logger.Info(fmt.Sprintf("Delete Event: %s", e.Object.GetName()))
 	_, err := r.sendEventRequest(e)
 	if err != nil {
-		r.Logger.Error(err, "Error occured while sending request")
+		r.Logger.Error(err, "Error occurred while sending request")
 		return
 	}
 }
@@ -103,19 +102,18 @@ func (r *KymaWatcherReconciler) GenericFunc(e event.GenericEvent, q workqueue.Ra
 	r.Logger.Info(fmt.Sprintf("Generic Event: %s", e.Object.GetName()))
 	_, err := r.sendEventRequest(e)
 	if err != nil {
-		r.Logger.Error(err, "Error occured while sending request")
+		r.Logger.Error(err, "Error occurred while sending request")
 		return
 	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	// Create ControllerBuilder
 	controllerBuilder := ctrl.NewControllerManagedBy(mgr).For(&v1.ConfigMap{})
 
 	// Create Dynamic Client
-	client, err := dynamic.NewForConfig(mgr.GetConfig())
+	dynamicClient, err := dynamic.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err
 	}
@@ -129,7 +127,7 @@ func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// InformerSet for GVR without labels
 	dynamicInformerSet := map[string]*source.Informer{}
 
-	informerFactory, err := factory.InformerFactory(client, mgr)
+	informerFactory, err := factory.InformerFactory(dynamicClient, mgr)
 	if err != nil {
 		return err
 	}
@@ -138,7 +136,7 @@ func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{Informer: informerFactory.ForResource(gvr.Gvr).Informer()}
 		} else {
 			for label, value := range gvr.Labels {
-				filteredInformerFactory, err := factory.InformerFactoryWithLabel(client, mgr, label, value)
+				filteredInformerFactory, err := factory.InformerFactoryWithLabel(dynamicClient, mgr, label, value)
 				if err != nil {
 					return err
 				}
@@ -166,7 +164,7 @@ func (r *KymaWatcherReconciler) triggerWatch(controllerBuilder *builder.Builder,
 	}
 }
 
-//TODO - Next Iteration: Implement Retry mechanism
+// TODO - Next Iteration: Implement Retry mechanism
 func (r *KymaWatcherReconciler) sendEventRequest(newEvent interface{}) (string, error) {
 	var component string
 	var kymaCr string
@@ -200,16 +198,16 @@ func (r *KymaWatcherReconciler) sendEventRequest(newEvent interface{}) (string, 
 	postBody, _ := json.Marshal(watcherEvent)
 
 	responseBody := bytes.NewBuffer(postBody)
-	url := fmt.Sprintf("%s:%s/%s/%s/%s", r.KcpIp, r.KcpPort, config.ContractVersion, component, config.EventEndpoint)
-	resp, err := http.Post(url, "application/json", responseBody)
-	//Handle Error
+	url := fmt.Sprintf("%s:%s/%s/%s/%s", r.KcpIP, r.KcpPort, config.ContractVersion, component, config.EventEndpoint)
+	resp, err := http.Post(url, "application/json", responseBody) //nolint
+	// Handle Error
 	if err != nil {
 		r.Logger.Info(fmt.Sprintf("Error POST %#v", err))
 		return "", err
 	}
 	defer resp.Body.Close()
-	//Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

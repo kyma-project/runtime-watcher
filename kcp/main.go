@@ -41,14 +41,18 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-func init() {
+func initializeOperator() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(componentv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+
+	//+kubebuilder:scaffold:scheme
 }
 
 func main() {
+	initializeOperator()
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string

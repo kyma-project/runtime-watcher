@@ -14,14 +14,12 @@ import (
 const paramContractVersion = "1"
 
 func RegisterListenerComponent(addr, componentName string) (*SKREventListener, *source.Channel) {
-
 	eventSource := make(chan event.GenericEvent)
 	return &SKREventListener{
 		addr:           addr,
 		componentName:  componentName,
 		receivedEvents: eventSource,
 	}, &source.Channel{Source: eventSource}
-
 }
 
 type SKREventListener struct {
@@ -39,7 +37,6 @@ func (l *SKREventListener) ReceivedEvents() chan event.GenericEvent {
 }
 
 func (l *SKREventListener) Start(ctx context.Context) error {
-
 	l.logger = ctrlLog.FromContext(ctx, "Module", "Listener")
 
 	router := http.NewServeMux()
@@ -48,7 +45,7 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 
 	router.HandleFunc(listenerPattern, l.handleSKREvent())
 
-	//start web server
+	// start web server
 	server := &http.Server{Addr: l.addr, Handler: router}
 	go func() {
 		l.logger.WithValues(
@@ -63,14 +60,11 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 	<-ctx.Done()
 	l.logger.Info("SKR events listener is shutting down: context got closed")
 	return server.Shutdown(ctx)
-
 }
 
 func (l *SKREventListener) handleSKREvent() http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		//http method support: POST only is allowed
+		// http method support: POST only is allowed
 		if r.Method != http.MethodPost {
 			errorMessage := fmt.Sprintf("%s method is not allowed on this path", r.Method)
 			l.logger.Error(nil, errorMessage)
@@ -80,7 +74,7 @@ func (l *SKREventListener) handleSKREvent() http.HandlerFunc {
 
 		l.logger.V(1).Info("received event from SKR")
 
-		//unmarshal received event
+		// unmarshal received event
 		genericEvtObject, unmarshalErr := unmarshalSKREvent(r)
 		if unmarshalErr != nil {
 			l.logger.Error(nil, unmarshalErr.Message)
@@ -88,11 +82,9 @@ func (l *SKREventListener) handleSKREvent() http.HandlerFunc {
 			return
 		}
 
-		//add event to the channel
+		// add event to the channel
 		l.receivedEvents <- event.GenericEvent{Object: genericEvtObject}
 		l.logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
 		w.WriteHeader(http.StatusOK)
-
 	}
-
 }

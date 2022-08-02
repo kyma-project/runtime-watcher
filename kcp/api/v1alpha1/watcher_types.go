@@ -169,6 +169,6 @@ type WatcherList struct {
 	Items           []Watcher `json:"items"`
 }
 
-func init() {
+func init() { //nolint
 	SchemeBuilder.Register(&Watcher{}, &WatcherList{})
 }

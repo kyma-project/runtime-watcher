@@ -36,9 +36,9 @@ type WatchItem struct {
 	Labels map[string]string
 }
 
-func GetGvr(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) []WatchItem {
+func GetGvr(ctx context.Context, namespace, name string, kubeClient client.Client, log logr.Logger) []WatchItem {
 	// Fetch config secret
-	configSecret, err := getConfigSecret(ctx, namespace, name, client, log)
+	configSecret, err := getConfigSecret(ctx, namespace, name, kubeClient, log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Error fetching config secret: %s", err.Error()))
 		return nil
@@ -75,17 +75,17 @@ func labelsListToMap(labelList []LabelValuePair) map[string]string {
 }
 
 //TODO: In next iteration: mount secret in deployment instead of using kubeconfig
-func getConfigSecret(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) (*v1.Secret, error) {
+func getConfigSecret(ctx context.Context, namespace, name string, kubeClient client.Client, log logr.Logger) (*v1.Secret, error) {
 	// Get config secret
 	var configSecret = &v1.Secret{}
-	err := client.Get(ctx, types.NamespacedName{
+	err := kubeClient.Get(ctx, types.NamespacedName{
 		Namespace: namespace,
 		Name:      name},
 		configSecret)
 	cacheNotStartedError := cache.ErrCacheNotStarted{}
 	if err.Error() == cacheNotStartedError.Error() {
 		// cache has not been started, create temporary in-cluster config
-		log.Info("Cluster cache not started, will create a temporary in-cluster client")
+		log.Info("Cluster cache not started, will create a temporary in-cluster kubeClient")
 		cl, err := config.GetConfig()
 		if err != nil {
 			return nil, fmt.Errorf("unable to get kube-config %s", err)

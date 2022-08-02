@@ -1,9 +1,10 @@
 package listener
 
 import (
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 	"net/http"
 	"testing"
+
+	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,6 @@ type unmarshalTestCase struct {
 }
 
 func TestUnmarshalSKREvent(t *testing.T) {
-
 	testWatcherEvt := &types.WatcherEvent{
 		KymaCr:    "kyma",
 		Name:      "kyma-sample",
@@ -34,11 +34,11 @@ func TestUnmarshalSKREvent(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			//GIVEN
+			// GIVEN
 			req := newListenerRequest(t, http.MethodPost, hostName+testCase.urlPath, testWatcherEvt)
-			//WHEN
+			// WHEN
 			evtObject, err := unmarshalSKREvent(req)
-			//THEN
+			// THEN
 			if err != nil {
 				require.Equal(t, testCase.errMsg, err.Message)
 				require.Equal(t, testCase.httpStatus, err.httpErrorCode)
@@ -48,8 +48,6 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			require.Equal(t, testCase.httpStatus, http.StatusOK)
 			require.Equal(t, testCase.payload.Name, evtObject.GetName())
 			require.Equal(t, testCase.payload.Namespace, evtObject.GetNamespace())
-
 		})
 	}
-
 }
