@@ -18,22 +18,15 @@ package controllers
 
 import (
 	"context"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/dynamic/dynamicinformer"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-	"time"
-
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // KymaReconciler reconciles a Kyma object
@@ -56,9 +49,23 @@ type KymaReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
 func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
+	logger.Info("Reconciliation loop starting for", "resource", req.NamespacedName.String())
 
-	// TODO(user): your logic here
+	// check if kyma resource exists
+	kyma := &kyma.Kyma{}
+	if err := r.Get(ctx, req.NamespacedName, kyma); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info(req.NamespacedName.String() + " got deleted!")
+			// TODO: Delete Kyma from the corresponding ConfigMaps
+			return ctrl.Result{}, nil //nolint:wrapcheck
+		}
+		return ctrl.Result{}, err //nolint:wrapcheck
+	}
+
+	// Kyma resource was created or updated
+
+	kyma.Status.Conditions
 
 	return ctrl.Result{}, nil
 }
@@ -67,41 +74,13 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 func (r *KymaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	SchemeBuilder := &scheme.Builder{GroupVersion: kyma.GroupVersion}
-
 	SchemeBuilder.Register(&kyma.Kyma{})
 	// Create ControllerBuilder
-	controllerBuilder := ctrl.NewControllerManagedBy(mgr).For(&kyma.Kyma{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
+	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
+		For(
+			&kyma.Kyma{},
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		)
 
-	// Create Dynamic Client
-	client, err := dynamic.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		return err
-	}
-
-	// Check if Kyma CRD is installed
-	_, err = client.Resource(kyma.GroupVersionResource).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	// Create InformerFactory for Kyma CRs
-	informerFactory := dynamicinformer.NewDynamicSharedInformerFactory(client, time.Minute*30)
-	err = mgr.Add(manager.RunnableFunc(
-		func(ctx context.Context) error {
-			informerFactory.Start(ctx.Done())
-			return nil
-		}))
-	if err != nil {
-		return err
-	}
-	informer := &source.Informer{Informer: informerFactory.
-		ForResource(kyma.GroupVersionResource).
-		Informer()}
-
-	// Start watching Kyma CRs and trigger reconcile if generation changed
-	controllerBuilder.Watches(
-		informer,
-		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	return controllerBuilder.Complete(r)
 }
