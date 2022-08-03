@@ -43,7 +43,7 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-func initializeOperator() {
+func init() { //nolint:gochecknoinits
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1.AddToScheme(scheme))
 
@@ -51,8 +51,6 @@ func initializeOperator() {
 }
 
 func main() {
-	initializeOperator()
-
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string

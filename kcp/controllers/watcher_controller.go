@@ -32,7 +32,7 @@ import (
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 )
 
-// WatcherReconciler reconciles a Watcher object
+// WatcherReconciler reconciles a Watcher object.
 type WatcherReconciler struct {
 	client.Client
 	RestConfig *rest.Config

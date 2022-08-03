@@ -1,8 +1,10 @@
-package listener
+package listener_test
 
 import (
 	"net/http"
 	"testing"
+
+	"github.com/kyma-project/kyma-watcher/kcp/pkg/listener"
 
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 
@@ -20,6 +22,7 @@ type unmarshalTestCase struct {
 }
 
 func TestUnmarshalSKREvent(t *testing.T) {
+	t.Parallel()
 	testWatcherEvt := &types.WatcherEvent{
 		KymaCr:    "kyma",
 		Name:      "kyma-sample",
@@ -27,21 +30,34 @@ func TestUnmarshalSKREvent(t *testing.T) {
 	}
 
 	testCases := []unmarshalTestCase{
-		{"happy path", "/v1/kyma/event", testWatcherEvt, "", http.StatusOK},
-		{"missing contract version", "/r1/kyma/event", testWatcherEvt, "could not read contract version", http.StatusBadRequest},
-		{"empty contract version", "/v/kyma/event", testWatcherEvt, "contract version cannot be empty", http.StatusBadRequest},
+		{
+			"happy path", "/v1/kyma/event",
+			testWatcherEvt, "",
+			http.StatusOK,
+		},
+		{
+			"missing contract version", "/r1/kyma/event",
+			testWatcherEvt, "could not read contract version",
+			http.StatusBadRequest,
+		},
+		{
+			"empty contract version", "/v/kyma/event",
+			testWatcherEvt, "contract version cannot be empty",
+			http.StatusBadRequest,
+		},
 	}
 
-	for _, testCase := range testCases {
+	for _, testCase := range testCases { //nolint:paralleltest
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			// GIVEN
 			req := newListenerRequest(t, http.MethodPost, hostName+testCase.urlPath, testWatcherEvt)
 			// WHEN
-			evtObject, err := unmarshalSKREvent(req)
+			evtObject, err := listener.UnmarshalSKREvent(req)
 			// THEN
 			if err != nil {
 				require.Equal(t, testCase.errMsg, err.Message)
-				require.Equal(t, testCase.httpStatus, err.httpErrorCode)
+				require.Equal(t, testCase.httpStatus, err.HTTPErrorCode)
 				return
 			}
 			require.Equal(t, testCase.errMsg, "")

@@ -16,11 +16,11 @@ const kymaNameLabel = "operator.kyma-project.io/kyma-name"
 
 type UnmarshalError struct {
 	Message       string
-	httpErrorCode int
+	HTTPErrorCode int
 }
 
-func unmarshalSKREvent(r *http.Request) (*unstructured.Unstructured, *UnmarshalError) {
-	pathVariables := strings.Split(r.URL.Path, "/")
+func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *UnmarshalError) {
+	pathVariables := strings.Split(req.URL.Path, "/")
 
 	var contractVersion string
 	_, err := fmt.Sscanf(pathVariables[1], "v%s", &contractVersion)
@@ -33,11 +33,11 @@ func unmarshalSKREvent(r *http.Request) (*unstructured.Unstructured, *UnmarshalE
 		return nil, &UnmarshalError{"contract version cannot be empty", http.StatusBadRequest}
 	}
 
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, &UnmarshalError{"could not read request body", http.StatusInternalServerError}
 	}
-	defer r.Body.Close()
+	defer req.Body.Close()
 
 	watcherEvent := &types.WatcherEvent{}
 	err = json.Unmarshal(body, watcherEvent)
