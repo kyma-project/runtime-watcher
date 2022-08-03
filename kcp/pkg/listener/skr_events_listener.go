@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -46,7 +47,8 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 	router.HandleFunc(listenerPattern, l.HandleSKREvent())
 
 	// start web server
-	server := &http.Server{Addr: l.Addr, Handler: router}
+	const defaultTimeout = time.Second * 60
+	server := &http.Server{Addr: l.Addr, Handler: router, ReadHeaderTimeout: defaultTimeout, ReadTimeout: defaultTimeout}
 	go func() {
 		l.Logger.WithValues(
 			"Addr", l.Addr,
