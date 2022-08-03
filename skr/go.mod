@@ -2,11 +2,9 @@ module github.com/kyma-project/kyma-watcher/skr
 
 go 1.18
 
-replace github.com/kyma-project/kyma-watcher/kcp => ../kcp
-
 require (
 	github.com/go-logr/logr v1.2.3
-	github.com/kyma-project/kyma-watcher/kcp v0.0.0-00010101000000-000000000000
+	github.com/kyma-project/kyma-watcher/kcp v0.0.0-20220801122243-5ce523a796aa
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	k8s.io/api v0.24.3
