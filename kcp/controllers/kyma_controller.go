@@ -18,9 +18,13 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
+	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +38,8 @@ type KymaReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
+
+const defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
 
 //+kubebuilder:rbac:groups=kyma-project.io,resources=kymas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kyma-project.io,resources=kymas/status,verbs=get;update;patch
@@ -53,8 +59,8 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	logger.Info("Reconciliation loop starting for", "resource", req.NamespacedName.String())
 
 	// check if kyma resource exists
-	kyma := &kyma.Kyma{}
-	if err := r.Get(ctx, req.NamespacedName, kyma); err != nil {
+	kymaCR := &kyma.Kyma{}
+	if err := r.Get(ctx, req.NamespacedName, kymaCR); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info(req.NamespacedName.String() + " got deleted!")
 			// TODO: Delete Kyma from the corresponding ConfigMaps
@@ -64,8 +70,28 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Kyma resource was created or updated
+	// Get installed modules fomr Kyma CR
+	modules := getModulesList(kymaCR)
+	if len(modules) == 0 {
+		// TODO return error
+	}
+	for _, module := range modules {
+		watcherCR, err := r.getWatcherCR(ctx, module, kymaCR.Namespace)
+		if err != nil {
+			// Corresponding WatcherCR could not be found
+			//TODO
+		}
+		if _, ok := watcherCR.Labels[defaultOperatorWatcherCRLabel]; ok == true {
+			watcherConfigMap, err := r.getWatcherCM(module)
+			if err != nil {
+				// TODO log error that configmap was not found
+			}
+			err = updateConfigMap(watcherConfigMap, kymaCR)
+		} else {
+			// Nothing has to be done
+		}
 
-	kyma.Status.Conditions
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -79,8 +105,31 @@ func (r *KymaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	controllerBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(
 			&kyma.Kyma{},
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		)
 
 	return controllerBuilder.Complete(r)
+}
+
+func getModulesList(kymaResource *kyma.Kyma) []kyma.Module {
+	modules := kymaResource.Spec.Modules
+	return modules
+}
+
+func (r *KymaReconciler) getWatcherCR(ctx context.Context, module kyma.Module, namespace string) (*componentv1alpha1.Watcher, error) {
+	watcherCRName := fmt.Sprintf("%s-%s", module.Name, module.Channel)
+	watcherCR := &componentv1alpha1.Watcher{}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: watcherCRName}, watcherCR); err != nil {
+		return nil, err
+	}
+	return watcherCR, nil
+}
+
+func (r *KymaReconciler) getWatcherCM(module string) (*v1.ConfigMap, error) {
+	// TODO implement
+	return nil, nil
+}
+
+func updateConfigMap(watcherConfigMap *v1.ConfigMap, kymaCR *kyma.Kyma) error {
+	return nil
 }
