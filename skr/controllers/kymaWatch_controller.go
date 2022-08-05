@@ -21,13 +21,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 
 	"github.com/kyma-project/kyma-watcher/skr/pkg/factory"
-
-	"io/ioutil"
-	"net/http"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
@@ -46,12 +45,12 @@ import (
 
 type EventType string
 
-// KymaWatcherReconciler reconciles a ConfigMap object
+// KymaWatcherReconciler reconciles a ConfigMap object.
 type KymaWatcherReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
 	Logger  logr.Logger
-	KcpIp   string
+	KcpIP   string
 	KcpPort string
 }
 
@@ -73,55 +72,53 @@ func (r *KymaWatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 func (r *KymaWatcherReconciler) CreateFunc(e event.CreateEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Create Event: %s", e.Object.GetName()))
-	_, err := r.sendEventRequest(e)
-	if err != nil {
-		r.Logger.Error(err, "Error occured while sending request")
+	if _, err := r.sendEventRequest(e); err != nil {
+		r.Logger.Error(err, "Error occurred while sending request")
 		return
 	}
-
 }
 
 func (r *KymaWatcherReconciler) UpdateFunc(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Update Event: %s", e.ObjectNew.GetName()))
-	_, err := r.sendEventRequest(e)
-	if err != nil {
-		r.Logger.Error(err, "Error occured while sending request")
+	if _, err := r.sendEventRequest(e); err != nil {
+		r.Logger.Error(err, "Error occurred while sending request")
 		return
 	}
 }
 
 func (r *KymaWatcherReconciler) DeleteFunc(e event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Delete Event: %s", e.Object.GetName()))
-	_, err := r.sendEventRequest(e)
-	if err != nil {
-		r.Logger.Error(err, "Error occured while sending request")
+	if _, err := r.sendEventRequest(e); err != nil {
+		r.Logger.Error(err, "Error occurred while sending request")
 		return
 	}
 }
 
 func (r *KymaWatcherReconciler) GenericFunc(e event.GenericEvent, q workqueue.RateLimitingInterface) {
 	r.Logger.Info(fmt.Sprintf("Generic Event: %s", e.Object.GetName()))
-	_, err := r.sendEventRequest(e)
-	if err != nil {
-		r.Logger.Error(err, "Error occured while sending request")
+	if _, err := r.sendEventRequest(e); err != nil {
+		r.Logger.Error(err, "Error occurred while sending request")
 		return
 	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	// Create ControllerBuilder
 	controllerBuilder := ctrl.NewControllerManagedBy(mgr).For(&v1.ConfigMap{})
 
 	// Create Dynamic Client
-	client, err := dynamic.NewForConfig(mgr.GetConfig())
+	dynamicClient, err := dynamic.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err
 	}
 
 	// Get resources to watch for configured GVs
-	gvrList := config.GetGvr(context.TODO(), config.WatcherSecretNamespace, config.WatcherSecretName, mgr.GetClient(), r.Logger)
+	gvrList := config.GetGvr(context.TODO(),
+		config.WatcherSecretNamespace,
+		config.WatcherSecretName,
+		mgr.GetClient(),
+		r.Logger)
 	if err != nil {
 		return err
 	}
@@ -129,20 +126,24 @@ func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// InformerSet for GVR without labels
 	dynamicInformerSet := map[string]*source.Informer{}
 
-	informerFactory, err := factory.InformerFactory(client, mgr)
+	informerFactory, err := factory.InformerFactory(dynamicClient, mgr)
 	if err != nil {
 		return err
 	}
 	for _, gvr := range gvrList {
 		if len(gvr.Labels) == 0 {
-			dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{Informer: informerFactory.ForResource(gvr.Gvr).Informer()}
+			dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{
+				Informer: informerFactory.ForResource(gvr.Gvr).Informer(),
+			}
 		} else {
 			for label, value := range gvr.Labels {
-				filteredInformerFactory, err := factory.InformerFactoryWithLabel(client, mgr, label, value)
+				filteredInformerFactory, err := factory.InformerFactoryWithLabel(dynamicClient, mgr, label, value)
 				if err != nil {
 					return err
 				}
-				dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{Informer: filteredInformerFactory.ForResource(gvr.Gvr).Informer()}
+				dynamicInformerSet[gvr.Gvr.String()] = &source.Informer{
+					Informer: filteredInformerFactory.ForResource(gvr.Gvr).Informer(),
+				}
 			}
 		}
 	}
@@ -151,7 +152,10 @@ func (r *KymaWatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return controllerBuilder.Complete(r)
 }
 
-func (r *KymaWatcherReconciler) triggerWatch(controllerBuilder *builder.Builder, dynamicInformerSet map[string]*source.Informer) {
+func (r *KymaWatcherReconciler) triggerWatch(
+	controllerBuilder *builder.Builder,
+	dynamicInformerSet map[string]*source.Informer,
+) {
 	// Trigger watch for each informer
 	for gvr, informer := range dynamicInformerSet {
 		controllerBuilder = controllerBuilder.
@@ -166,7 +170,7 @@ func (r *KymaWatcherReconciler) triggerWatch(controllerBuilder *builder.Builder,
 	}
 }
 
-//TODO - Next Iteration: Implement Retry mechanism
+// TODO - Next Iteration: Implement Retry mechanism.
 func (r *KymaWatcherReconciler) sendEventRequest(newEvent interface{}) (string, error) {
 	var component string
 	var kymaCr string
@@ -197,19 +201,28 @@ func (r *KymaWatcherReconciler) sendEventRequest(newEvent interface{}) (string, 
 		Namespace: namespace,
 		Name:      name,
 	}
-	postBody, _ := json.Marshal(watcherEvent)
-
+	postBody, err := json.Marshal(watcherEvent)
+	if err != nil {
+		return "", err
+	}
 	responseBody := bytes.NewBuffer(postBody)
-	url := fmt.Sprintf("%s:%s/%s/%s/%s", r.KcpIp, r.KcpPort, config.ContractVersion, component, config.EventEndpoint)
-	resp, err := http.Post(url, "application/json", responseBody)
-	//Handle Error
+
+	url := fmt.Sprintf("%s:%s/%s/%s/%s",
+		r.KcpIP,
+		r.KcpPort,
+		config.ContractVersion,
+		component,
+		config.EventEndpoint)
+
+	resp, err := http.Post(url, "application/json", responseBody) //nolint
+	// Handle Error
 	if err != nil {
 		r.Logger.Info(fmt.Sprintf("Error POST %#v", err))
 		return "", err
 	}
 	defer resp.Body.Close()
-	//Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

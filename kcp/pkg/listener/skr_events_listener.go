@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -14,24 +15,22 @@ import (
 const paramContractVersion = "1"
 
 func RegisterListenerComponent(addr, componentName string) (*SKREventListener, *source.Channel) {
-
 	eventSource := make(chan event.GenericEvent)
 	return &SKREventListener{
-		addr:           addr,
-		componentName:  componentName,
+		Addr:           addr,
+		ComponentName:  componentName,
 		receivedEvents: eventSource,
 	}, &source.Channel{Source: eventSource}
-
 }
 
 type SKREventListener struct {
-	addr           string
-	logger         logr.Logger
-	componentName  string
+	Addr           string
+	Logger         logr.Logger
+	ComponentName  string
 	receivedEvents chan event.GenericEvent
 }
 
-func (l *SKREventListener) ReceivedEvents() chan event.GenericEvent {
+func (l *SKREventListener) GetReceivedEvents() chan event.GenericEvent {
 	if l.receivedEvents == nil {
 		l.receivedEvents = make(chan event.GenericEvent)
 	}
@@ -39,60 +38,55 @@ func (l *SKREventListener) ReceivedEvents() chan event.GenericEvent {
 }
 
 func (l *SKREventListener) Start(ctx context.Context) error {
-
-	l.logger = ctrlLog.FromContext(ctx, "Module", "Listener")
+	l.Logger = ctrlLog.FromContext(ctx, "Module", "Listener")
 
 	router := http.NewServeMux()
 
-	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.componentName)
+	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.ComponentName)
 
-	router.HandleFunc(listenerPattern, l.handleSKREvent())
+	router.HandleFunc(listenerPattern, l.HandleSKREvent())
 
-	//start web server
-	server := &http.Server{Addr: l.addr, Handler: router}
+	// start web server
+	const defaultTimeout = time.Second * 60
+	server := &http.Server{Addr: l.Addr, Handler: router, ReadHeaderTimeout: defaultTimeout, ReadTimeout: defaultTimeout}
 	go func() {
-		l.logger.WithValues(
-			"Addr", l.addr,
+		l.Logger.WithValues(
+			"Addr", l.Addr,
 			"ApiPath", listenerPattern,
 		).Info("Listener is starting up...")
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			l.logger.Error(err, "Webserver startup failed")
+			l.Logger.Error(err, "Webserver startup failed")
 		}
 	}()
 	<-ctx.Done()
-	l.logger.Info("SKR events listener is shutting down: context got closed")
+	l.Logger.Info("SKR events listener is shutting down: context got closed")
 	return server.Shutdown(ctx)
-
 }
 
-func (l *SKREventListener) handleSKREvent() http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		//http method support: POST only is allowed
-		if r.Method != http.MethodPost {
-			errorMessage := fmt.Sprintf("%s method is not allowed on this path", r.Method)
-			l.logger.Error(nil, errorMessage)
-			http.Error(w, errorMessage, http.StatusMethodNotAllowed)
+func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		// http method support: POST only is allowed
+		if req.Method != http.MethodPost {
+			errorMessage := fmt.Sprintf("%s method is not allowed on this path", req.Method)
+			l.Logger.Error(nil, errorMessage)
+			http.Error(writer, errorMessage, http.StatusMethodNotAllowed)
 			return
 		}
 
-		l.logger.V(1).Info("received event from SKR")
+		l.Logger.V(1).Info("received event from SKR")
 
-		//unmarshal received event
-		genericEvtObject, unmarshalErr := unmarshalSKREvent(r)
+		// unmarshal received event
+		genericEvtObject, unmarshalErr := UnmarshalSKREvent(req)
 		if unmarshalErr != nil {
-			l.logger.Error(nil, unmarshalErr.Message)
-			http.Error(w, unmarshalErr.Message, unmarshalErr.httpErrorCode)
+			l.Logger.Error(nil, unmarshalErr.Message)
+			http.Error(writer, unmarshalErr.Message, unmarshalErr.HTTPErrorCode)
 			return
 		}
 
-		//add event to the channel
+		// add event to the channel
 		l.receivedEvents <- event.GenericEvent{Object: genericEvtObject}
-		l.logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
-		w.WriteHeader(http.StatusOK)
-
+		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
+		writer.WriteHeader(http.StatusOK)
 	}
-
 }

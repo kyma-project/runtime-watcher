@@ -22,7 +22,7 @@ import (
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// WatcherSpec defines the desired state of Watcher
+// WatcherSpec defines the desired state of Watcher.
 type WatcherSpec struct {
 	// Watcher URL consists of <IngressEndpoint>:<IngressPort>/ContractVersion/ComponentName
 
@@ -96,7 +96,7 @@ type WatcherStatus struct {
 	Conditions []WatcherCondition `json:"conditions"`
 }
 
-// WatcherCondition describes condition information for Watcher
+// WatcherCondition describes condition information for Watcher.
 type WatcherCondition struct {
 	// Type is used to reflect what type of condition we are dealing with. Most commonly ConditionTypeReady it is used
 	// as extension marker in the future
@@ -144,7 +144,7 @@ const (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Watcher is the Schema for the watchers API
+// Watcher is the Schema for the watchers API.
 type Watcher struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -160,7 +160,7 @@ type Watcher struct {
 
 //+kubebuilder:object:root=true
 
-// WatcherList contains a list of Watcher
+// WatcherList contains a list of Watcher.
 type WatcherList struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -169,6 +169,6 @@ type WatcherList struct {
 	Items           []Watcher `json:"items"`
 }
 
-func init() {
+func init() { //nolint:gochecknoinits
 	SchemeBuilder.Register(&Watcher{}, &WatcherList{})
 }

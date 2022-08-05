@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-// JSON struct for GroupVersionResources to watch
+// JSON struct for GroupVersionResources to watch.
 type gvrToWatch struct {
 	GvrList []struct {
 		Group          string           `json:"group"`
@@ -36,9 +36,9 @@ type WatchItem struct {
 	Labels map[string]string
 }
 
-func GetGvr(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) []WatchItem {
+func GetGvr(ctx context.Context, namespace, name string, kubeClient client.Client, log logr.Logger) []WatchItem {
 	// Fetch config secret
-	configSecret, err := getConfigSecret(ctx, namespace, name, client, log)
+	configSecret, err := getConfigSecret(ctx, namespace, name, kubeClient, log)
 	if err != nil {
 		log.Info(fmt.Sprintf("Error fetching config secret: %s", err.Error()))
 		return nil
@@ -53,17 +53,20 @@ func GetGvr(ctx context.Context, namespace, name string, client client.Client, l
 	}
 
 	// Construct GVR list with labels
-	var grvList []WatchItem
+
+	gvrList := make([]WatchItem, 0, len(data.GvrList))
 	for _, gvr := range data.GvrList {
-		grvList = append(grvList,
+		gvrList = append(gvrList,
 			WatchItem{
 				Gvr: schema.GroupVersionResource{
 					Group:    gvr.Group,
 					Version:  gvr.Version,
-					Resource: gvr.Resource},
-				Labels: labelsListToMap(gvr.LabelValueList)})
+					Resource: gvr.Resource,
+				},
+				Labels: labelsListToMap(gvr.LabelValueList),
+			})
 	}
-	return grvList
+	return gvrList
 }
 
 func labelsListToMap(labelList []LabelValuePair) map[string]string {
@@ -74,30 +77,35 @@ func labelsListToMap(labelList []LabelValuePair) map[string]string {
 	return lvMap
 }
 
-//TODO: In next iteration: mount secret in deployment instead of using kubeconfig
-func getConfigSecret(ctx context.Context, namespace, name string, client client.Client, log logr.Logger) (*v1.Secret, error) {
+// TODO: In next iteration: mount secret in deployment instead of using kubeconfig.
+func getConfigSecret(ctx context.Context,
+	namespace,
+	name string, kubeClient client.Client,
+	log logr.Logger,
+) (*v1.Secret, error) {
 	// Get config secret
-	var configSecret = &v1.Secret{}
-	err := client.Get(ctx, types.NamespacedName{
+	configSecret := &v1.Secret{}
+	err := kubeClient.Get(ctx, types.NamespacedName{
 		Namespace: namespace,
-		Name:      name},
+		Name:      name,
+	},
 		configSecret)
 	cacheNotStartedError := cache.ErrCacheNotStarted{}
 	if err.Error() == cacheNotStartedError.Error() {
 		// cache has not been started, create temporary in-cluster config
-		log.Info("Cluster cache not started, will create a temporary in-cluster client")
+		log.Info("Cluster cache not started, will create a temporary in-cluster kubeClient")
 		cl, err := config.GetConfig()
 		if err != nil {
-			return nil, fmt.Errorf("unable to get kube-config %s", err)
+			return nil, fmt.Errorf("unable to get kube-config %w", err)
 		}
 
 		clientset, err := kubernetes.NewForConfig(cl)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create our clientset: %s", err)
+			return nil, fmt.Errorf("unable to create our clientset: %w", err)
 		}
 		configSecret, err = clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("no Secret for label reference found: %s", err)
+			return nil, fmt.Errorf("no Secret for label reference found: %w", err)
 		}
 	}
 	return configSecret, nil
