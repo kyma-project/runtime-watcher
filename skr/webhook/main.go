@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
-	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
-	"io/ioutil"
+	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
+	"github.com/kyma-project/manifest-operator/operator/pkg/util"
 	"net/http"
 	"os"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 
 	"k8s.io/klog/v2"
@@ -24,72 +22,56 @@ type ServerParameters struct {
 var parameters ServerParameters
 
 func main() {
-	// check env for relevant values
-	portEnv := os.Getenv("WEBHOOK_PORT")
-	port := 8443
+	logger := ctrl.Log.WithName("skr-webhook")
 	var err error
 
+	// port
+	portEnv := os.Getenv("WEBHOOK_PORT")
+	defaultPort := 8443
 	if portEnv != "" {
-		port, err = strconv.Atoi(portEnv)
+		defaultPort, err = strconv.Atoi(portEnv)
 		if err != nil {
-			klog.Error("Error parsing Webhook server port: ", err.Error())
+			logger.Error(err, "Error parsing Webhook server port")
 		}
 	}
+	parameters.port = defaultPort
 
-	parameters.port = port
-
-	t := os.Getenv("TLS_ENABLED")
+	// tls
+	tlsEnabledEnv := os.Getenv("TLS_ENABLED")
 	tlsEnabled := false
-
-	if t != "" {
-		tlsEnabled, err = strconv.ParseBool(t)
+	if tlsEnabledEnv != "" {
+		tlsEnabled, err = strconv.ParseBool(tlsEnabledEnv)
 		if err != nil {
-			klog.Error("Error parsing tls: ", err.Error())
+			logger.Error(err, "Error parsing tls flag")
 		}
 	}
 	parameters.tlsEnabled = tlsEnabled
-
 	parameters.certFile = os.Getenv("TLS_CERT")
 	parameters.keyFile = os.Getenv("TLS_KEY")
 
+	// rest client
+	restConfig, err := util.GetConfig("", "")
 	if err != nil {
-		klog.Fatalf("Config build: ", err.Error())
+		logger.Error(err, "rest config could not be determined for skr-webhook")
+		return
+	}
+	client, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		logger.Error(err, "rest client could not be determined for skr-webhook")
+		return
 	}
 
-	http.HandleFunc("/validate", func(handler http.ResponseWriter, req *http.Request) {
-		fmt.Println("send web requests to kcp")
+	// handler
+	handler := &internal.Handler{
+		Client: client,
+		Logger: logger,
+	}
+	http.HandleFunc("/validate", handler.Handle)
 
-		watcherEvent := &types.WatcherEvent{
-			KymaCr:    "kyma-sample",
-			Namespace: "default",
-			Name:      "manifestkyma-sample",
-		}
-		postBody, _ := json.Marshal(watcherEvent)
-
-		responseBody := bytes.NewBuffer(postBody)
-
-		kcpIp := os.Getenv("KCP_IP")
-		kcpPort := os.Getenv("KCP_PORT")
-		contract := os.Getenv("KCP_CONTRACT")
-		component := os.Getenv("COMPONENT")
-
-		url := fmt.Sprintf("http://%s:%s/%s/%s/%s", kcpIp, kcpPort, contract, component, config.EventEndpoint)
-		fmt.Println("url" + url)
-		resp, err := http.Post(url, "application/json", responseBody)
-
-		if err != nil {
-			fmt.Println("error" + err.Error())
-		}
-		fmt.Println(resp)
-		body, err := ioutil.ReadAll(req.Body)
-		err = ioutil.WriteFile("/tmp/request", body, 0644)
-		if err != nil {
-			panic(err.Error())
-		}
-	})
-
+	// server
 	if parameters.tlsEnabled {
-		klog.Fatal(http.ListenAndServeTLS(":"+strconv.Itoa(parameters.port), parameters.certFile, parameters.keyFile, nil))
+		klog.Fatal(http.ListenAndServeTLS(":"+strconv.Itoa(parameters.port), parameters.certFile,
+			parameters.keyFile, nil))
 	} else {
 		klog.Fatal(http.ListenAndServe(":"+strconv.Itoa(parameters.port), nil))
 	}

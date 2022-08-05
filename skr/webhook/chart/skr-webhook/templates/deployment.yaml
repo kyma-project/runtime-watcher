@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: skr-webhook
+  namespace: default
+spec:
+  selector:
+    #selector for deployment labels (key, values)
+    app: skr-webhook
+  ports:
+    - port: {{.Values.service.port}}
+      targetPort: watcher-container-port
+      name: webhook
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skr-webhook
+  namespace: default
+  labels:
+    app: skr-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: skr-webhook
+  template:
+    metadata:
+      labels:
+        app: skr-webhook
+    spec:
+      containers:
+        - name: server
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: WEBHOOK_PORT
+              value: {{.Values.service.targetPort}}
+            - name: TLS_ENABLED
+              value: "true"
+            - name: TLS_KEY
+              value: "/app/etc/ssl/tls.key"
+            - name: TLS_CERT
+              value: "/app/etc/ssl/tls.crt"
+            - name: KCP_IP
+              value: "<load-balancer-ip-here>"
+            - name: KCP_PORT
+              value: "80"
+            - name: KCP_CONTRACT
+              value: {{.Values.service.contactVersion}}
+          image: adityabhatia/webhook:0.1.1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{.Values.service.targetPort}}
+              name: watcher-container-port
+          volumeMounts:
+            - name: webhook-tls-certs
+              mountPath: /app/etc/ssl/
+              readOnly: true
+      volumes:
+        - name: webhook-tls-certs
+          secret:
+            secretName: skr-webhook-tls
