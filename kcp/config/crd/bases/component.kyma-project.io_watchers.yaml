@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Watcher is the Schema for the watchers API
+        description: Watcher is the Schema for the watchers API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: WatcherSpec defines the desired state of Watcher
+            description: WatcherSpec defines the desired state of Watcher.
             properties:
               componentName:
                 description: ComponentName signifies the component name appended to
@@ -108,7 +108,7 @@ spec:
                   Watcher.
                 items:
                   description: WatcherCondition describes condition information for
-                    Watcher
+                    Watcher.
                   properties:
                     lastTransitionTime:
                       description: Timestamp for when Watcher last transitioned from
