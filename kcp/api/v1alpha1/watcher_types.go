@@ -22,7 +22,7 @@ import (
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// WatcherSpec defines the desired state of Watcher
+// WatcherSpec defines the desired state of Watcher.
 type WatcherSpec struct {
 	// Watcher URL consists of <IngressEndpoint>:<IngressPort>/ContractVersion/ComponentName
 
@@ -34,6 +34,28 @@ type WatcherSpec struct {
 
 	// ServiceInfo describes the service information of the operator
 	ServiceInfo ServiceInfo `json:"serviceInfo"`
+
+	// GvrsToWatch describes the gvr and their labels that should be watched
+	GvrsToWatch []WatchableGvr `json:"gvrsToWatch"`
+}
+
+type Gvr struct {
+	// Group describes the group of the watchable resource
+	Group string `json:"group"`
+
+	// Version describes the version of the watchable resource
+	Version string `json:"version"`
+
+	// Resource describes the resource should be watched
+	Resource string `json:"resource"`
+}
+
+type WatchableGvr struct {
+	// Gvr describes the gvr that should be watched
+	Gvr Gvr `json:"gvr"`
+
+	// LabelsToWatch describes the labels that should be watched from the gvr
+	LabelsToWatch map[string]string `json:"labelsToWatch"`
 }
 
 type ServiceInfo struct {
@@ -74,11 +96,11 @@ type WatcherStatus struct {
 	Conditions []WatcherCondition `json:"conditions"`
 }
 
-// WatcherCondition describes condition information for Watcher
+// WatcherCondition describes condition information for Watcher.
 type WatcherCondition struct {
 	// Type is used to reflect what type of condition we are dealing with. Most commonly ConditionTypeReady it is used
 	// as extension marker in the future
-	Type WatcherConditionStatus `json:"type"`
+	Type WatcherConditionType `json:"type"`
 
 	// Status of the Watcher Condition.
 	// Value can be one of ("True", "False", "Unknown").
@@ -122,7 +144,7 @@ const (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Watcher is the Schema for the watchers API
+// Watcher is the Schema for the watchers API.
 type Watcher struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -138,7 +160,7 @@ type Watcher struct {
 
 //+kubebuilder:object:root=true
 
-// WatcherList contains a list of Watcher
+// WatcherList contains a list of Watcher.
 type WatcherList struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -147,6 +169,6 @@ type WatcherList struct {
 	Items           []Watcher `json:"items"`
 }
 
-func init() {
+func init() { //nolint:gochecknoinits
 	SchemeBuilder.Register(&Watcher{}, &WatcherList{})
 }

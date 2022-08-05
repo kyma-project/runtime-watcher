@@ -39,11 +39,15 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme   = runtime.NewScheme()        //nolint:gochecknoglobals
+	setupLog = ctrl.Log.WithName("setup") //nolint:gochecknoglobals
 )
 
-func init() {
+const (
+	port = 9443
+)
+
+func init() { //nolint:gochecknoinits
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1.AddToScheme(scheme))
 
@@ -54,14 +58,14 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
-	var kcpIp, kcpPort string
+	var kcpIP, kcpPort string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8083", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8084", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&kcpIp, "kcp-ip", config.KcpIp, "IP-Adress of KCP")
+	flag.StringVar(&kcpIP, "kcp-ip", config.KcpIP, "IP-Address of KCP")
 	flag.StringVar(&kcpPort, "kcp-port", config.KcpPort, "Exposed event port of KCP")
 	opts := zap.Options{
 		Development: true,
@@ -74,7 +78,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Port:                   port,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "893110f8.kyma-project.io",
@@ -88,13 +92,13 @@ func main() {
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
 		Logger:  mgr.GetLogger(),
-		KcpIp:   kcpIp,
+		KcpIP:   kcpIP,
 		KcpPort: kcpPort,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KymaWatcherReconciler")
 		os.Exit(1)
 	}
-	
+
 	//+kubebuilder:scaffold:builder
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

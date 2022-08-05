@@ -1,6 +1,8 @@
-
 # Image URL to use all building/pushing image targets
-IMG ?= jaythedevil666/kyma-watcher:latest
+# Include valid image value before executing any kustomize targets
+IMG ?= <your-own-skr-watcher-image>
+
+HELM_CHART_TEMPLATES_DIR=$(shell pwd)/chart/templates
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
@@ -71,7 +73,6 @@ run: manifests generate fmt vet ## Run kyma-watcher from your host.
 	go run ./main.go
 
 .PHONY: docker-build
-.PHONY: docker-build
 docker-build: #test ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
@@ -107,6 +108,12 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## NOT SUPPORTED - Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: helm-prepare
+helm-prepare: manifests kustomize ## Generates k8s manifests and writes them as a Helm template in the watcher helm-chart
+	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
+	$(KUSTOMIZE) build config/default > ${HELM_CHART_TEMPLATES_DIR}/skr-watcher-manifests.yaml
+
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
@@ -118,10 +125,12 @@ $(LOCALBIN):
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.8.0
+GOLANG_CI_LINT_VERSION ?= v1.46.2
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -138,3 +147,9 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: lint
+lint: ## Run golangci-lint against code.
+	go mod vendor
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
+	$(LOCALBIN)/golangci-lint run

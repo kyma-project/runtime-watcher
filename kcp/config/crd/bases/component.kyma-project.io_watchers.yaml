@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Watcher is the Schema for the watchers API
+        description: Watcher is the Schema for the watchers API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: WatcherSpec defines the desired state of Watcher
+            description: WatcherSpec defines the desired state of Watcher.
             properties:
               componentName:
                 description: ComponentName signifies the component name appended to
@@ -43,6 +43,41 @@ spec:
                 description: ContractVersion signifies the contract version appended
                   to the Watcher endpoint.
                 type: string
+              gvrsToWatch:
+                description: GvrsToWatch describes the gvr and their labels that should
+                  be watched
+                items:
+                  properties:
+                    gvr:
+                      description: Gvr describes the gvr that should be watched
+                      properties:
+                        group:
+                          description: Group describes the group of the watchable
+                            resource
+                          type: string
+                        resource:
+                          description: Resource describes the resource should be watched
+                          type: string
+                        version:
+                          description: Version describes the version of the watchable
+                            resource
+                          type: string
+                      required:
+                      - group
+                      - resource
+                      - version
+                      type: object
+                    labelsToWatch:
+                      additionalProperties:
+                        type: string
+                      description: LabelsToWatch describes the labels that should
+                        be watched from the gvr
+                      type: object
+                  required:
+                  - gvr
+                  - labelsToWatch
+                  type: object
+                type: array
               serviceInfo:
                 description: ServiceInfo describes the service information of the
                   operator
@@ -62,6 +97,7 @@ spec:
             required:
             - componentName
             - contractVersion
+            - gvrsToWatch
             - serviceInfo
             type: object
           status:
@@ -72,7 +108,7 @@ spec:
                   Watcher.
                 items:
                   description: WatcherCondition describes condition information for
-                    Watcher
+                    Watcher.
                   properties:
                     lastTransitionTime:
                       description: Timestamp for when Watcher last transitioned from
