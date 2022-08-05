@@ -18,11 +18,13 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
-// KymaReconciler reconciles a Kyma object
+// KymaReconciler reconciles a Kyma object.
 type KymaReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -47,58 +49,49 @@ const defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Kyma object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
 func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciliation loop starting for", "resource", req.NamespacedName.String())
-
 	// check if kyma resource exists
 	kymaCR := &kyma.Kyma{}
 	if err := r.Get(ctx, req.NamespacedName, kymaCR); err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info(req.NamespacedName.String() + " got deleted!")
-			// TODO: Delete Kyma from the corresponding ConfigMaps
+		if k8serrors.IsNotFound(err) {
+			logger.Info(req.NamespacedName.String() + " got deleted! Reference in WatcherCR ConfigMap will be removed")
+			// TODO: Delete Kyma from the corresponding ConfigMaps - will be implemented in next iteration
 			return ctrl.Result{}, nil //nolint:wrapcheck
 		}
 		return ctrl.Result{}, err //nolint:wrapcheck
 	}
 
 	// Kyma resource was created or updated
-	// Get installed modules fomr Kyma CR
+	// Get installed modules from Kyma CR
 	modules := getModulesList(kymaCR)
 	if len(modules) == 0 {
-		// TODO return error
+		return ctrl.Result{}, errors.New("module list of KymaCR is empty")
 	}
 	for _, module := range modules {
 		watcherCR, err := r.getWatcherCR(ctx, module, kymaCR.Namespace)
 		if err != nil {
-			// Corresponding WatcherCR could not be found
-			//TODO
+			return ctrl.Result{}, err
 		}
-		if _, ok := watcherCR.Labels[defaultOperatorWatcherCRLabel]; ok == true {
-			watcherConfigMap, err := r.getWatcherCM(module)
+		if _, ok := watcherCR.Labels[defaultOperatorWatcherCRLabel]; ok {
+			watcherConfigMap, err := r.getWatcherCM(ctx, module, kymaCR.Namespace)
 			if err != nil {
-				// TODO log error that configmap was not found
+				return ctrl.Result{}, err
 			}
-			err = updateConfigMap(watcherConfigMap, kymaCR)
-		} else {
-			// Nothing has to be done
+			err = r.updateConfigMap(ctx, watcherConfigMap, kymaCR)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			logger.Info("Corresponding ConfigMap of WatcherCR got updated.")
+			return ctrl.Result{}, nil
 		}
-
 	}
-
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KymaReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	SchemeBuilder := &scheme.Builder{GroupVersion: kyma.GroupVersion}
 	SchemeBuilder.Register(&kyma.Kyma{})
 	// Create ControllerBuilder
@@ -116,7 +109,10 @@ func getModulesList(kymaResource *kyma.Kyma) []kyma.Module {
 	return modules
 }
 
-func (r *KymaReconciler) getWatcherCR(ctx context.Context, module kyma.Module, namespace string) (*componentv1alpha1.Watcher, error) {
+func (r *KymaReconciler) getWatcherCR(ctx context.Context,
+	module kyma.Module,
+	namespace string,
+) (*componentv1alpha1.Watcher, error) {
 	watcherCRName := fmt.Sprintf("%s-%s", module.Name, module.Channel)
 	watcherCR := &componentv1alpha1.Watcher{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: watcherCRName}, watcherCR); err != nil {
@@ -125,11 +121,34 @@ func (r *KymaReconciler) getWatcherCR(ctx context.Context, module kyma.Module, n
 	return watcherCR, nil
 }
 
-func (r *KymaReconciler) getWatcherCM(module string) (*v1.ConfigMap, error) {
-	// TODO implement
-	return nil, nil
+func (r *KymaReconciler) getWatcherCM(ctx context.Context,
+	module kyma.Module,
+	namespace string,
+) (*v1.ConfigMap, error) {
+	watcherConfigMapName := fmt.Sprintf("%s-%s", module.Name, module.Channel)
+	watcherConfigMap := &v1.ConfigMap{}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: watcherConfigMapName},
+		watcherConfigMap); err != nil {
+		return nil, err
+	}
+	return watcherConfigMap, nil
 }
 
-func updateConfigMap(watcherConfigMap *v1.ConfigMap, kymaCR *kyma.Kyma) error {
+func (r *KymaReconciler) updateConfigMap(ctx context.Context,
+	watcherConfigMap *v1.ConfigMap,
+	kymaCR *kyma.Kyma,
+) error {
+	for key, value := range watcherConfigMap.Data {
+		if key == kymaCR.Name && value == kymaCR.Namespace {
+			// Kyma already exists in ConfigMap, nothing has to be done
+			return nil
+		}
+	}
+	// Kyma does not exists in ConfigMap
+	watcherConfigMap.Data[kymaCR.Name] = kymaCR.Namespace
+	err := r.Client.Update(ctx, watcherConfigMap)
+	if err != nil {
+		return err
+	}
 	return nil
 }
