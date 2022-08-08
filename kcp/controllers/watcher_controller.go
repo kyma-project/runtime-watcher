@@ -159,15 +159,15 @@ func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Con
 	namespace := obj.GetNamespace()
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create istio client set from rest config(%s): %v", r.RestConfig.String(), err)
+		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
 	err = r.createOrUpdateIstioGwForCR(ctx, istioClientSet, namespace)
 	if err != nil {
-		return fmt.Errorf("failed to create and configure Istio Gateway resource: %v", err)
+		return fmt.Errorf("failed to create and configure Istio Gateway resource: %w", err)
 	}
 	err = r.createOrUpdateIstioVirtualServiceForCR(ctx, istioClientSet, obj)
 	if err != nil {
-		return fmt.Errorf("failed to create and configure Istio VirtualService resource: %v", err)
+		return fmt.Errorf("failed to create and configure Istio VirtualService resource: %w", err)
 	}
 	return nil
 }
@@ -246,14 +246,14 @@ func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, logger log
 	cm := &v1.ConfigMap{}
 	err := r.Get(ctx, watcherObjKey, cm)
 	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to send get config map request to API server: %v", err)
+		return fmt.Errorf("failed to send get config map request to API server: %w", err)
 	}
 	if errors.IsNotFound(err) {
 		cm.SetName(watcherObjKey.Name)
 		cm.SetNamespace(watcherObjKey.Namespace)
 		err = r.Create(ctx, cm)
 		if err != nil {
-			return fmt.Errorf("failed to send create config map request to API server: %v", err)
+			return fmt.Errorf("failed to send create config map request to API server: %w", err)
 		}
 	}
 	return nil
@@ -307,11 +307,11 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, lo
 	vsName := obj.GetName()
 	ic, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create istio client set from rest config(%s): %v", r.RestConfig.String(), err)
+		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
 	_, err = ic.NetworkingV1beta1().VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get istio virtual service: %v", err)
+		return fmt.Errorf("failed to get istio virtual service: %w", err)
 	}
 	if errors.IsNotFound(err) {
 		//nothing to do
@@ -319,7 +319,7 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, lo
 	}
 	err = ic.NetworkingV1beta1().VirtualServices(namespace).Delete(ctx, vsName, metav1.DeleteOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to delete istio virtual service: %v", err)
+		return fmt.Errorf("failed to delete istio virtual service: %w", err)
 	}
 	return nil
 
@@ -337,11 +337,11 @@ func (r *WatcherReconciler) deleteConfigMapForCR(ctx context.Context, logger log
 	cm := &v1.ConfigMap{}
 	err := r.Get(ctx, watcherObjKey, cm)
 	if err != nil {
-		return fmt.Errorf("failed to send get config map request to API server: %v", err)
+		return fmt.Errorf("failed to send get config map request to API server: %w", err)
 	}
 	err = r.Delete(ctx, cm)
 	if err != nil {
-		return fmt.Errorf("failed to delete config map: %v", err)
+		return fmt.Errorf("failed to delete config map: %w", err)
 	}
 	return nil
 }
@@ -379,7 +379,7 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context, logge
 		cm := &v1.ConfigMap{}
 		err := r.Get(ctx, watcherObjKey, cm)
 		if err != nil && !errors.IsNotFound(err) {
-			return false, fmt.Errorf("failed to send get config map request to API server: %v", err)
+			return false, fmt.Errorf("failed to send get config map request to API server: %w", err)
 		}
 		if errors.IsNotFound(err) {
 			return false, nil
@@ -389,7 +389,7 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context, logge
 	namespace := obj.GetNamespace()
 	ic, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
-		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %v", r.RestConfig.String(), err)
+		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
 	gw, apiErr := ic.NetworkingV1beta1().Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
 	ready, err := util.IstioReourcesErrorCheck(istioGatewayGVR, apiErr)
