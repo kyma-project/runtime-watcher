@@ -56,6 +56,7 @@ type WatcherReconciler struct {
 	Config     *util.WatcherConfig
 }
 
+//nolint:lll
 //+kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers/finalizers,verbs=update
