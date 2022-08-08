@@ -122,19 +122,19 @@ func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.Virtual
 	if len(virtualService.Spec.Http) != 1 {
 		return true
 	}
-	istioHttpRoute := prepareIstioHTTPRouteForCR(obj)
-	return !isRouteConfigEqual(virtualService.Spec.Http[firstElementIdx], istioHttpRoute)
+	istioHTTPRoute := prepareIstioHTTPRouteForCR(obj)
+	return !isRouteConfigEqual(virtualService.Spec.Http[firstElementIdx], istioHTTPRoute)
 }
 
 func UpdateVirtualServiceConfig(virtualService *istioclientapiv1beta1.VirtualService, obj *componentv1alpha1.Watcher, gwName string) {
 	if virtualService == nil {
 		return
 	}
-	istioHttpRoute := prepareIstioHTTPRouteForCR(obj)
+	istioHTTPRoute := prepareIstioHTTPRouteForCR(obj)
 	virtualService.Spec = istioapiv1beta1.VirtualService{
 		Gateways: []string{gwName},
 		Hosts:    []string{istioHostsWildcard},
-		Http:     []*istioapiv1beta1.HTTPRoute{istioHttpRoute},
+		Http:     []*istioapiv1beta1.HTTPRoute{istioHTTPRoute},
 	}
 }
 
