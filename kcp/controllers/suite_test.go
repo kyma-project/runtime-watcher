@@ -19,17 +19,26 @@ package controllers_test
 // TODO:test pipeline
 
 import (
-	"path/filepath"
-	"testing"
-
+	"context"
+	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
+	"github.com/kyma-project/kyma-watcher/kcp/controllers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	yaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"net/http"
+	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"testing"
+	"time"
 
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
@@ -38,7 +47,14 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var testEnv *envtest.Environment //nolint:gochecknoglobals
+var (
+	_          *rest.Config
+	k8sClient  client.Client        //nolint:gochecknoglobals
+	k8sManager manager.Manager      //nolint:gochecknoglobals
+	testEnv    *envtest.Environment //nolint:gochecknoglobals
+	ctx        context.Context      //nolint:gochecknoglobals
+	cancel     context.CancelFunc   //nolint:gochecknoglobals
+)
 
 func TestAPIs(t *testing.T) {
 	t.Parallel()
@@ -50,11 +66,29 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	ctx, cancel = context.WithCancel(context.TODO())
+	logger := zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true))
+	logf.SetLogger(logger)
 
 	By("bootstrapping test environment")
+
+	watcherCrd := &v1.CustomResourceDefinition{}
+	res, err := http.DefaultClient.Get(
+		"https://raw.githubusercontent.com/kyma-project/kyma-watcher/main/kcp/config/crd/bases/component.kyma-project.io_watchers.yaml") //nolint:lll
+	Expect(err).NotTo(HaveOccurred())
+	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
+	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(watcherCrd)).To(Succeed())
+
+	kymaCrd := &v1.CustomResourceDefinition{}
+	res, err = http.DefaultClient.Get(
+		"https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml") //nolint:lll
+	Expect(err).NotTo(HaveOccurred())
+	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
+	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(kymaCrd)).To(Succeed())
+
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDs:                  []*v1.CustomResourceDefinition{watcherCrd, kymaCrd},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -62,18 +96,41 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = componentv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(componentv1alpha1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
+	Expect(v1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
+	Expect(kyma.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
-}, 60)
+
+	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&controllers.KymaReconciler{
+		Client: k8sManager.GetClient(),
+		Scheme: scheme.Scheme,
+	}).SetupWithManager(k8sManager)
+
+	go func() {
+		defer GinkgoRecover()
+		err = k8sManager.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+	}()
+
+})
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	err := testEnv.Stop()
+	// Set 4 with random, to avoid `timeout waiting for process kube-apiserver to stop`
+	if err != nil {
+		time.Sleep(4 * time.Second)
+	}
+	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })

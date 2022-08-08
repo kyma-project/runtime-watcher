@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
@@ -41,7 +40,7 @@ type KymaReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-const defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
+const DefaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
 
 //+kubebuilder:rbac:groups=kyma-project.io,resources=kymas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kyma-project.io,resources=kymas/status,verbs=get;update;patch
@@ -74,7 +73,7 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		if _, ok := watcherCR.Labels[defaultOperatorWatcherCRLabel]; ok {
+		if _, ok := watcherCR.Labels[DefaultOperatorWatcherCRLabel]; ok {
 			watcherConfigMap, err := r.getWatcherCM(ctx, module, kymaCR.Namespace)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -138,10 +137,15 @@ func (r *KymaReconciler) updateConfigMap(ctx context.Context,
 	watcherConfigMap *v1.ConfigMap,
 	kymaCR *kyma.Kyma,
 ) error {
-	for key, value := range watcherConfigMap.Data {
-		if key == kymaCR.Name && value == kymaCR.Namespace {
-			// Kyma already exists in ConfigMap, nothing has to be done
-			return nil
+	if watcherConfigMap.Data == nil {
+		// initialize data map, if map is nil
+		watcherConfigMap.Data = make(map[string]string)
+	} else {
+		for key, value := range watcherConfigMap.Data {
+			if key == kymaCR.Name && value == kymaCR.Namespace {
+				// Kyma already exists in ConfigMap, nothing has to be done
+				return nil
+			}
 		}
 	}
 	// Kyma does not exists in ConfigMap
