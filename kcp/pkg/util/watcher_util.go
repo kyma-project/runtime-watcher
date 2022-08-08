@@ -88,8 +88,8 @@ func AddReadyCondition(obj *componentv1alpha1.Watcher, state componentv1alpha1.W
 
 func isRouteConfigEqual(route1 *istioapiv1beta1.HTTPRoute, route2 *istioapiv1beta1.HTTPRoute) bool {
 
-	if route1.Match[firstElementIdx].Uri.MatchType.(*istioapiv1beta1.StringMatch_Prefix).Prefix !=
-		route2.Match[firstElementIdx].Uri.MatchType.(*istioapiv1beta1.StringMatch_Prefix).Prefix {
+	if route1.Match[firstElementIdx].Uri.MatchType.(*istioapiv1beta1.StringMatch_Prefix).Prefix != //nolint:nosnakecase
+		route2.Match[firstElementIdx].Uri.MatchType.(*istioapiv1beta1.StringMatch_Prefix).Prefix { //nolint:nosnakecase
 		return false
 	}
 
@@ -143,7 +143,7 @@ func prepareIstioHTTPRouteForCR(obj *componentv1alpha1.Watcher) *istioapiv1beta1
 		Match: []*istioapiv1beta1.HTTPMatchRequest{
 			{
 				Uri: &istioapiv1beta1.StringMatch{
-					MatchType: &istioapiv1beta1.StringMatch_Prefix{
+					MatchType: &istioapiv1beta1.StringMatch_Prefix{ //nolint:nosnakecase
 						Prefix: fmt.Sprintf("/v%s/%s/event", obj.Spec.ContractVersion, obj.Spec.ComponentName),
 					},
 				},
