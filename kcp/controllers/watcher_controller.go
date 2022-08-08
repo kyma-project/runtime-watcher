@@ -181,11 +181,11 @@ func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context, isti
 
 	if errors.IsNotFound(apiErr) {
 		//create gateway with config from CR
-		gw := &istioclientapiv1beta1.Gateway{}
-		gw.SetName(istioGatewayResourceName)
-		gw.SetNamespace(namespace)
-		util.UpdateIstioGWConfig(gw, r.Config.ListenerIstioGatewayPort)
-		_, apiErr = istioClientSet.NetworkingV1beta1().Gateways(namespace).Create(ctx, gw, metav1.CreateOptions{})
+		gateway := &istioclientapiv1beta1.Gateway{}
+		gateway.SetName(istioGatewayResourceName)
+		gateway.SetNamespace(namespace)
+		util.UpdateIstioGWConfig(gateway, r.Config.ListenerIstioGatewayPort)
+		_, apiErr = istioClientSet.NetworkingV1beta1().Gateways(namespace).Create(ctx, gateway, metav1.CreateOptions{})
 		if apiErr != nil {
 			return apiErr
 		}
@@ -391,7 +391,7 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context, logge
 	if err != nil {
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
-	gw, apiErr := ic.NetworkingV1beta1().Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
+	gateway, apiErr := ic.NetworkingV1beta1().Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
 	ready, err := util.IstioReourcesErrorCheck(istioGatewayGVR, apiErr)
 	if !ready {
 		return false, err
@@ -399,7 +399,7 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context, logge
 	if errors.IsNotFound(apiErr) {
 		return false, nil
 	}
-	if util.IsGWConfigChanged(gw, r.Config.ListenerIstioGatewayPort) {
+	if util.IsGWConfigChanged(gateway, r.Config.ListenerIstioGatewayPort) {
 		//CR config changed, resources not ready!
 		return false, nil
 	}

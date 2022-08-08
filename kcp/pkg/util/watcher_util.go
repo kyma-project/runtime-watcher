@@ -178,18 +178,18 @@ func isCrdInstalled(err error) (bool, error) {
 	return true, nil
 }
 
-func IsGWConfigChanged(gw *istioclientapiv1beta1.Gateway, gwPortNumber uint32) bool {
-	if len(gw.Spec.Selector) != 1 {
+func IsGWConfigChanged(gateway *istioclientapiv1beta1.Gateway, gwPortNumber uint32) bool {
+	if len(gateway.Spec.Selector) != 1 {
 		return true
 	}
-	istioSelector, ok := gw.Spec.Selector[istioGWSelectorMapKey]
+	istioSelector, ok := gateway.Spec.Selector[istioGWSelectorMapKey]
 	if !ok || istioSelector != istioGWSelectorMapValue {
 		return true
 	}
-	if len(gw.Spec.Servers) != 1 {
+	if len(gateway.Spec.Servers) != 1 {
 		return true
 	}
-	listenerGwPort := gw.Spec.Servers[0].Port
+	listenerGwPort := gateway.Spec.Servers[0].Port
 	if listenerGwPort.Number != gwPortNumber || listenerGwPort.Name != strings.ToLower(httpProtocol) ||
 		listenerGwPort.Protocol != httpProtocol {
 		return true
@@ -198,11 +198,11 @@ func IsGWConfigChanged(gw *istioclientapiv1beta1.Gateway, gwPortNumber uint32) b
 	return false
 }
 
-func UpdateIstioGWConfig(gw *istioclientapiv1beta1.Gateway, gwPortNumber uint32) {
+func UpdateIstioGWConfig(gateway *istioclientapiv1beta1.Gateway, gwPortNumber uint32) {
 	selectorMap := make(map[string]string, 1)
 	selectorMap[istioGWSelectorMapKey] = istioGWSelectorMapValue
-	gw.Spec.Selector = selectorMap
-	gw.Spec.Servers = []*istioapiv1beta1.Server{
+	gateway.Spec.Selector = selectorMap
+	gateway.Spec.Servers = []*istioapiv1beta1.Server{
 		{
 			Hosts: []string{istioHostsWildcard},
 			Port: &istioapiv1beta1.Port{
