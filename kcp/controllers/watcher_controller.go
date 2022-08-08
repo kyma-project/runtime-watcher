@@ -157,15 +157,15 @@ func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, log
 
 func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Context, logger logr.Logger, obj *componentv1alpha1.Watcher) error {
 	namespace := obj.GetNamespace()
-	ic, err := istioclient.NewForConfig(r.RestConfig)
+	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create istio client set from rest config(%s): %v", r.RestConfig.String(), err)
 	}
-	err = r.createOrUpdateIstioGwForCR(ctx, ic, namespace)
+	err = r.createOrUpdateIstioGwForCR(ctx, istioClientSet, namespace)
 	if err != nil {
 		return fmt.Errorf("failed to create and configure Istio Gateway resource: %v", err)
 	}
-	err = r.createOrUpdateIstioVirtualServiceForCR(ctx, ic, obj)
+	err = r.createOrUpdateIstioVirtualServiceForCR(ctx, istioClientSet, obj)
 	if err != nil {
 		return fmt.Errorf("failed to create and configure Istio VirtualService resource: %v", err)
 	}
