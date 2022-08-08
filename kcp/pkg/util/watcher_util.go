@@ -107,7 +107,8 @@ func isRouteConfigEqual(route1 *istioapiv1beta1.HTTPRoute, route2 *istioapiv1bet
 	return true
 }
 
-func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.VirtualService, obj *componentv1alpha1.Watcher, gwName string) bool {
+func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.VirtualService,
+	obj *componentv1alpha1.Watcher, gwName string) bool {
 	if len(virtualService.Spec.Gateways) != 1 {
 		return true
 	}
@@ -127,7 +128,8 @@ func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.Virtual
 	return !isRouteConfigEqual(virtualService.Spec.Http[firstElementIdx], istioHTTPRoute)
 }
 
-func UpdateVirtualServiceConfig(virtualService *istioclientapiv1beta1.VirtualService, obj *componentv1alpha1.Watcher, gwName string) {
+func UpdateVirtualServiceConfig(virtualService *istioclientapiv1beta1.VirtualService,
+	obj *componentv1alpha1.Watcher, gwName string) {
 	if virtualService == nil {
 		return
 	}
