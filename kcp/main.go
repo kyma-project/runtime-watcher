@@ -18,8 +18,10 @@ package main
 
 import (
 	"flag"
-	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	"os"
+
+
+	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.

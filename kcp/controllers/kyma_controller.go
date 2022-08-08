@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
@@ -74,7 +75,7 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		if _, ok := watcherCR.Labels[DefaultOperatorWatcherCRLabel]; ok {
+		if value, ok := watcherCR.Labels[DefaultOperatorWatcherCRLabel]; ok && strings.ToLower(value) == "true" {
 			watcherConfigMap, err := r.getWatcherCM(ctx, module, kymaCR.Namespace)
 			if err != nil {
 				return ctrl.Result{}, err

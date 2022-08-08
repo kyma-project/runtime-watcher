@@ -30,12 +30,9 @@ const (
 var _ = Describe("Correct WatcherCR Setup", func() {
 	testKyma := NewTestKyma("test-kyma")
 	testConfigMap := NewTestConfigMap(configMapName)
-	testWatcherCR := NewTestWatcherCR(watcherName, map[string]string{controllers.DefaultOperatorWatcherCRLabel: "test"})
+	testWatcherCR := NewTestWatcherCR(watcherName, map[string]string{controllers.DefaultOperatorWatcherCRLabel: "true"})
 
 	SetupTestEnvironment(testKyma, testConfigMap, testWatcherCR)
-
-	BeforeEach(func() {
-	})
 
 	It("should insert testKyma in the ConfigMap of the example-module WatcherCR", func() {
 		By("checking the data of the ConfigMap")
