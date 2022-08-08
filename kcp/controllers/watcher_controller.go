@@ -414,7 +414,8 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 		return false, err
 	}
 	//3.step: istio VirtualService check
-	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj, istioVirtualServiceGVR, istioGatewayResourceName)
+	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj,
+		istioVirtualServiceGVR, istioGatewayResourceName)
 	if returns {
 		return false, err
 	}
