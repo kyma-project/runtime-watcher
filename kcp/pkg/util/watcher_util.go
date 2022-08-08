@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -13,8 +14,11 @@ import (
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	istioapiv1beta1 "istio.io/api/networking/v1beta1"
 	istioclientapiv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istioclient "istio.io/client-go/pkg/clientset/versioned"
+	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -36,7 +40,7 @@ type WatcherConfig struct {
 	RequeueInterval int
 }
 
-func IstioReourcesErrorCheck(gvr string, err error) (bool, error) {
+func IstioResourcesErrorCheck(gvr string, err error) (bool, error) {
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return false, err
 	}
@@ -220,4 +224,54 @@ func UpdateIstioGWConfig(gateway *istioclientapiv1beta1.Gateway, gwPortNumber ui
 			},
 		},
 	}
+}
+
+func PerformConfigMapCheck(ctx context.Context, reader client.Reader,
+	watcherObjKey client.ObjectKey) (bool, error) {
+	configMap := &v1.ConfigMap{}
+	err := reader.Get(ctx, watcherObjKey, configMap)
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return true, fmt.Errorf("failed to send get config map request to API server: %w", err)
+	}
+	if k8serrors.IsNotFound(err) {
+		return true, nil
+	}
+	return false, nil
+}
+
+func PerformIstioGWCheck(ctx context.Context, istioClientSet *istioclient.Clientset,
+	gwPort uint32, gwResourceName, gwGVR, namespace string) (bool, error) {
+	gateway, apiErr := istioClientSet.NetworkingV1beta1().
+		Gateways(namespace).Get(ctx, gwResourceName, metav1.GetOptions{})
+	ready, err := IstioResourcesErrorCheck(gwGVR, apiErr)
+	if !ready {
+		return true, err
+	}
+	if k8serrors.IsNotFound(apiErr) {
+		return true, nil
+	}
+	if IsGWConfigChanged(gateway, gwPort) {
+		//CR config changed, resources not ready!
+		return true, nil
+	}
+	return false, nil
+}
+
+func PerformIstioVirtualServiceCheck(ctx context.Context, istioClientSet *istioclient.Clientset,
+	obj *componentv1alpha1.Watcher, virtualServiceGVR, gwName string) (bool, error) {
+	watcherObjKey := client.ObjectKeyFromObject(obj)
+	virtualService, apiErr := istioClientSet.NetworkingV1beta1().
+		VirtualServices(watcherObjKey.Namespace).Get(ctx, watcherObjKey.Name, metav1.GetOptions{})
+	ready, err := IstioResourcesErrorCheck(virtualServiceGVR, apiErr)
+	if !ready {
+		return true, err
+	}
+	if k8serrors.IsNotFound(apiErr) {
+		return true, nil
+	}
+	if IsVirtualServiceConfigChanged(virtualService, obj, gwName) {
+		//CR config changed, resources not ready!
+		return true, nil
+	}
+	return false, nil
 }

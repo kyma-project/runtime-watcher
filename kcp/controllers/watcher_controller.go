@@ -179,7 +179,7 @@ func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context, isti
 	namespace string) error {
 	listenerGateway, apiErr := istioClientSet.NetworkingV1beta1().
 		Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
-	ready, err := util.IstioReourcesErrorCheck(istioGatewayGVR, apiErr)
+	ready, err := util.IstioResourcesErrorCheck(istioGatewayGVR, apiErr)
 	if !ready {
 		return err
 	}
@@ -215,7 +215,7 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 	vsName := obj.GetName()
 	listenerVirtualService, apiErr := istioClientSet.NetworkingV1beta1().
 		VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
-	ready, err := util.IstioReourcesErrorCheck(istioGatewayGVR, apiErr)
+	ready, err := util.IstioResourcesErrorCheck(istioGatewayGVR, apiErr)
 	if !ready {
 		return err
 	}
@@ -395,49 +395,28 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 	_, ok := watcherCRLabels[defaultOperatorWatcherCRLabel]
 	if !ok {
 		watcherObjKey := client.ObjectKeyFromObject(obj)
-		configMap := &v1.ConfigMap{}
-		err := r.Get(ctx, watcherObjKey, configMap)
-		if err != nil && !errors.IsNotFound(err) {
-			return false, fmt.Errorf("failed to send get config map request to API server: %w", err)
-		}
-		if errors.IsNotFound(err) {
-			return false, nil
+		returns, err := util.PerformConfigMapCheck(ctx, r.Client, watcherObjKey)
+		if returns {
+			return false, err
 		}
 	}
-	//2.step: istio GW check
+
 	namespace := obj.GetNamespace()
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w",
 			r.RestConfig.String(), err)
 	}
-	gateway, apiErr := istioClientSet.NetworkingV1beta1().
-		Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
-	ready, err := util.IstioReourcesErrorCheck(istioGatewayGVR, apiErr)
-	if !ready {
+	//2.step: istio GW check
+	returns, err := util.PerformIstioGWCheck(ctx, istioClientSet, r.Config.ListenerIstioGatewayPort,
+		istioGatewayResourceName, istioGatewayGVR, namespace)
+	if returns {
 		return false, err
-	}
-	if errors.IsNotFound(apiErr) {
-		return false, nil
-	}
-	if util.IsGWConfigChanged(gateway, r.Config.ListenerIstioGatewayPort) {
-		//CR config changed, resources not ready!
-		return false, nil
 	}
 	//3.step: istio VirtualService check
-	vsName := obj.GetName()
-	virtualService, apiErr := istioClientSet.NetworkingV1beta1().
-		VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
-	ready, err = util.IstioReourcesErrorCheck(istioVirtualServiceGVR, apiErr)
-	if !ready {
+	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj, istioVirtualServiceGVR, istioGatewayResourceName)
+	if returns {
 		return false, err
-	}
-	if errors.IsNotFound(apiErr) {
-		return false, nil
-	}
-	if util.IsVirtualServiceConfigChanged(virtualService, obj, istioGatewayResourceName) {
-		//CR config changed, resources not ready!
-		return false, nil
 	}
 	//4.step: SKR watcher config check
 	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
