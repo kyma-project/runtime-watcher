@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -12,7 +13,7 @@ import (
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	istioapiv1beta1 "istio.io/api/networking/v1beta1"
 	istioclientapiv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -36,7 +37,7 @@ type WatcherConfig struct {
 }
 
 func IstioReourcesErrorCheck(gvr string, err error) (bool, error) {
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		return false, err
 	}
 	if err != nil {
@@ -163,10 +164,15 @@ func prepareIstioHTTPRouteForCR(obj *componentv1alpha1.Watcher) *istioapiv1beta1
 }
 
 func isCrdInstalled(err error) (bool, error) {
-	if err == nil || !errors.IsNotFound(err) {
+	if err == nil || !k8serrors.IsNotFound(err) {
 		return false, fmt.Errorf("expected non nil error of NotFound kind")
 	}
-	errCauses := err.(*errors.StatusError).ErrStatus.Details.Causes
+	var k8sStatusErr *k8serrors.StatusError
+	converted := errors.As(err, &k8sStatusErr)
+	if !converted {
+		return false, fmt.Errorf("expected non nil error of StatusError type")
+	}
+	errCauses := k8sStatusErr.ErrStatus.Details.Causes
 	expectedErrCause := metav1.StatusCause{
 		Type:    metav1.CauseTypeUnexpectedServerResponse,
 		Message: "404 page not found",
