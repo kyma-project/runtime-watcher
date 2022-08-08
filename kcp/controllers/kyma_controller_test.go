@@ -1,6 +1,8 @@
 package controllers_test
 
 import (
+	"time"
+
 	"github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/kyma-watcher/kcp/controllers"
@@ -10,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"time"
 )
 
 const (
@@ -34,12 +35,12 @@ var _ = Describe("Correct WatcherCR Setup", func() {
 	SetupTestEnvironment(testKyma, testConfigMap, testWatcherCR)
 
 	BeforeEach(func() {
-
 	})
 
 	It("should insert testKyma in the ConfigMap of the example-module WatcherCR", func() {
 		By("checking the data of the ConfigMap")
-		Eventually(GetConfigMapData(testConfigMap), 5*time.Second, interval).Should(Equal(map[string]string{"test-kyma": "default"}))
+		Eventually(GetConfigMapData(testConfigMap), 5*time.Second, interval).
+			Should(Equal(map[string]string{"test-kyma": "default"}))
 	})
 })
 
@@ -104,7 +105,10 @@ func NewTestConfigMap(name string) *v1.ConfigMap {
 
 func NewTestWatcherCR(name string, labels map[string]string) *componentv1alpha1.Watcher {
 	return &componentv1alpha1.Watcher{
-		TypeMeta:   metav1.TypeMeta{Kind: componentv1alpha1.WatcherKind, APIVersion: componentv1alpha1.GroupVersion.String()},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       componentv1alpha1.WatcherKind,
+			APIVersion: componentv1alpha1.GroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace, Labels: labels},
 		Spec: componentv1alpha1.WatcherSpec{
 			ContractVersion: contractVersion,
@@ -115,7 +119,11 @@ func NewTestWatcherCR(name string, labels map[string]string) *componentv1alpha1.
 			},
 			GvrsToWatch: []componentv1alpha1.WatchableGvr{
 				{
-					Gvr:           componentv1alpha1.Gvr{Group: v1alpha1.GroupVersion.Group, Version: v1alpha1.GroupVersion.Version, Resource: v1alpha1.KymaPlural},
+					Gvr: componentv1alpha1.Gvr{
+						Group:    v1alpha1.GroupVersion.Group,
+						Version:  v1alpha1.GroupVersion.Version,
+						Resource: v1alpha1.KymaPlural,
+					},
 					LabelsToWatch: map[string]string{},
 				},
 			},
@@ -127,7 +135,10 @@ func NewTestWatcherCR(name string, labels map[string]string) *componentv1alpha1.
 func GetConfigMapData(configMap *v1.ConfigMap) func() map[string]string {
 	return func() map[string]string {
 		createdConfigMap := &v1.ConfigMap{}
-		err := k8sClient.Get(ctx, types.NamespacedName{Name: configMap.GetName(), Namespace: configMap.GetNamespace()}, createdConfigMap)
+		err := k8sClient.Get(ctx, types.NamespacedName{
+			Name:      configMap.GetName(),
+			Namespace: configMap.GetNamespace(),
+		}, createdConfigMap)
 		if err != nil {
 			return map[string]string{}
 		}

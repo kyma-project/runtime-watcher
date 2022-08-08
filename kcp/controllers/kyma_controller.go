@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"

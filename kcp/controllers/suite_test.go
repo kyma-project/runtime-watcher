@@ -20,6 +20,11 @@ package controllers_test
 
 import (
 	"context"
+	"net/http"
+	"path/filepath"
+	"testing"
+	"time"
+
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	"github.com/kyma-project/kyma-watcher/kcp/controllers"
 	. "github.com/onsi/ginkgo"
@@ -28,8 +33,6 @@ import (
 	yaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"net/http"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -37,8 +40,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
-	"time"
 
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
@@ -121,7 +122,6 @@ var _ = BeforeSuite(func() {
 		err = k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
-
 })
 
 var _ = AfterSuite(func() {
