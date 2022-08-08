@@ -24,15 +24,16 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/kyma-watcher/kcp/controllers"
+	"github.com/kyma-project/kyma-watcher/kcp/pkg/util"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/kyma-watcher/kcp/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -43,7 +44,6 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(componentv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -65,6 +65,9 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	//get env vars for watcher config
+	watcherConfig := util.GetConfigValuesFromEnv(setupLog)
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -81,6 +84,7 @@ func main() {
 	if err = (&controllers.WatcherReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Config: watcherConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
 		os.Exit(1)

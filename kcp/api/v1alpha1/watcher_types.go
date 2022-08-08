@@ -55,6 +55,7 @@ type WatchableGvr struct {
 	Gvr Gvr `json:"gvr"`
 
 	// LabelsToWatch describes the labels that should be watched from the gvr
+	// +kubebuilder:validation:Optional
 	LabelsToWatch map[string]string `json:"labelsToWatch"`
 }
 
@@ -94,6 +95,10 @@ type WatcherStatus struct {
 	// List of status conditions to indicate the status of a Watcher.
 	// +kubebuilder:validation:Optional
 	Conditions []WatcherCondition `json:"conditions"`
+
+	// ObservedGeneration
+	// +kubebuilder:validation:Optional
+	ObservedGeneration int64 `json:"observedGeneration"`
 }
 
 // WatcherCondition describes condition information for Watcher
@@ -156,6 +161,11 @@ type Watcher struct {
 
 	// +kubebuilder:validation:Optional
 	Status WatcherStatus `json:"status"`
+}
+
+func (m *Watcher) SetObservedGeneration() *Watcher {
+	m.Status.ObservedGeneration = m.Generation
+	return m
 }
 
 //+kubebuilder:object:root=true

@@ -75,7 +75,6 @@ spec:
                       type: object
                   required:
                   - gvr
-                  - labelsToWatch
                   type: object
                 type: array
               serviceInfo:
@@ -137,6 +136,10 @@ spec:
                   - type
                   type: object
                 type: array
+              observedGeneration:
+                description: ObservedGeneration
+                format: int64
+                type: integer
               state:
                 description: State signifies current state of a Watcher. Value can
                   be one of ("Ready", "Processing", "Error", "Deleting")
