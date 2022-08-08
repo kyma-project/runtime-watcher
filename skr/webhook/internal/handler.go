@@ -8,13 +8,14 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
-	"io/ioutil"
+	"io"
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"net/http"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,23 +26,69 @@ type Handler struct {
 	Logger logr.Logger
 }
 
+type validateResource struct {
+	errorOccurred bool
+	allowed       bool
+	message       string
+}
+
+type responseInterface interface {
+	isEmpty() bool
+}
+
+type Resource struct {
+	schema.GroupVersionKind
+	Fields ResourceFields `json:"fields"`
+}
+
+type ResourceFields struct {
+	Status []FieldKey `json:"status"`
+	Spec   []FieldKey `json:"spec"`
+}
+
+type FieldKey struct {
+	Field string `json:"field"`
+}
+
+type Metadata struct {
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace"`
+	Labels    map[string]string `json:"labels"`
+}
+
+func (m Metadata) isEmpty() bool {
+	return m.Name == ""
+}
+
+type ObjectWatched struct {
+	Metadata `json:"metadata"`
+	Spec     map[string]interface{} `json:"spec"`
+	Kind     string                 `json:"kind"`
+}
+
 const (
-	admissionError = "admission request error"
+	LabelTenantType     = "sme.sap.com/tenant-type"
+	SideCarEnv          = "WEBHOOK_SIDE_CAR"
+	AdmissionError      = "admission error:"
+	InvalidResource     = "invalid resource"
+	InvalidationMessage = "invalidated from webhook"
+	ValidationMessage   = "validated from webhook"
+	RequestPath         = "/request"
 )
 
 var (
-	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
+	UniversalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 )
 
 func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	ctx := context.TODO()
-	kyma := h.getKymaFromConfigMap(ctx)
+	kyma, resourceList := h.getKymaAndResourceListFromConfigMap(ctx)
 
 	// read incoming request to bytes
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		h.httpError(writer, http.StatusInternalServerError, fmt.Errorf("%s %w",
-			admissionError, err))
+			AdmissionError, err))
 		return
 	}
 
@@ -51,10 +98,12 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	h.validateResources(writer, admissionReview, resourceList)
+
 	h.Logger.Info(fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.Kind))
 
 	// store incoming request
-	err = ioutil.WriteFile("/tmp/request", body, 0644)
+	err = os.WriteFile("/tmp/request", body, 0644)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -84,7 +133,29 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	fmt.Println(resp)
 }
 
-func (h *Handler) getKymaFromConfigMap(ctx context.Context) *unstructured.Unstructured {
+func (h *Handler) validateResources(writer http.ResponseWriter, admissionReview *admissionv1.AdmissionReview,
+	resourcesList []Resource) validateResource {
+	for _, resource := range resourcesList {
+		objectWatched := ObjectWatched{}
+		// Note: OldObject is nil for "CONNECT" and "CREATE" operations
+		if admissionReview.Request.Operation == admissionv1.Update {
+			if validatedResource := h.unmarshalRawObj(writer, admissionReview.Request.OldObject.Raw,
+				&objectWatched, resource.GroupVersionKind.String()); !validatedResource.allowed {
+				return validatedResource
+			}
+		}
+	}
+	return h.validAdmissionReviewObj()
+}
+
+func (h *Handler) unmarshalRawObj(writer http.ResponseWriter, rawBytes []byte, response responseInterface, resourceKind string) validateResource {
+	if err := json.Unmarshal(rawBytes, response); err != nil || response.isEmpty() {
+		return h.invalidAdmissionReviewObj(writer, resourceKind, err)
+	}
+	return h.validAdmissionReviewObj()
+}
+
+func (h *Handler) getKymaAndResourceListFromConfigMap(ctx context.Context) (*unstructured.Unstructured, []Resource) {
 	// fetch resource mapping ConfigMap
 	configMap := v1.ConfigMap{}
 	err := h.Client.Get(ctx, client.ObjectKey{
@@ -99,13 +170,13 @@ func (h *Handler) getKymaFromConfigMap(ctx context.Context) *unstructured.Unstru
 	kymaGvkStringified, kymaExists := configMap.Data["kyma"]
 	if !kymaExists {
 		h.Logger.Error(fmt.Errorf("failed to fetch kyma GVK from resource mapping"), "")
-		return nil
+		return nil, nil
 	}
 	kymaGvr := schema.GroupVersionKind{}
-	err = json.Unmarshal([]byte(kymaGvkStringified), &kymaGvr)
+	err = yaml.Unmarshal([]byte(kymaGvkStringified), &kymaGvr)
 	if err != nil {
 		h.Logger.Error(err, "kyma GVK could not me unmarshalled")
-		return nil
+		return nil, nil
 	}
 
 	// get SKR kyma
@@ -114,13 +185,24 @@ func (h *Handler) getKymaFromConfigMap(ctx context.Context) *unstructured.Unstru
 	err = h.Client.List(ctx, &kymasList)
 	if err != nil {
 		h.Logger.Error(err, "could not list kyma resources")
-		return nil
+		return nil, nil
 	} else if len(kymasList.Items) != 1 {
 		h.Logger.Error(fmt.Errorf("only one Kyma should exist in SKR"), "abort")
-		return nil
+		return nil, nil
 	}
 
-	return &kymasList.Items[0]
+	resourceListStringified, listExists := configMap.Data["resources"]
+	if !listExists {
+		h.Logger.Error(fmt.Errorf("failed to fetch resources list resource mapping"), "")
+	}
+	var resources []Resource
+	err = yaml.Unmarshal([]byte(resourceListStringified), &resources)
+	if err != nil {
+		h.Logger.Error(err, "resources list could not me unmarshalled")
+		return nil, nil
+	}
+
+	return &kymasList.Items[0], resources
 }
 
 func (h *Handler) httpError(w http.ResponseWriter, code int, err error) {
@@ -130,12 +212,22 @@ func (h *Handler) httpError(w http.ResponseWriter, code int, err error) {
 
 func (h *Handler) getAdmissionRequestFromBytes(w http.ResponseWriter, body []byte) *admissionv1.AdmissionReview {
 	admissionReview := admissionv1.AdmissionReview{}
-	if _, _, err := universalDeserializer.Decode(body, nil, &admissionReview); err != nil {
-		h.httpError(w, http.StatusBadRequest, fmt.Errorf("%s %w", admissionError, err))
+	if _, _, err := UniversalDeserializer.Decode(body, nil, &admissionReview); err != nil {
+		h.httpError(w, http.StatusBadRequest, fmt.Errorf("%s %w", AdmissionError, err))
 		return nil
 	} else if admissionReview.Request == nil {
-		h.httpError(w, http.StatusBadRequest, fmt.Errorf("%s empty request", admissionError))
+		h.httpError(w, http.StatusBadRequest, fmt.Errorf("%s empty request", AdmissionError))
 		return nil
 	}
 	return &admissionReview
+}
+
+func (h *Handler) invalidAdmissionReviewObj(writer http.ResponseWriter, kind string, sourceErr error) validateResource {
+	h.httpError(writer, http.StatusInternalServerError,
+		fmt.Errorf("%s %s %s %w", InvalidResource, kind, AdmissionError, sourceErr))
+	return validateResource{errorOccurred: true}
+}
+
+func (h *Handler) validAdmissionReviewObj() validateResource {
+	return validateResource{allowed: true}
 }
