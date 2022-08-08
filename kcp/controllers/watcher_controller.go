@@ -261,7 +261,7 @@ func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, obj *compo
 
 func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *componentv1alpha1.Watcher, state componentv1alpha1.WatcherState, msg string) error {
 	obj.Status.State = state
-	switch state {
+	switch state { //nolint:exhaustive
 	case componentv1alpha1.WatcherStateReady:
 		util.AddReadyCondition(obj, componentv1alpha1.ConditionStatusTrue, msg)
 	case "":
