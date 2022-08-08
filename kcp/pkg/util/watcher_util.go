@@ -65,7 +65,7 @@ func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
 		config.RequeueInterval = defaultRequeueInterval
 		return config
 	}
-	gwPortIntValue, err := strconv.ParseUint(gwPortVarValue, 10, 0)
+	gwPortIntValue, err := strconv.Atoi(gwPortVarValue)
 	if err != nil {
 		logger.V(1).Error(err, "could not get unsigned int value for ", gwPortVarName)
 	}
