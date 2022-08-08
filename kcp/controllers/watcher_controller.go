@@ -243,15 +243,15 @@ func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, logger log
 	}
 	//create empty config map for CR
 	watcherObjKey := client.ObjectKeyFromObject(obj)
-	cm := &v1.ConfigMap{}
-	err := r.Get(ctx, watcherObjKey, cm)
+	configMap := &v1.ConfigMap{}
+	err := r.Get(ctx, watcherObjKey, configMap)
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to send get config map request to API server: %w", err)
 	}
 	if errors.IsNotFound(err) {
-		cm.SetName(watcherObjKey.Name)
-		cm.SetNamespace(watcherObjKey.Namespace)
-		err = r.Create(ctx, cm)
+		configMap.SetName(watcherObjKey.Name)
+		configMap.SetNamespace(watcherObjKey.Namespace)
+		err = r.Create(ctx, configMap)
 		if err != nil {
 			return fmt.Errorf("failed to send create config map request to API server: %w", err)
 		}
@@ -305,11 +305,11 @@ func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, log
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, logger logr.Logger, obj *componentv1alpha1.Watcher) error {
 	namespace := obj.GetNamespace()
 	vsName := obj.GetName()
-	ic, err := istioclient.NewForConfig(r.RestConfig)
+	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
-	_, err = ic.NetworkingV1beta1().VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
+	_, err = istioClientSet.NetworkingV1beta1().VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to get istio virtual service: %w", err)
 	}
@@ -317,7 +317,7 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, lo
 		//nothing to do
 		return nil
 	}
-	err = ic.NetworkingV1beta1().VirtualServices(namespace).Delete(ctx, vsName, metav1.DeleteOptions{})
+	err = istioClientSet.NetworkingV1beta1().VirtualServices(namespace).Delete(ctx, vsName, metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to delete istio virtual service: %w", err)
 	}
@@ -334,12 +334,12 @@ func (r *WatcherReconciler) deleteConfigMapForCR(ctx context.Context, logger log
 	}
 	//delete config map for CR
 	watcherObjKey := client.ObjectKeyFromObject(obj)
-	cm := &v1.ConfigMap{}
-	err := r.Get(ctx, watcherObjKey, cm)
+	configMap := &v1.ConfigMap{}
+	err := r.Get(ctx, watcherObjKey, configMap)
 	if err != nil {
 		return fmt.Errorf("failed to send get config map request to API server: %w", err)
 	}
-	err = r.Delete(ctx, cm)
+	err = r.Delete(ctx, configMap)
 	if err != nil {
 		return fmt.Errorf("failed to delete config map: %w", err)
 	}
@@ -376,8 +376,8 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context, logge
 	_, ok := watcherCRLabels[defaultOperatorWatcherCRLabel]
 	if !ok {
 		watcherObjKey := client.ObjectKeyFromObject(obj)
-		cm := &v1.ConfigMap{}
-		err := r.Get(ctx, watcherObjKey, cm)
+		configMap := &v1.ConfigMap{}
+		err := r.Get(ctx, watcherObjKey, configMap)
 		if err != nil && !errors.IsNotFound(err) {
 			return false, fmt.Errorf("failed to send get config map request to API server: %w", err)
 		}
@@ -387,11 +387,11 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context, logge
 	}
 	//2.step: istio GW check
 	namespace := obj.GetNamespace()
-	ic, err := istioclient.NewForConfig(r.RestConfig)
+	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
-	gateway, apiErr := ic.NetworkingV1beta1().Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
+	gateway, apiErr := istioClientSet.NetworkingV1beta1().Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
 	ready, err := util.IstioReourcesErrorCheck(istioGatewayGVR, apiErr)
 	if !ready {
 		return false, err
@@ -405,7 +405,7 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context, logge
 	}
 	//3.step: istio VirtualService check
 	vsName := obj.GetName()
-	virtualService, apiErr := ic.NetworkingV1beta1().VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
+	virtualService, apiErr := istioClientSet.NetworkingV1beta1().VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
 	ready, err = util.IstioReourcesErrorCheck(istioVirtualServiceGVR, apiErr)
 	if !ready {
 		return false, err
