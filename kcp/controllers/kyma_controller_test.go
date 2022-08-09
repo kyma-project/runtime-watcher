@@ -56,14 +56,14 @@ var _ = Describe("WatcherCR applies to all Kymas - Configmap stores no data", fu
 
 func SetupTestEnvironment(kyma *v1alpha1.Kyma, configmap *v1.ConfigMap, watcher *componentv1alpha1.Watcher) {
 	BeforeEach(func() {
-		Expect(k8sClient.Create(ctx, kyma)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, configmap)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, watcher)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, kyma)).Should(Succeed())
 	})
 	AfterEach(func() {
-		Expect(k8sClient.Delete(ctx, kyma)).Should(Succeed())
 		Expect(k8sClient.Delete(ctx, configmap)).Should(Succeed())
 		Expect(k8sClient.Delete(ctx, watcher)).Should(Succeed())
+		Expect(k8sClient.Delete(ctx, kyma)).Should(Succeed())
 	})
 }
 

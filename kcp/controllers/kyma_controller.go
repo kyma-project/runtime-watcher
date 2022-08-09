@@ -22,10 +22,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
+
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,6 +42,7 @@ import (
 type KymaReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	logger logr.Logger
 }
 
 const DefaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
@@ -51,13 +54,13 @@ const DefaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-	logger.Info("Reconciliation loop starting for", "resource", req.NamespacedName.String())
+	r.logger = log.FromContext(ctx)
+	r.logger.Info("Reconciliation loop starting for", "resource", req.NamespacedName.String())
 	// check if kyma resource exists
 	kymaCR := &kyma.Kyma{}
 	if err := r.Get(ctx, req.NamespacedName, kymaCR); err != nil {
-		if k8serrors.IsNotFound(err) {
-			logger.Info(req.NamespacedName.String() + " got deleted! Reference in WatcherCR ConfigMap will be removed")
+		if apierrors.IsNotFound(err) {
+			r.logger.Info(req.NamespacedName.String() + " got deleted! Reference in WatcherCR ConfigMap will be removed")
 			// TODO: Delete Kyma from the corresponding ConfigMaps - will be implemented in next iteration
 			return ctrl.Result{}, nil //nolint:wrapcheck
 		}
@@ -70,9 +73,17 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if len(modules) == 0 {
 		return ctrl.Result{}, errors.New("module list of KymaCR is empty")
 	}
+	// Sync ConfigMap of given modules
+	return r.SyncConfigMap(ctx, modules, kymaCR)
+}
+
+func (r *KymaReconciler) SyncConfigMap(ctx context.Context, modules []kyma.Module, kymaCR *kyma.Kyma) (ctrl.Result, error) { //nolint:lll
 	for _, module := range modules {
 		watcherCR, err := r.getWatcherCR(ctx, module, kymaCR.Namespace)
-		if err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Info("No WatcherCR has been found", "module", module)
+			continue
+		} else if err != nil {
 			return ctrl.Result{}, err
 		}
 		if value, ok := watcherCR.Labels[DefaultOperatorWatcherCRLabel]; ok && strings.ToLower(value) == "true" {
@@ -84,7 +95,7 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			if err != nil {
 				return ctrl.Result{}, err
 			}
-			logger.Info("Corresponding ConfigMap of WatcherCR got updated.")
+			r.logger.Info("Corresponding ConfigMap of WatcherCR got updated.")
 			return ctrl.Result{}, nil
 		}
 	}
