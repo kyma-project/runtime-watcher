@@ -41,11 +41,9 @@ import (
 
 const (
 	istioGatewayResourceName = "kcp-listener-gw"
-	// defaultOperatorWatcherCRLabel is a label indicating that watcher CR applies to all Kymas
-	defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
-	watcherFinalizer              = "component.kyma-project.io/watcher"
-	istioGatewayGVR               = "gateways.networking.istio.io/v1beta1"
-	istioVirtualServiceGVR        = "virtualservices.networking.istio.io/v1beta1"
+	watcherFinalizer         = "component.kyma-project.io/watcher"
+	istioGatewayGVR          = "gateways.networking.istio.io/v1beta1"
+	istioVirtualServiceGVR   = "virtualservices.networking.istio.io/v1beta1"
 )
 
 // WatcherReconciler reconciles a Watcher object
@@ -68,7 +66,7 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	err := r.Get(ctx, client.ObjectKey{Name: req.Name, Namespace: req.Namespace}, watcherObj)
 	if err != nil {
 
-		logger.Info(fmt.Sprintf("%s got deleted", req.NamespacedName.String()))
+		logger.Info(fmt.Sprintf("failed to get reconciliation object: %s", req.NamespacedName.String()))
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	watcherObj = watcherObj.DeepCopy()
@@ -107,14 +105,6 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *WatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.RestConfig = mgr.GetConfig()
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&componentv1alpha1.Watcher{}).
-		Complete(r)
-}
-
 func (r *WatcherReconciler) HandleInitialState(ctx context.Context, obj *componentv1alpha1.Watcher) error {
 	return r.updateWatcherCRStatus(ctx, obj, componentv1alpha1.WatcherStateProcessing, "watcher cr created")
 }
@@ -141,19 +131,82 @@ func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 	return nil
 }
 
-func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger logr.Logger, err error,
-	obj *componentv1alpha1.Watcher, errMsg string) error {
-	logger.Error(err, errMsg)
-	apiErr := r.updateWatcherCRStatus(ctx, obj, componentv1alpha1.WatcherStateError, errMsg)
-	if apiErr != nil {
-		logger.Error(apiErr, "update request to API server failed")
-		return apiErr
+func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr.Logger,
+	obj *componentv1alpha1.Watcher) error {
+	err := r.deleteConfigMapForCR(ctx, obj)
+	if err != nil {
+		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete config map")
 	}
-	return err
+	err = r.deleteServiceMeshConfigForCR(ctx, obj)
+	if err != nil {
+		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete service mesh config")
+	}
+	err = r.deleteSKRWatcherConfigForCR(ctx, obj)
+	if err != nil {
+		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete SKR config")
+	}
+	updated := controllerutil.RemoveFinalizer(obj, watcherFinalizer)
+	if !updated {
+		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to remove finalizer")
+	}
+	err = r.Update(ctx, obj)
+	if err != nil {
+		logger.Error(err, "failed to update watcher cr")
+	}
+	logger.Info("deletion state handling was successful")
+	return nil
 }
 
-func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
+func (r *WatcherReconciler) HandleErrorState(ctx context.Context, obj *componentv1alpha1.Watcher) error {
+	return r.updateWatcherCRStatus(ctx, obj, componentv1alpha1.WatcherStateProcessing, "observed generation change")
+}
+
+func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Logger,
+	obj *componentv1alpha1.Watcher) error {
+	if obj.Generation != obj.Status.ObservedGeneration {
+		logger.Info("observed generation change for watcher cr")
+		return r.updateWatcherCRStatus(ctx, obj,
+			componentv1alpha1.WatcherStateProcessing, "observed generation change")
+	}
+
+	logger.Info("checking consistent state for watcher cr")
+	ready, err := r.checkConsistentStateForCR(ctx, obj)
+	if err != nil {
+		logger.Info("failed while checking resources for watcher cr")
+		return r.updateWatcherCRStatus(ctx, obj,
+			componentv1alpha1.WatcherStateError, "failed while checking resources")
+	}
+	if !ready {
+		logger.Info("resources not yet ready for watcher cr")
+		return r.updateWatcherCRStatus(ctx, obj,
+			componentv1alpha1.WatcherStateProcessing, "resources not yet ready")
+	}
+	logger.Info("watcher cr resources are Ready!")
+	return nil
+}
+
+func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
+	watcherCRLabels := obj.GetLabels()
+	if util.IsDefaultComponent(watcherCRLabels) {
+		//watcher CR belongs to a KCP operator which applies on all Kymas.
+		//So no need to create configMap for it!
+		return nil
+	}
+	//create empty config map for CR
+	watcherObjKey := client.ObjectKeyFromObject(obj)
+	configMap := &v1.ConfigMap{}
+	err := r.Get(ctx, watcherObjKey, configMap)
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get config map: %w", err)
+	}
+	if errors.IsNotFound(err) {
+		configMap.SetName(watcherObjKey.Name)
+		configMap.SetNamespace(watcherObjKey.Namespace)
+		err = r.Create(ctx, configMap)
+		if err != nil {
+			return fmt.Errorf("failed to create config map: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -244,74 +297,29 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 	return nil
 }
 
-func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
+func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
+	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
+	return nil
+}
+
+func (r *WatcherReconciler) deleteConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
 	watcherCRLabels := obj.GetLabels()
-	_, ok := watcherCRLabels[defaultOperatorWatcherCRLabel]
-	if ok {
+	if util.IsDefaultComponent(watcherCRLabels) {
 		//watcher CR belongs to a KCP operator which applies on all Kymas.
-		//So no need to create configMap for it!
+		//So no need to delete its non-existing configMap
 		return nil
 	}
-	//create empty config map for CR
+	//delete config map for CR
 	watcherObjKey := client.ObjectKeyFromObject(obj)
 	configMap := &v1.ConfigMap{}
 	err := r.Get(ctx, watcherObjKey, configMap)
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to send get config map request to API server: %w", err)
-	}
-	if errors.IsNotFound(err) {
-		configMap.SetName(watcherObjKey.Name)
-		configMap.SetNamespace(watcherObjKey.Namespace)
-		err = r.Create(ctx, configMap)
-		if err != nil {
-			return fmt.Errorf("failed to send create config map request to API server: %w", err)
-		}
-	}
-	return nil
-}
-
-func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *componentv1alpha1.Watcher,
-	state componentv1alpha1.WatcherState, msg string) error {
-	obj.Status.State = state
-	switch state { //nolint:exhaustive
-	case componentv1alpha1.WatcherStateReady:
-		util.AddReadyCondition(obj, componentv1alpha1.ConditionStatusTrue, msg)
-	case "":
-		util.AddReadyCondition(obj, componentv1alpha1.ConditionStatusUnknown, msg)
-	default:
-		util.AddReadyCondition(obj, componentv1alpha1.ConditionStatusFalse, msg)
-	}
-	return r.Status().Update(ctx, obj.SetObservedGeneration())
-}
-
-func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr.Logger,
-	obj *componentv1alpha1.Watcher) error {
-	err := r.deleteConfigMapForCR(ctx, obj)
 	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to create config map")
+		return fmt.Errorf("failed to get config map: %w", err)
 	}
-	err = r.deleteServiceMeshConfigForCR(ctx, obj)
+	err = r.Delete(ctx, configMap)
 	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to create or update service mesh config")
+		return fmt.Errorf("failed to delete config map: %w", err)
 	}
-	err = r.deleteSKRWatcherConfigForCR(ctx, obj)
-	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to update SKR config")
-	}
-	updated := controllerutil.RemoveFinalizer(obj, watcherFinalizer)
-	if !updated {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to remove finalizer")
-	}
-	err = r.Update(ctx, obj)
-	if err != nil {
-		logger.Error(err, "failed to update watcher cr")
-	}
-	logger.Info("deletion state handling was successful")
-	return nil
-}
-
-func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
 	return nil
 }
 
@@ -338,62 +346,41 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, ob
 
 }
 
-func (r *WatcherReconciler) deleteConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	watcherCRLabels := obj.GetLabels()
-	_, ok := watcherCRLabels[defaultOperatorWatcherCRLabel]
-	if ok {
-		//watcher CR belongs to a KCP operator which applies on all Kymas.
-		//So no need to delete its non-existing configMap
-		return nil
-	}
-	//delete config map for CR
-	watcherObjKey := client.ObjectKeyFromObject(obj)
-	configMap := &v1.ConfigMap{}
-	err := r.Get(ctx, watcherObjKey, configMap)
-	if err != nil {
-		return fmt.Errorf("failed to send get config map request to API server: %w", err)
-	}
-	err = r.Delete(ctx, configMap)
-	if err != nil {
-		return fmt.Errorf("failed to delete config map: %w", err)
-	}
+func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
+	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
 	return nil
 }
 
-func (r *WatcherReconciler) HandleErrorState(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	return r.updateWatcherCRStatus(ctx, obj, componentv1alpha1.WatcherStateProcessing, "observed generation change")
+func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *componentv1alpha1.Watcher,
+	state componentv1alpha1.WatcherState, msg string) error {
+	obj.Status.State = state
+	switch state { //nolint:exhaustive
+	case componentv1alpha1.WatcherStateReady:
+		util.AddReadyCondition(obj, componentv1alpha1.ConditionStatusTrue, msg)
+	case "":
+		util.AddReadyCondition(obj, componentv1alpha1.ConditionStatusUnknown, msg)
+	default:
+		util.AddReadyCondition(obj, componentv1alpha1.ConditionStatusFalse, msg)
+	}
+	return r.Status().Update(ctx, obj.SetObservedGeneration())
 }
 
-func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Logger,
-	obj *componentv1alpha1.Watcher) error {
-	if obj.Generation != obj.Status.ObservedGeneration {
-		logger.Info("observed generation change for watcher cr")
-		return r.updateWatcherCRStatus(ctx, obj,
-			componentv1alpha1.WatcherStateProcessing, "observed generation change")
+func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger logr.Logger, err error,
+	obj *componentv1alpha1.Watcher, errMsg string) error {
+	logger.Error(err, errMsg)
+	apiErr := r.updateWatcherCRStatus(ctx, obj, componentv1alpha1.WatcherStateError, errMsg)
+	if apiErr != nil {
+		logger.Error(apiErr, "update request to API server failed")
+		return apiErr
 	}
-
-	logger.Info("checking consistent state for watcher cr")
-	ready, err := r.checkConsistentStateForCR(ctx, obj)
-	if err != nil {
-		logger.Info("failed while checking resources for watcher cr")
-		return r.updateWatcherCRStatus(ctx, obj,
-			componentv1alpha1.WatcherStateError, "failed while checking resources")
-	}
-	if !ready {
-		logger.Info("resources not yet ready for watcher cr")
-		return r.updateWatcherCRStatus(ctx, obj,
-			componentv1alpha1.WatcherStateProcessing, "resources not yet ready")
-	}
-	logger.Info("watcher cr resources are Ready!")
-	return nil
+	return err
 }
 
 func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 	obj *componentv1alpha1.Watcher) (bool, error) {
 	//1.step: config map check
 	watcherCRLabels := obj.GetLabels()
-	_, ok := watcherCRLabels[defaultOperatorWatcherCRLabel]
-	if !ok {
+	if !util.IsDefaultComponent(watcherCRLabels) {
 		watcherObjKey := client.ObjectKeyFromObject(obj)
 		returns, err := util.PerformConfigMapCheck(ctx, r.Client, watcherObjKey)
 		if returns {
@@ -422,4 +409,12 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 	//4.step: SKR watcher config check
 	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
 	return true, nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *WatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.RestConfig = mgr.GetConfig()
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&componentv1alpha1.Watcher{}).
+		Complete(r)
 }

@@ -31,6 +31,8 @@ const (
 	istioGWSelectorMapValue = "ingressgateway"
 	istioHostsWildcard      = "*"
 	firstElementIdx         = 0
+	// defaultOperatorWatcherCRLabel is a label indicating that watcher CR applies to all Kymas
+	defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
 )
 
 type WatcherConfig struct {
@@ -38,6 +40,17 @@ type WatcherConfig struct {
 	ListenerIstioGatewayPort uint32
 	// RequeueInterval represents requeue interval in seconds
 	RequeueInterval int
+}
+
+func IsDefaultComponent(labels map[string]string) bool {
+	if labels == nil {
+		return false
+	}
+	value, ok := labels[defaultOperatorWatcherCRLabel]
+	if !ok || value != strconv.FormatBool(true) {
+		return false
+	}
+	return true
 }
 
 func IstioResourcesErrorCheck(gvr string, err error) (bool, error) {
