@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
-	"github.com/kyma-project/manifest-operator/operator/pkg/util"
 	"net/http"
 	"os"
+	"strconv"
+
+	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
+	"github.com/kyma-project/manifest-operator/operator/pkg/util"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 
 	"k8s.io/klog/v2"
 )
@@ -19,7 +21,7 @@ type ServerParameters struct {
 	tlsEnabled bool   // indicates if TLS is enabled
 }
 
-var parameters ServerParameters
+var parameters ServerParameters //nolint:gochecknoglobals
 
 func main() {
 	logger := ctrl.Log.WithName("skr-webhook")

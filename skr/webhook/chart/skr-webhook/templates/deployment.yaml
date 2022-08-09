@@ -43,9 +43,15 @@ spec:
             - name: TLS_ENABLED
               value: "true"
             - name: TLS_KEY
-              value: "/app/etc/ssl/tls.key"
+              valueFrom:
+                secretKeyRef:
+                  name: skr-webhook-tls
+                  key: tls.key
             - name: TLS_CERT
-              value: "/app/etc/ssl/tls.crt"
+              valueFrom:
+                secretKeyRef:
+                  name: skr-webhook-tls
+                  key: tls.cert
             - name: KCP_IP
               value: "<load-balancer-ip-here>"
             - name: KCP_PORT
@@ -57,11 +63,3 @@ spec:
           ports:
             - containerPort: {{.Values.service.targetPort}}
               name: watcher-container-port
-          volumeMounts:
-            - name: webhook-tls-certs
-              mountPath: /app/etc/ssl/
-              readOnly: true
-      volumes:
-        - name: webhook-tls-certs
-          secret:
-            secretName: skr-webhook-tls

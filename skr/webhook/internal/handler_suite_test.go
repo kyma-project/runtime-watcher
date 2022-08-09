@@ -2,16 +2,18 @@ package internal_test
 
 import (
 	"context"
+	"net/http"
+	"testing"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"net/http"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
 )
 
 func TestAPIs(t *testing.T) {
@@ -33,7 +35,8 @@ var _ = BeforeSuite(func() {
 
 	kymaCrd := &v1.CustomResourceDefinition{}
 	res, err := http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml") //nolint:lll
+		"https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/" +
+			"config/crd/bases/operator.kyma-project.io_kymas.yaml")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
 	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(kymaCrd)).To(Succeed())
@@ -53,7 +56,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 	//+kubebuilder:scaffold:scheme
-
 })
 
 var _ = AfterSuite(func() {

@@ -5,10 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"os"
+	"reflect"
+
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
-	"io"
+
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,9 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"net/http"
-	"os"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -63,15 +66,16 @@ type ObjectWatched struct {
 }
 
 const (
-	AdmissionError      = "admission error:"
-	InvalidResource     = "invalid resource"
-	InvalidationMessage = "invalidated from webhook"
-	ValidationMessage   = "validated from webhook"
+	AdmissionError       = "admission error:"
+	InvalidResource      = "invalid resource"
+	InvalidationMessage  = "invalidated from webhook"
+	ValidationMessage    = "validated from webhook"
+	writeFilePermissions = 0o600
+	defaultBufferSize    = 2048
 )
 
-var (
-	UniversalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
-)
+//nolint:gochecknoglobals
+var UniversalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 
 func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	ctx := context.TODO()
@@ -96,21 +100,25 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	h.Logger.Info(fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.Kind))
 
 	// store incoming request
-	err = os.WriteFile("/tmp/request", body, 0644)
+	//nolint:gosec
+	err = os.WriteFile("/tmp/request", body, writeFilePermissions)
 	if err != nil {
-		panic(err.Error())
+		h.Logger.Error(err, "")
 	}
 
 	// prepare response
-	if responseBytes := h.prepareResponse(writer, admissionReview, resourceValidation); responseBytes == nil {
+	responseBytes := h.prepareResponse(writer, admissionReview, resourceValidation)
+	if responseBytes == nil {
 		return
-	} else {
-		writer.Write(responseBytes)
+	}
+	if _, err = writer.Write(responseBytes); err != nil {
+		h.Logger.Error(err, "")
 	}
 }
 
 func (h *Handler) prepareResponse(writer http.ResponseWriter, admissionReview *admissionv1.AdmissionReview,
-	validation validateResource) []byte {
+	validation validateResource,
+) []byte {
 	// prepare response object
 	finalizedAdmissionReview := admissionv1.AdmissionReview{}
 	finalizedAdmissionReview.Kind = admissionReview.Kind
@@ -137,57 +145,59 @@ func (h *Handler) prepareResponse(writer http.ResponseWriter, admissionReview *a
 		)
 	}
 
-	if bytes, err := json.Marshal(&finalizedAdmissionReview); err != nil {
+	bytes, err := json.Marshal(&finalizedAdmissionReview)
+	if err != nil {
 		h.httpError(writer, http.StatusInternalServerError, fmt.Errorf("%s %w", AdmissionError, err))
 		return nil
-	} else {
-		return bytes
 	}
+	return bytes
 }
 
 func (h *Handler) validateResources(writer http.ResponseWriter, admissionReview *admissionv1.AdmissionReview,
-	resourcesList []Resource, kymaName string) validateResource {
+	resourcesList []Resource, kymaName string,
+) validateResource {
+	if admissionReview.Request.Operation != admissionv1.Update {
+		return h.validAdmissionReviewObj(
+			fmt.Sprintf("%s operation not supported", admissionReview.Request.Operation), metav1.StatusFailure,
+		)
+	}
 	var message string
 	var status string
 	for _, resource := range resourcesList {
-
 		if admissionReview.Request.Kind.String() != resource.GroupVersionKind.String() {
 			continue
 		}
-
 		// Note: OldObject is nil for "CONNECT" and "CREATE" operations
-		if admissionReview.Request.Operation == admissionv1.Update {
-			// old object
-			oldObjectWatched := ObjectWatched{}
-			validatedResource := h.unmarshalRawObj(writer, admissionReview.Request.OldObject.Raw,
-				&oldObjectWatched, resource.GroupVersionKind.String())
-			if !validatedResource.allowed {
-				return validatedResource
-			}
+		// old object
+		oldObjectWatched := ObjectWatched{}
+		validatedResource := h.unmarshalRawObj(writer, admissionReview.Request.OldObject.Raw,
+			&oldObjectWatched, resource.GroupVersionKind.String())
+		if !validatedResource.allowed {
+			return validatedResource
+		}
 
-			// new object
-			objectWatched := ObjectWatched{}
-			validatedResource = h.unmarshalRawObj(writer, admissionReview.Request.Object.Raw,
-				&objectWatched, resource.GroupVersionKind.String())
-			if !validatedResource.allowed {
-				return validatedResource
-			}
+		// new object
+		objectWatched := ObjectWatched{}
+		validatedResource = h.unmarshalRawObj(writer, admissionReview.Request.Object.Raw,
+			&objectWatched, resource.GroupVersionKind.String())
+		if !validatedResource.allowed {
+			return validatedResource
+		}
 
-			if resource.Status {
-				if !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status) {
-					message = "sent requests to KCP for Status"
-				}
+		if resource.Status {
+			if !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status) {
+				message = "sent requests to KCP for Status"
 			}
+		}
 
-			if resource.Spec && message == "" {
-				if !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec) {
-					message = "sent requests to KCP for Spec"
-				}
+		if resource.Spec && message == "" {
+			if !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec) {
+				message = "sent requests to KCP for Spec"
 			}
+		}
 
-			if message != "" {
-				status = h.sendRequestToKcp(kymaName, objectWatched)
-			}
+		if message != "" {
+			status = h.sendRequestToKcp(kymaName, objectWatched)
 		}
 
 		// since resource was found - exit loop
@@ -205,39 +215,46 @@ func (h *Handler) sendRequestToKcp(kymaName string, watched ObjectWatched) strin
 		Namespace: watched.Namespace,
 		Name:      watched.Name,
 	}
-	postBody, _ := json.Marshal(watcherEvent)
+	postBody, err := json.Marshal(watcherEvent)
+	if err != nil {
+		h.Logger.Error(err, "")
+		return metav1.StatusFailure
+	}
 
 	responseBody := bytes.NewBuffer(postBody)
 
-	kcpIp := os.Getenv("KCP_IP")
+	kcpIP := os.Getenv("KCP_IP")
 	kcpPort := os.Getenv("KCP_PORT")
 	contract := os.Getenv("KCP_CONTRACT")
 	component := "manifest"
 
-	if kcpIp == "" || kcpPort == "" || contract == "" {
+	if kcpIP == "" || kcpPort == "" || contract == "" {
 		return metav1.StatusSuccess
 	}
 
-	url := fmt.Sprintf("http://%s:%s/%s/%s/%s", kcpIp, kcpPort, contract, component, config.EventEndpoint)
-	fmt.Println("url" + url)
-	resp, err := http.Post(url, "application/json", responseBody)
+	url := fmt.Sprintf("http://%s/%s/%s/%s", net.JoinHostPort(kcpIP, kcpPort),
+		contract, component, config.EventEndpoint)
 
+	h.Logger.Info("KCP", "url", url)
+	//nolint:gosec
+	resp, err := http.Post(url, "application/json", responseBody)
 	if err != nil {
 		h.Logger.Error(err, "")
 		return metav1.StatusFailure
 	}
 
 	var response interface{}
-	if err = yaml.NewYAMLOrJSONDecoder(resp.Body, 2048).Decode(response); err != nil {
+	if err = yaml.NewYAMLOrJSONDecoder(resp.Body, defaultBufferSize).Decode(response); err != nil {
 		h.Logger.Error(err, "response from KCP could not be unmarshalled")
 		return metav1.StatusFailure
 	}
-	fmt.Println(response)
+	h.Logger.Info("response", response)
 	return metav1.StatusSuccess
 }
 
 func (h *Handler) unmarshalRawObj(writer http.ResponseWriter, rawBytes []byte, response responseInterface,
-	resourceKind string) validateResource {
+	resourceKind string,
+) validateResource {
 	if err := json.Unmarshal(rawBytes, response); err != nil || response.isEmpty() {
 		return h.invalidAdmissionReviewObj(writer, resourceKind, err)
 	}
@@ -294,18 +311,18 @@ func (h *Handler) getKymaAndResourceListFromConfigMap(ctx context.Context) (*uns
 	return &kymasList.Items[0], resources
 }
 
-func (h *Handler) httpError(w http.ResponseWriter, code int, err error) {
+func (h *Handler) httpError(writer http.ResponseWriter, code int, err error) {
 	h.Logger.Error(err, "")
-	http.Error(w, err.Error(), code)
+	http.Error(writer, err.Error(), code)
 }
 
-func (h *Handler) getAdmissionRequestFromBytes(w http.ResponseWriter, body []byte) *admissionv1.AdmissionReview {
+func (h *Handler) getAdmissionRequestFromBytes(writer http.ResponseWriter, body []byte) *admissionv1.AdmissionReview {
 	admissionReview := admissionv1.AdmissionReview{}
 	if _, _, err := UniversalDeserializer.Decode(body, nil, &admissionReview); err != nil {
-		h.httpError(w, http.StatusBadRequest, fmt.Errorf("%s %w", AdmissionError, err))
+		h.httpError(writer, http.StatusBadRequest, fmt.Errorf("%s %w", AdmissionError, err))
 		return nil
 	} else if admissionReview.Request == nil {
-		h.httpError(w, http.StatusBadRequest, fmt.Errorf("%s empty request", AdmissionError))
+		h.httpError(writer, http.StatusBadRequest, fmt.Errorf("%s empty request", AdmissionError))
 		return nil
 	}
 	return &admissionReview

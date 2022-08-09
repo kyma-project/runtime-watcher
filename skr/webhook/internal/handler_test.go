@@ -3,18 +3,21 @@ package internal_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+
 	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"io"
+
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"net/http"
-	"net/http/httptest"
-	"os"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -22,14 +25,14 @@ import (
 
 var (
 	testEnv   *envtest.Environment //nolint:gochecknoglobals
-	k8sClient client.Client
+	k8sClient client.Client        //nolint:gochecknoglobals
 )
 
 const (
 	uid = "someUid"
 )
 
-func getHttpRequest(operation admissionv1.Operation, crdName string) (*http.Request, *httptest.ResponseRecorder) {
+func getHTTPRequest(operation admissionv1.Operation, crdName string) (*http.Request, *httptest.ResponseRecorder) {
 	admissionReview, err := createAdmissionRequest(operation, crdName)
 	Expect(err).ShouldNot(HaveOccurred())
 	bytesRequest, err := json.Marshal(admissionReview)
@@ -92,16 +95,19 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		if configMapContent != nil {
-			if err = yaml.NewYAMLOrJSONDecoder(configMapContent, 2048).Decode(&configMap); err != nil {
-				Expect(err).ShouldNot(HaveOccurred())
-			}
+			err = yaml.NewYAMLOrJSONDecoder(configMapContent, 2048).Decode(&configMap)
+			Expect(err).ShouldNot(HaveOccurred())
 			err = configMapContent.Close()
+			Expect(err).ShouldNot(HaveOccurred())
 		}
 
 		Expect(k8sClient.Create(ctx, &configMap)).Should(Succeed())
 
 		// base kyma resource
-		response, err := http.DefaultClient.Get("https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/config/samples/component-integration-installed/operator_v1alpha1_kyma.yaml")
+		response, err := http.DefaultClient.Get(
+			"https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/config/samples/" +
+				"component-integration-installed/operator_v1alpha1_kyma.yaml")
+		Expect(err).ShouldNot(HaveOccurred())
 		body, err := io.ReadAll(response.Body)
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -118,23 +124,22 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 	})
 
 	It("when relevant fields are modified", func() {
-
-		wh := &internal.Handler{
+		handler := &internal.Handler{
 			Client: k8sClient,
 			Logger: ctrl.Log.WithName("skr-watcher-test"),
 		}
 
-		request, recorder := getHttpRequest(admissionv1.Update, "crdName")
+		request, recorder := getHTTPRequest(admissionv1.Update, "crdName")
 
-		wh.Handle(recorder, request)
+		handler.Handle(recorder, request)
 
 		admissionReview := admissionv1.AdmissionReview{}
 		bytes, err := io.ReadAll(recorder.Body)
 		Expect(err).ShouldNot(HaveOccurred())
-		internal.UniversalDeserializer.Decode(bytes, nil, &admissionReview)
+		_, _, err = internal.UniversalDeserializer.Decode(bytes, nil, &admissionReview)
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(admissionReview.Response.Allowed).Should(BeTrue())
 		Expect(admissionReview.Response.Result.Message).To(Equal("sent requests to KCP for Spec"))
 		Expect(admissionReview.Response.Result.Status).To(Equal(metav1.StatusSuccess))
 	})
-
 })
