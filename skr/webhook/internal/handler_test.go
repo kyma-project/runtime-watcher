@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
@@ -25,7 +26,7 @@ var (
 )
 
 const (
-	uid = "uid"
+	uid = "someUid"
 )
 
 func getHttpRequest(operation admissionv1.Operation, crdName string) (*http.Request, *httptest.ResponseRecorder) {
@@ -62,57 +63,65 @@ func createAdmissionRequest(operation admissionv1.Operation, crdName string) (*a
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: map[string]interface{}{
-			"key": "value",
+			"specField": "value",
 		},
 		Kind: "Manifest",
 	}
 
 	rawBytes, err := json.Marshal(objectWatched)
-	if err != nil {
-		return nil, err
-	}
+	Expect(err).ShouldNot(HaveOccurred())
 
-	admissionReview.Request.OldObject.Raw = rawBytes
+	// change watched field
+	objectWatchedOld := objectWatched
+	objectWatchedOld.Spec["specField"] = "oldValue"
+	rawBytesOld, err := json.Marshal(objectWatchedOld)
+	Expect(err).ShouldNot(HaveOccurred())
+
 	admissionReview.Request.Object.Raw = rawBytes
+	admissionReview.Request.OldObject.Raw = rawBytesOld
 
 	return admissionReview, nil
 }
 
 var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
-
+	configMap := v1.ConfigMap{}
+	kyma := unstructured.Unstructured{}
 	BeforeAll(func() {
-		file, err := os.Open("./../configmap.yaml")
+		// config map
+		configMapContent, err := os.Open("./assets/configmap.yaml")
 		Expect(err).ShouldNot(HaveOccurred())
 
-		configMap := v1.ConfigMap{}
-		if file != nil {
-			if err = yaml.NewYAMLOrJSONDecoder(file, 2048).Decode(&configMap); err != nil {
+		if configMapContent != nil {
+			if err = yaml.NewYAMLOrJSONDecoder(configMapContent, 2048).Decode(&configMap); err != nil {
 				Expect(err).ShouldNot(HaveOccurred())
 			}
-			err = file.Close()
+			err = configMapContent.Close()
 		}
 
 		Expect(k8sClient.Create(ctx, &configMap)).Should(Succeed())
 
-		file, err = os.Open("./../kyma.yaml")
+		// base kyma resource
+		response, err := http.DefaultClient.Get("https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/config/samples/component-integration-installed/operator_v1alpha1_kyma.yaml")
+		body, err := io.ReadAll(response.Body)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		kyma := unstructured.Unstructured{}
-		if file != nil {
-			if err = yaml.NewYAMLOrJSONDecoder(file, 2048).Decode(&kyma); err != nil {
-				Expect(err).ShouldNot(HaveOccurred())
-			}
-			err = file.Close()
-		}
+		_, _, err = internal.UniversalDeserializer.Decode(body,
+			nil, &kyma)
+		Expect(err).ShouldNot(HaveOccurred())
 
 		Expect(k8sClient.Create(ctx, &kyma)).Should(Succeed())
 	})
 
-	It("Should result in an error state", func() {
-		// valid CAPApplication
-		//Ca := createManifestResource()
+	AfterAll(func() {
+		Expect(k8sClient.Delete(ctx, &configMap)).Should(Succeed())
+		Expect(k8sClient.Delete(ctx, &kyma)).Should(Succeed())
+	})
+
+	It("when relevant fields are modified", func() {
+
 		wh := &internal.Handler{
 			Client: k8sClient,
+			Logger: ctrl.Log.WithName("skr-watcher-test"),
 		}
 
 		request, recorder := getHttpRequest(admissionv1.Update, "crdName")
@@ -123,7 +132,9 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 		bytes, err := io.ReadAll(recorder.Body)
 		Expect(err).ShouldNot(HaveOccurred())
 		internal.UniversalDeserializer.Decode(bytes, nil, &admissionReview)
-
+		Expect(admissionReview.Response.Allowed).Should(BeTrue())
+		Expect(admissionReview.Response.Result.Message).To(Equal("sent requests to KCP for Spec"))
+		Expect(admissionReview.Response.Result.Status).To(Equal(metav1.StatusSuccess))
 	})
 
 })

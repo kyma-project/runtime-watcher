@@ -11,6 +11,7 @@ import (
 	"io"
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"net/http"
 	"os"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -30,6 +32,7 @@ type validateResource struct {
 	errorOccurred bool
 	allowed       bool
 	message       string
+	status        string
 }
 
 type responseInterface interface {
@@ -37,17 +40,9 @@ type responseInterface interface {
 }
 
 type Resource struct {
-	schema.GroupVersionKind
-	Fields ResourceFields `json:"fields"`
-}
-
-type ResourceFields struct {
-	Status []FieldKey `json:"status"`
-	Spec   []FieldKey `json:"spec"`
-}
-
-type FieldKey struct {
-	Field string `json:"field"`
+	metav1.GroupVersionKind
+	Status bool `json:"status"`
+	Spec   bool `json:"spec"`
 }
 
 type Metadata struct {
@@ -64,16 +59,14 @@ type ObjectWatched struct {
 	Metadata `json:"metadata"`
 	Spec     map[string]interface{} `json:"spec"`
 	Kind     string                 `json:"kind"`
+	Status   map[string]interface{} `json:"status"`
 }
 
 const (
-	LabelTenantType     = "sme.sap.com/tenant-type"
-	SideCarEnv          = "WEBHOOK_SIDE_CAR"
 	AdmissionError      = "admission error:"
 	InvalidResource     = "invalid resource"
 	InvalidationMessage = "invalidated from webhook"
 	ValidationMessage   = "validated from webhook"
-	RequestPath         = "/request"
 )
 
 var (
@@ -98,7 +91,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	h.validateResources(writer, admissionReview, resourceList)
+	resourceValidation := h.validateResources(writer, admissionReview, resourceList, kyma.GetName())
 
 	h.Logger.Info(fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.Kind))
 
@@ -108,11 +101,109 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		panic(err.Error())
 	}
 
+	// prepare response
+	if responseBytes := h.prepareResponse(writer, admissionReview, resourceValidation); responseBytes == nil {
+		return
+	} else {
+		writer.Write(responseBytes)
+	}
+}
+
+func (h *Handler) prepareResponse(writer http.ResponseWriter, admissionReview *admissionv1.AdmissionReview,
+	validation validateResource) []byte {
+	// prepare response object
+	finalizedAdmissionReview := admissionv1.AdmissionReview{}
+	finalizedAdmissionReview.Kind = admissionReview.Kind
+	finalizedAdmissionReview.APIVersion = admissionReview.APIVersion
+	finalizedAdmissionReview.Response = &admissionv1.AdmissionResponse{
+		UID:     admissionReview.Request.UID,
+		Allowed: validation.allowed,
+	}
+	finalizedAdmissionReview.APIVersion = admissionReview.APIVersion
+
+	finalizedAdmissionReview.Response.Result = &metav1.Status{
+		Message: validation.message,
+		Status:  validation.status,
+	}
+	if !validation.allowed {
+		h.Logger.Info(
+			fmt.Sprintf("%s %s %s", admissionReview.Request.Kind.Kind,
+				string(admissionReview.Request.Operation), InvalidationMessage),
+		)
+	} else {
+		h.Logger.Info(
+			fmt.Sprintf("%s %s %s", admissionReview.Request.Kind.Kind,
+				string(admissionReview.Request.Operation), ValidationMessage),
+		)
+	}
+
+	if bytes, err := json.Marshal(&finalizedAdmissionReview); err != nil {
+		h.httpError(writer, http.StatusInternalServerError, fmt.Errorf("%s %w", AdmissionError, err))
+		return nil
+	} else {
+		return bytes
+	}
+}
+
+func (h *Handler) validateResources(writer http.ResponseWriter, admissionReview *admissionv1.AdmissionReview,
+	resourcesList []Resource, kymaName string) validateResource {
+	var message string
+	var status string
+	for _, resource := range resourcesList {
+
+		if admissionReview.Request.Kind.String() != resource.GroupVersionKind.String() {
+			continue
+		}
+
+		// Note: OldObject is nil for "CONNECT" and "CREATE" operations
+		if admissionReview.Request.Operation == admissionv1.Update {
+			// old object
+			oldObjectWatched := ObjectWatched{}
+			validatedResource := h.unmarshalRawObj(writer, admissionReview.Request.OldObject.Raw,
+				&oldObjectWatched, resource.GroupVersionKind.String())
+			if !validatedResource.allowed {
+				return validatedResource
+			}
+
+			// new object
+			objectWatched := ObjectWatched{}
+			validatedResource = h.unmarshalRawObj(writer, admissionReview.Request.Object.Raw,
+				&objectWatched, resource.GroupVersionKind.String())
+			if !validatedResource.allowed {
+				return validatedResource
+			}
+
+			if resource.Status {
+				if !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status) {
+					message = "sent requests to KCP for Status"
+				}
+			}
+
+			if resource.Spec && message == "" {
+				if !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec) {
+					message = "sent requests to KCP for Spec"
+				}
+			}
+
+			if message != "" {
+				status = h.sendRequestToKcp(kymaName, objectWatched)
+			}
+		}
+
+		// since resource was found - exit loop
+		break
+	}
+
+	// send valid admission response - under all circumstances!
+	return h.validAdmissionReviewObj(message, status)
+}
+
+func (h *Handler) sendRequestToKcp(kymaName string, watched ObjectWatched) string {
 	// send request to kcp
 	watcherEvent := &types.WatcherEvent{
-		KymaCr:    kyma.GetName(),
-		Namespace: "default",
-		Name:      "manifestkyma-sample",
+		KymaCr:    kymaName,
+		Namespace: watched.Namespace,
+		Name:      watched.Name,
 	}
 	postBody, _ := json.Marshal(watcherEvent)
 
@@ -123,36 +214,34 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	contract := os.Getenv("KCP_CONTRACT")
 	component := "manifest"
 
+	if kcpIp == "" || kcpPort == "" || contract == "" {
+		return metav1.StatusSuccess
+	}
+
 	url := fmt.Sprintf("http://%s:%s/%s/%s/%s", kcpIp, kcpPort, contract, component, config.EventEndpoint)
 	fmt.Println("url" + url)
 	resp, err := http.Post(url, "application/json", responseBody)
 
 	if err != nil {
-		fmt.Println("error" + err.Error())
+		h.Logger.Error(err, "")
+		return metav1.StatusFailure
 	}
-	fmt.Println(resp)
+
+	var response interface{}
+	if err = yaml.NewYAMLOrJSONDecoder(resp.Body, 2048).Decode(response); err != nil {
+		h.Logger.Error(err, "response from KCP could not be unmarshalled")
+		return metav1.StatusFailure
+	}
+	fmt.Println(response)
+	return metav1.StatusSuccess
 }
 
-func (h *Handler) validateResources(writer http.ResponseWriter, admissionReview *admissionv1.AdmissionReview,
-	resourcesList []Resource) validateResource {
-	for _, resource := range resourcesList {
-		objectWatched := ObjectWatched{}
-		// Note: OldObject is nil for "CONNECT" and "CREATE" operations
-		if admissionReview.Request.Operation == admissionv1.Update {
-			if validatedResource := h.unmarshalRawObj(writer, admissionReview.Request.OldObject.Raw,
-				&objectWatched, resource.GroupVersionKind.String()); !validatedResource.allowed {
-				return validatedResource
-			}
-		}
-	}
-	return h.validAdmissionReviewObj()
-}
-
-func (h *Handler) unmarshalRawObj(writer http.ResponseWriter, rawBytes []byte, response responseInterface, resourceKind string) validateResource {
+func (h *Handler) unmarshalRawObj(writer http.ResponseWriter, rawBytes []byte, response responseInterface,
+	resourceKind string) validateResource {
 	if err := json.Unmarshal(rawBytes, response); err != nil || response.isEmpty() {
 		return h.invalidAdmissionReviewObj(writer, resourceKind, err)
 	}
-	return h.validAdmissionReviewObj()
+	return h.validAdmissionReviewObj("", "")
 }
 
 func (h *Handler) getKymaAndResourceListFromConfigMap(ctx context.Context) (*unstructured.Unstructured, []Resource) {
@@ -228,6 +317,10 @@ func (h *Handler) invalidAdmissionReviewObj(writer http.ResponseWriter, kind str
 	return validateResource{errorOccurred: true}
 }
 
-func (h *Handler) validAdmissionReviewObj() validateResource {
-	return validateResource{allowed: true}
+func (h *Handler) validAdmissionReviewObj(message string, status string) validateResource {
+	return validateResource{
+		allowed: true,
+		message: message,
+		status:  status,
+	}
 }

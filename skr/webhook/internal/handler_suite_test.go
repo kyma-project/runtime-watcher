@@ -7,7 +7,6 @@ import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"net/http"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -30,7 +29,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel = context.WithCancel(context.TODO())
 
-	By("bootstrapping test environment")
+	By("bootstrapping test environment for skr-watcher tests")
 
 	kymaCrd := &v1.CustomResourceDefinition{}
 	res, err := http.DefaultClient.Get(
@@ -40,9 +39,6 @@ var _ = BeforeSuite(func() {
 	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(kymaCrd)).To(Succeed())
 
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{
-			filepath.Join("..", "config", "crd", "bases"),
-		},
 		CRDs:                  []*v1.CustomResourceDefinition{kymaCrd},
 		ErrorIfCRDPathMissing: false,
 	}
@@ -51,18 +47,16 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	//err = componentv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-
-	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+	//+kubebuilder:scaffold:scheme
+
 })
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
+	Expect(testEnv.Stop()).To(Succeed())
 })
