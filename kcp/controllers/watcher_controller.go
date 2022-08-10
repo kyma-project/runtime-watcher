@@ -133,11 +133,7 @@ func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 
 func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr.Logger,
 	obj *componentv1alpha1.Watcher) error {
-	err := r.deleteConfigMapForCR(ctx, obj)
-	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete config map")
-	}
-	err = r.deleteServiceMeshConfigForCR(ctx, obj)
+	err := r.deleteServiceMeshConfigForCR(ctx, obj)
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete service mesh config")
 	}
@@ -186,22 +182,18 @@ func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Lo
 }
 
 func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	watcherCRLabels := obj.GetLabels()
-	if util.IsDefaultComponent(watcherCRLabels) {
-		//watcher CR belongs to a KCP operator which applies on all Kymas.
-		//So no need to create configMap for it!
-		return nil
+	cmObjectKey := client.ObjectKey{
+		Name:      util.ConfigMapResourceName,
+		Namespace: obj.GetNamespace(),
 	}
-	//create empty config map for CR
-	watcherObjKey := client.ObjectKeyFromObject(obj)
 	configMap := &v1.ConfigMap{}
-	err := r.Get(ctx, watcherObjKey, configMap)
+	err := r.Get(ctx, cmObjectKey, configMap)
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to get config map: %w", err)
 	}
 	if errors.IsNotFound(err) {
-		configMap.SetName(watcherObjKey.Name)
-		configMap.SetNamespace(watcherObjKey.Namespace)
+		configMap.SetName(cmObjectKey.Name)
+		configMap.SetNamespace(cmObjectKey.Namespace)
 		err = r.Create(ctx, configMap)
 		if err != nil {
 			return fmt.Errorf("failed to create config map: %w", err)
@@ -302,27 +294,6 @@ func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj
 	return nil
 }
 
-func (r *WatcherReconciler) deleteConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	watcherCRLabels := obj.GetLabels()
-	if util.IsDefaultComponent(watcherCRLabels) {
-		//watcher CR belongs to a KCP operator which applies on all Kymas.
-		//So no need to delete its non-existing configMap
-		return nil
-	}
-	//delete config map for CR
-	watcherObjKey := client.ObjectKeyFromObject(obj)
-	configMap := &v1.ConfigMap{}
-	err := r.Get(ctx, watcherObjKey, configMap)
-	if err != nil {
-		return fmt.Errorf("failed to get config map: %w", err)
-	}
-	err = r.Delete(ctx, configMap)
-	if err != nil {
-		return fmt.Errorf("failed to delete config map: %w", err)
-	}
-	return nil
-}
-
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
 	namespace := obj.GetNamespace()
 	vsName := obj.GetName()
@@ -379,23 +350,19 @@ func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger
 func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 	obj *componentv1alpha1.Watcher) (bool, error) {
 	//1.step: config map check
-	watcherCRLabels := obj.GetLabels()
-	if !util.IsDefaultComponent(watcherCRLabels) {
-		watcherObjKey := client.ObjectKeyFromObject(obj)
-		returns, err := util.PerformConfigMapCheck(ctx, r.Client, watcherObjKey)
-		if returns {
-			return false, err
-		}
+	namespace := obj.GetNamespace()
+	returns, err := util.PerformConfigMapCheck(ctx, r.Client, namespace)
+	if returns {
+		return false, err
 	}
 
-	namespace := obj.GetNamespace()
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w",
 			r.RestConfig.String(), err)
 	}
 	//2.step: istio GW check
-	returns, err := util.PerformIstioGWCheck(ctx, istioClientSet, r.Config.ListenerIstioGatewayPort,
+	returns, err = util.PerformIstioGWCheck(ctx, istioClientSet, r.Config.ListenerIstioGatewayPort,
 		istioGatewayResourceName, istioGatewayGVR, namespace)
 	if returns {
 		return false, err

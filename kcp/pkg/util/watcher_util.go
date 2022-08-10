@@ -16,7 +16,7 @@ import (
 	istioclientapiv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	v1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -33,9 +33,13 @@ const (
 	firstElementIdx         = 0
 	// defaultOperatorWatcherCRLabel is a label indicating that watcher CR applies to all Kymas
 	defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
+	ConfigMapResourceName         = "kcp-watcher-kyma-mapping"
 )
 
 type WatcherConfig struct {
+	// ListenerIstioGatewayHost represents hostname or IP address
+	//on which KCP listeners will be reachable for SKR watchers
+	ListenerIstioGatewayHost string
 	// ListenerIstioGatewayPort represents port on which KCP listeners will be reachable for SKR watchers
 	ListenerIstioGatewayPort uint32
 	// RequeueInterval represents requeue interval in seconds
@@ -54,7 +58,7 @@ func IsDefaultComponent(labels map[string]string) bool {
 }
 
 func IstioResourcesErrorCheck(gvr string, err error) (bool, error) {
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !k8sapierrors.IsNotFound(err) {
 		return false, err
 	}
 	if err != nil {
@@ -183,10 +187,10 @@ func prepareIstioHTTPRouteForCR(obj *componentv1alpha1.Watcher) *istioapiv1beta1
 }
 
 func isCrdInstalled(err error) (bool, error) {
-	if err == nil || !k8serrors.IsNotFound(err) {
+	if err == nil || !k8sapierrors.IsNotFound(err) {
 		return false, fmt.Errorf("expected non nil error of NotFound kind")
 	}
-	var k8sStatusErr *k8serrors.StatusError
+	var k8sStatusErr *k8sapierrors.StatusError
 	converted := errors.As(err, &k8sStatusErr)
 	if !converted {
 		return false, fmt.Errorf("expected non nil error of StatusError type")
@@ -240,13 +244,17 @@ func UpdateIstioGWConfig(gateway *istioclientapiv1beta1.Gateway, gwPortNumber ui
 }
 
 func PerformConfigMapCheck(ctx context.Context, reader client.Reader,
-	watcherObjKey client.ObjectKey) (bool, error) {
+	namespace string) (bool, error) {
+	cmObjectKey := client.ObjectKey{
+		Name:      ConfigMapResourceName,
+		Namespace: namespace,
+	}
 	configMap := &v1.ConfigMap{}
-	err := reader.Get(ctx, watcherObjKey, configMap)
-	if err != nil && !k8serrors.IsNotFound(err) {
+	err := reader.Get(ctx, cmObjectKey, configMap)
+	if err != nil && !k8sapierrors.IsNotFound(err) {
 		return true, fmt.Errorf("failed to send get config map request to API server: %w", err)
 	}
-	if k8serrors.IsNotFound(err) {
+	if k8sapierrors.IsNotFound(err) {
 		return true, nil
 	}
 	return false, nil
@@ -260,7 +268,7 @@ func PerformIstioGWCheck(ctx context.Context, istioClientSet *istioclient.Client
 	if !ready {
 		return true, err
 	}
-	if k8serrors.IsNotFound(apiErr) {
+	if k8sapierrors.IsNotFound(apiErr) {
 		return true, nil
 	}
 	if IsGWConfigChanged(gateway, gwPort) {
@@ -279,7 +287,7 @@ func PerformIstioVirtualServiceCheck(ctx context.Context, istioClientSet *istioc
 	if !ready {
 		return true, err
 	}
-	if k8serrors.IsNotFound(apiErr) {
+	if k8sapierrors.IsNotFound(apiErr) {
 		return true, nil
 	}
 	if IsVirtualServiceConfigChanged(virtualService, obj, gwName) {
