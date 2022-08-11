@@ -1,0 +1,20 @@
+apiVersion: component.kyma-project.io/v1alpha1
+kind: Watcher
+metadata:
+  labels:
+    operator.kyma-project.io/default: "somethingSomething"
+  name: example-module-name-stable
+  namespace: default
+spec:
+  componentName: "example-module-name"
+  contractVersion: "v1"
+  gvrsToWatch:
+  - gvr: 
+      group: "operator.kyma-project.io"
+      version: "v1aplha1"
+      resource: "configmaps"
+    labelsToWatch: 
+      test: "value"
+  serviceInfo:
+    serviceName: "sample-service"
+    servicePort: 8083

@@ -31,14 +31,14 @@ const (
 	istioGWSelectorMapValue = "ingressgateway"
 	istioHostsWildcard      = "*"
 	firstElementIdx         = 0
-	// defaultOperatorWatcherCRLabel is a label indicating that watcher CR applies to all Kymas
+	// defaultOperatorWatcherCRLabel is a label indicating that watcher CR applies to all Kymas.
 	defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
 	ConfigMapResourceName         = "kcp-watcher-kyma-mapping"
 )
 
 type WatcherConfig struct {
 	// ListenerIstioGatewayHost represents hostname or IP address
-	//on which KCP listeners will be reachable for SKR watchers
+
 	ListenerIstioGatewayHost string
 	// ListenerIstioGatewayPort represents port on which KCP listeners will be reachable for SKR watchers
 	ListenerIstioGatewayPort uint32
@@ -109,7 +109,6 @@ func AddReadyCondition(obj *componentv1alpha1.Watcher, state componentv1alpha1.W
 }
 
 func isRouteConfigEqual(route1 *istioapiv1beta1.HTTPRoute, route2 *istioapiv1beta1.HTTPRoute) bool {
-
 	if route1.Match[firstElementIdx].Uri.MatchType.(*istioapiv1beta1.StringMatch_Prefix).Prefix != //nolint:nosnakecase
 		route2.Match[firstElementIdx].Uri.MatchType.(*istioapiv1beta1.StringMatch_Prefix).Prefix { //nolint:nosnakecase
 		return false
@@ -129,7 +128,8 @@ func isRouteConfigEqual(route1 *istioapiv1beta1.HTTPRoute, route2 *istioapiv1bet
 }
 
 func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.VirtualService,
-	obj *componentv1alpha1.Watcher, gwName string) bool {
+	obj *componentv1alpha1.Watcher, gwName string,
+) bool {
 	if len(virtualService.Spec.Gateways) != 1 {
 		return true
 	}
@@ -150,7 +150,8 @@ func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.Virtual
 }
 
 func UpdateVirtualServiceConfig(virtualService *istioclientapiv1beta1.VirtualService,
-	obj *componentv1alpha1.Watcher, gwName string) {
+	obj *componentv1alpha1.Watcher, gwName string,
+) {
 	if virtualService == nil {
 		return
 	}
@@ -244,7 +245,8 @@ func UpdateIstioGWConfig(gateway *istioclientapiv1beta1.Gateway, gwPortNumber ui
 }
 
 func PerformConfigMapCheck(ctx context.Context, reader client.Reader,
-	namespace string) (bool, error) {
+	namespace string,
+) (bool, error) {
 	cmObjectKey := client.ObjectKey{
 		Name:      ConfigMapResourceName,
 		Namespace: namespace,
@@ -261,7 +263,8 @@ func PerformConfigMapCheck(ctx context.Context, reader client.Reader,
 }
 
 func PerformIstioGWCheck(ctx context.Context, istioClientSet *istioclient.Clientset,
-	gwPort uint32, gwResourceName, gwGVR, namespace string) (bool, error) {
+	gwPort uint32, gwResourceName, gwGVR, namespace string,
+) (bool, error) {
 	gateway, apiErr := istioClientSet.NetworkingV1beta1().
 		Gateways(namespace).Get(ctx, gwResourceName, metav1.GetOptions{})
 	ready, err := IstioResourcesErrorCheck(gwGVR, apiErr)
@@ -272,14 +275,15 @@ func PerformIstioGWCheck(ctx context.Context, istioClientSet *istioclient.Client
 		return true, nil
 	}
 	if IsGWConfigChanged(gateway, gwPort) {
-		//CR config changed, resources not ready!
+		// CR config changed, resources not ready!
 		return true, nil
 	}
 	return false, nil
 }
 
 func PerformIstioVirtualServiceCheck(ctx context.Context, istioClientSet *istioclient.Clientset,
-	obj *componentv1alpha1.Watcher, virtualServiceGVR, gwName string) (bool, error) {
+	obj *componentv1alpha1.Watcher, virtualServiceGVR, gwName string,
+) (bool, error) {
 	watcherObjKey := client.ObjectKeyFromObject(obj)
 	virtualService, apiErr := istioClientSet.NetworkingV1beta1().
 		VirtualServices(watcherObjKey.Namespace).Get(ctx, watcherObjKey.Name, metav1.GetOptions{})
@@ -291,7 +295,6 @@ func PerformIstioVirtualServiceCheck(ctx context.Context, istioClientSet *istioc
 		return true, nil
 	}
 	if IsVirtualServiceConfigChanged(virtualService, obj, gwName) {
-		//CR config changed, resources not ready!
 		return true, nil
 	}
 	return false, nil

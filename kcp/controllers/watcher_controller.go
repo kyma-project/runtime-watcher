@@ -65,7 +65,6 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	watcherObj := &componentv1alpha1.Watcher{}
 	err := r.Get(ctx, client.ObjectKey{Name: req.Name, Namespace: req.Namespace}, watcherObj)
 	if err != nil {
-
 		logger.Info(fmt.Sprintf("failed to get reconciliation object: %s", req.NamespacedName.String()))
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -110,7 +109,8 @@ func (r *WatcherReconciler) HandleInitialState(ctx context.Context, obj *compone
 }
 
 func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
-	logger logr.Logger, obj *componentv1alpha1.Watcher) error {
+	logger logr.Logger, obj *componentv1alpha1.Watcher,
+) error {
 	err := r.createConfigMapForCR(ctx, obj)
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to create config map")
@@ -132,7 +132,8 @@ func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 }
 
 func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr.Logger,
-	obj *componentv1alpha1.Watcher) error {
+	obj *componentv1alpha1.Watcher,
+) error {
 	err := r.deleteServiceMeshConfigForCR(ctx, obj)
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete service mesh config")
@@ -158,7 +159,8 @@ func (r *WatcherReconciler) HandleErrorState(ctx context.Context, obj *component
 }
 
 func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Logger,
-	obj *componentv1alpha1.Watcher) error {
+	obj *componentv1alpha1.Watcher,
+) error {
 	if obj.Generation != obj.Status.ObservedGeneration {
 		logger.Info("observed generation change for watcher cr")
 		return r.updateWatcherCRStatus(ctx, obj,
@@ -203,7 +205,8 @@ func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, obj *compo
 }
 
 func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Context,
-	obj *componentv1alpha1.Watcher) error {
+	obj *componentv1alpha1.Watcher,
+) error {
 	namespace := obj.GetNamespace()
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
@@ -221,7 +224,8 @@ func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Con
 }
 
 func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context, istioClientSet *istioclient.Clientset,
-	namespace string) error {
+	namespace string,
+) error {
 	listenerGateway, apiErr := istioClientSet.NetworkingV1beta1().
 		Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
 	ready, err := util.IstioResourcesErrorCheck(istioGatewayGVR, apiErr)
@@ -230,7 +234,7 @@ func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context, isti
 	}
 
 	if errors.IsNotFound(apiErr) {
-		//create gateway with config from CR
+		// create gateway with config from CR
 		gateway := &istioclientapiv1beta1.Gateway{}
 		gateway.SetName(istioGatewayResourceName)
 		gateway.SetNamespace(namespace)
@@ -255,7 +259,8 @@ func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context, isti
 }
 
 func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.Context,
-	istioClientSet *istioclient.Clientset, obj *componentv1alpha1.Watcher) error {
+	istioClientSet *istioclient.Clientset, obj *componentv1alpha1.Watcher,
+) error {
 	namespace := obj.GetNamespace()
 	vsName := obj.GetName()
 	listenerVirtualService, apiErr := istioClientSet.NetworkingV1beta1().
@@ -265,7 +270,6 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 		return err
 	}
 	if errors.IsNotFound(apiErr) {
-		//create virtual service with config from CR
 		vs := &istioclientapiv1beta1.VirtualService{}
 		vs.SetName(vsName)
 		vs.SetNamespace(namespace)
@@ -277,7 +281,7 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 		}
 		return nil
 	}
-	//check if config already exists
+	// check if config already exists
 	if util.IsVirtualServiceConfigChanged(listenerVirtualService, obj, istioGatewayResourceName) {
 		util.UpdateVirtualServiceConfig(listenerVirtualService, obj, istioGatewayResourceName)
 		_, err = istioClientSet.NetworkingV1beta1().
@@ -290,7 +294,7 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
+	// this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
 	return nil
 }
 
@@ -306,7 +310,7 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, ob
 		return fmt.Errorf("failed to get istio virtual service: %w", err)
 	}
 	if errors.IsNotFound(err) {
-		//nothing to do
+		// nothing to do
 		return nil
 	}
 	err = istioClientSet.NetworkingV1beta1().VirtualServices(namespace).Delete(ctx, vsName, metav1.DeleteOptions{})
@@ -314,16 +318,15 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, ob
 		return fmt.Errorf("failed to delete istio virtual service: %w", err)
 	}
 	return nil
-
 }
 
 func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
 	return nil
 }
 
 func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *componentv1alpha1.Watcher,
-	state componentv1alpha1.WatcherState, msg string) error {
+	state componentv1alpha1.WatcherState, msg string,
+) error {
 	obj.Status.State = state
 	switch state { //nolint:exhaustive
 	case componentv1alpha1.WatcherStateReady:
@@ -337,7 +340,8 @@ func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *comp
 }
 
 func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger logr.Logger, err error,
-	obj *componentv1alpha1.Watcher, errMsg string) error {
+	obj *componentv1alpha1.Watcher, errMsg string,
+) error {
 	logger.Error(err, errMsg)
 	apiErr := r.updateWatcherCRStatus(ctx, obj, componentv1alpha1.WatcherStateError, errMsg)
 	if apiErr != nil {
@@ -348,8 +352,9 @@ func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger
 }
 
 func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
-	obj *componentv1alpha1.Watcher) (bool, error) {
-	//1.step: config map check
+	obj *componentv1alpha1.Watcher,
+) (bool, error) {
+	// 1.step: config map check
 	namespace := obj.GetNamespace()
 	returns, err := util.PerformConfigMapCheck(ctx, r.Client, namespace)
 	if returns {
@@ -361,20 +366,20 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w",
 			r.RestConfig.String(), err)
 	}
-	//2.step: istio GW check
+	// 2.step: istio GW check
 	returns, err = util.PerformIstioGWCheck(ctx, istioClientSet, r.Config.ListenerIstioGatewayPort,
 		istioGatewayResourceName, istioGatewayGVR, namespace)
 	if returns {
 		return false, err
 	}
-	//3.step: istio VirtualService check
+	// 3.step: istio VirtualService check
 	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj,
 		istioVirtualServiceGVR, istioGatewayResourceName)
 	if returns {
 		return false, err
 	}
-	//4.step: SKR watcher config check
-	//this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
+
+	// this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
 	return true, nil
 }
 

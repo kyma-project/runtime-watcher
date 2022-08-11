@@ -20,6 +20,7 @@ import (
 	"flag"
 	"os"
 
+	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -49,10 +50,11 @@ const (
 func init() { //nolint:gochecknoinits
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(componentv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kyma.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
-func main() {
+func main() { //nolint:funlen
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -69,7 +71,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	//get env vars for watcher config
+	// get env vars for watcher config
 	watcherConfig := util.GetConfigValuesFromEnv(setupLog)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -91,6 +93,13 @@ func main() {
 		Config: watcherConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
+		os.Exit(1)
+	}
+	if err = (&controllers.KymaReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Kyma")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
