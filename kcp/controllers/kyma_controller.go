@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -45,7 +46,11 @@ type KymaReconciler struct {
 	logger logr.Logger
 }
 
-const DefaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
+const (
+	DefaultOperatorWatcherCRLabel       = "operator.kyma-project.io/default" //nolint:gosec
+	KcpWatcherModulesConfigMapName      = "kcp-watcher-modules"              //nolint:gosec
+	KcpWatcherModulesConfigMapNamespace = "default"                          //nolint:gosec
+)
 
 //+kubebuilder:rbac:groups=kyma-project.io,resources=kymas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kyma-project.io,resources=kymas/status,verbs=get;update;patch
@@ -78,6 +83,10 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 func (r *KymaReconciler) SyncConfigMap(ctx context.Context, modules []kyma.Module, kymaCR *kyma.Kyma) (ctrl.Result, error) { //nolint:lll
+	watcherConfigMap, err := r.getWatcherCM(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	for _, module := range modules {
 		watcherCR, err := r.getWatcherCR(ctx, module, kymaCR.Namespace)
 		if apierrors.IsNotFound(err) {
@@ -87,11 +96,7 @@ func (r *KymaReconciler) SyncConfigMap(ctx context.Context, modules []kyma.Modul
 			return ctrl.Result{}, err
 		}
 		if value, ok := watcherCR.Labels[DefaultOperatorWatcherCRLabel]; ok && strings.ToLower(value) == "true" {
-			watcherConfigMap, err := r.getWatcherCM(ctx, module, kymaCR.Namespace)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-			err = r.updateConfigMap(ctx, watcherConfigMap, kymaCR)
+			err = r.updateConfigMap(ctx, watcherConfigMap, module, kymaCR)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -133,13 +138,12 @@ func (r *KymaReconciler) getWatcherCR(ctx context.Context,
 	return watcherCR, nil
 }
 
-func (r *KymaReconciler) getWatcherCM(ctx context.Context,
-	module kyma.Module,
-	namespace string,
-) (*v1.ConfigMap, error) {
-	watcherConfigMapName := fmt.Sprintf("%s-%s", module.Name, module.Channel)
+func (r *KymaReconciler) getWatcherCM(ctx context.Context) (*v1.ConfigMap, error) {
 	watcherConfigMap := &v1.ConfigMap{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: watcherConfigMapName},
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: KcpWatcherModulesConfigMapNamespace,
+		Name:      KcpWatcherModulesConfigMapName,
+	},
 		watcherConfigMap); err != nil {
 		return nil, err
 	}
@@ -148,24 +152,98 @@ func (r *KymaReconciler) getWatcherCM(ctx context.Context,
 
 func (r *KymaReconciler) updateConfigMap(ctx context.Context,
 	watcherConfigMap *v1.ConfigMap,
+	module kyma.Module,
 	kymaCR *kyma.Kyma,
 ) error {
+	moduleKey := fmt.Sprintf("%s-%s", module.Name, module.Channel)
 	if watcherConfigMap.Data == nil {
 		// initialize data map, if map is nil
 		watcherConfigMap.Data = make(map[string]string)
 	} else {
-		for key, value := range watcherConfigMap.Data {
-			if key == kymaCR.Name && value == kymaCR.Namespace {
-				// Kyma already exists in ConfigMap, nothing has to be done
-				return nil
+		// ConfigMap is not empty, check if Module exists in data
+		if data, ok := watcherConfigMap.Data[moduleKey]; ok {
+			// insert KymaCR if it does not exist
+			err := r.insertIntoModule(ctx, moduleKey, data, kymaCR, watcherConfigMap)
+			if err != nil {
+				return err
 			}
+			return nil
 		}
 	}
-	// Kyma does not exists in ConfigMap
-	watcherConfigMap.Data[kymaCR.Name] = kymaCR.Namespace
-	err := r.Client.Update(ctx, watcherConfigMap)
+	// module does not exist in ConfigMap
+	err := r.createModuleAndInsertKyma(ctx, moduleKey, kymaCR, watcherConfigMap)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+type WatcherJSONData struct {
+	KymaCRList []KymaCREntry `json:"kymaCrList"`
+}
+
+type KymaCREntry struct {
+	KymaCR        string `json:"kymaCr"`
+	KymaNamespace string `json:"kymaNamespace"`
+}
+
+func (r *KymaReconciler) insertIntoModule(
+	ctx context.Context,
+	module, data string,
+	kymaCR *kyma.Kyma,
+	watcherConfigMap *v1.ConfigMap,
+) error {
+	// unmarshall json into go struct
+	var configMapdata WatcherJSONData
+	err := json.Unmarshal([]byte(data), &configMapdata)
+	if err != nil {
+		return err
+	}
+	// check if KymaCR already exists in ConfigMap
+	for _, kyma := range configMapdata.KymaCRList {
+		if kyma.KymaCR == kymaCR.Name && kyma.KymaNamespace == kymaCR.Namespace {
+			r.logger.Info(
+				fmt.Sprintf(
+					"KymaCR `%s` already exists in Watcher-KCP-ConfigMap - Nothing has to be done",
+					kymaCR.Name),
+			)
+			return nil
+		}
+	}
+	// KymaCR does not exist, insert it into ConfigMap
+	configMapdata.KymaCRList = append(configMapdata.KymaCRList, KymaCREntry{
+		KymaCR:        kymaCR.Name,
+		KymaNamespace: kymaCR.Namespace,
+	})
+	byteString, err := json.Marshal(configMapdata)
+	if err != nil {
+		return err
+	}
+	watcherConfigMap.Data[module] = string(byteString)
+	// update the ConfigMap on the cluster
+	err = r.Update(ctx, watcherConfigMap)
+	return err
+}
+
+func (r *KymaReconciler) createModuleAndInsertKyma(
+	ctx context.Context,
+	module string,
+	kymaCR *kyma.Kyma,
+	watcherConfigMap *v1.ConfigMap,
+) error {
+	// create KymaCR entry
+	configMapdata := WatcherJSONData{
+		KymaCRList: []KymaCREntry{
+			{KymaCR: kymaCR.Name, KymaNamespace: kymaCR.Namespace},
+		},
+	}
+	byteString, err := json.Marshal(configMapdata)
+	if err != nil {
+		return err
+	}
+	// insert entry into ConfigMap data
+	watcherConfigMap.Data[module] = string(byteString)
+	// update the ConfigMap on the cluster
+	err = r.Update(ctx, watcherConfigMap)
+	return err
 }

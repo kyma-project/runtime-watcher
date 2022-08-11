@@ -22,7 +22,7 @@ const (
 	serviceName      = "test-service"
 	servicePort      = 8083
 	watcherName      = componentName + "-" + componentChannel
-	configMapName    = componentName + "-" + componentChannel
+	configMapName    = "kcp-watcher-modules"
 
 	interval = time.Millisecond * 250
 )
@@ -37,7 +37,10 @@ var _ = Describe("Correct WatcherCR Setup", func() {
 	It("should insert testKyma in the ConfigMap of the example-module WatcherCR", func() {
 		By("checking the data of the ConfigMap")
 		Eventually(GetConfigMapData(testConfigMap), 5*time.Second, interval).
-			Should(Equal(map[string]string{"test-kyma": "default"}))
+			Should(Equal(map[string]string{
+				"example-module-stable": "{\"kymaCrList\":[{\"kymaCr\":\"test-kyma\",\"kymaNamespace\":\"default\"}]}",
+			},
+			))
 	})
 })
 
