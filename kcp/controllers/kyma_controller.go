@@ -47,9 +47,9 @@ type KymaReconciler struct {
 }
 
 const (
-	DefaultOperatorWatcherCRLabel       = "operator.kyma-project.io/default" //nolint:gosec
-	KcpWatcherModulesConfigMapName      = "kcp-watcher-modules"              //nolint:gosec
-	KcpWatcherModulesConfigMapNamespace = "default"                          //nolint:gosec
+	DefaultOperatorWatcherCRLabel       = "operator.kyma-project.io/default"
+	KcpWatcherModulesConfigMapName      = "kcp-watcher-modules" //nolint:gosec
+	KcpWatcherModulesConfigMapNamespace = "default"             //nolint:gosec
 )
 
 //+kubebuilder:rbac:groups=kyma-project.io,resources=kymas,verbs=get;list;watch;create;update;patch;delete

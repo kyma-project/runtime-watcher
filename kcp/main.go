@@ -54,7 +54,7 @@ func init() { //nolint:gochecknoinits
 	//+kubebuilder:scaffold:scheme
 }
 
-func main() {
+func main() { //nolint:funlen
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -71,7 +71,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	//get env vars for watcher config
+	// get env vars for watcher config
 	watcherConfig := util.GetConfigValuesFromEnv(setupLog)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
