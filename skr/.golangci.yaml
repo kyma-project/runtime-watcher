@@ -32,7 +32,7 @@ linters-settings:
       - default # Contains all imports that could not be matched to another section type.
       - prefix(github.com/kyma-project)
   cyclop:
-    max-complexity: 15
+    max-complexity: 10
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

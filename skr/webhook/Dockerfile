@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine as dev-env
+FROM gcr.io/distroless/static:nonroot as dev-env
 
 WORKDIR /app
 

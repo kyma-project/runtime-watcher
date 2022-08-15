@@ -44,10 +44,6 @@ func getHTTPRequest(operation admissionv1.Operation, crdName string) (*http.Requ
 
 func createAdmissionRequest(operation admissionv1.Operation, crdName string) (*admissionv1.AdmissionReview, error) {
 	admissionReview := &admissionv1.AdmissionReview{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       admissionv1.AdmissionReview{}.Kind,
-			APIVersion: admissionv1.AdmissionReview{}.APIVersion,
-		},
 		Request: &admissionv1.AdmissionRequest{
 			Name: crdName,
 			Kind: metav1.GroupVersionKind{
@@ -140,6 +136,7 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(admissionReview.Response.Allowed).Should(BeTrue())
 		Expect(admissionReview.Response.Result.Message).To(Equal("sent requests to KCP for Spec"))
-		Expect(admissionReview.Response.Result.Status).To(Equal(metav1.StatusSuccess))
+		// since the KCP request is not sent - metav1.StatusFailure expected
+		Expect(admissionReview.Response.Result.Status).To(Equal(metav1.StatusFailure))
 	})
 })

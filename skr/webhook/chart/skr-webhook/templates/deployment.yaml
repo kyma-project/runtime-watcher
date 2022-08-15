@@ -32,6 +32,18 @@ spec:
         app: skr-webhook
     spec:
       containers:
+        {{- if eq .Values.sidecar true }}
+        - name: request-sidecar
+          image: alpine
+          command:
+            - /bin/sh
+            - "-c"
+            - "sleep 60m"
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: request
+              mountPath: /tmp
+        {{- end }}
         - name: server
           env:
             - name: POD_NAME
@@ -58,6 +70,8 @@ spec:
               value: "80"
             - name: KCP_CONTRACT
               value: {{.Values.service.contactVersion}}
+            - name: WEBHOOK_SIDE_CAR
+              value: {{ if eq .Values.sidecar true }} "true" {{ else }} "false" {{ end }}
           image: adityabhatia/webhook:0.1.1
           imagePullPolicy: Always
           ports:

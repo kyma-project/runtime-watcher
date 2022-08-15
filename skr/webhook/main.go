@@ -10,8 +10,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"k8s.io/klog/v2"
 )
 
 type ServerParameters struct {
@@ -57,7 +55,7 @@ func main() {
 		logger.Error(err, "rest config could not be determined for skr-webhook")
 		return
 	}
-	client, err := client.New(restConfig, client.Options{})
+	restClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		logger.Error(err, "rest client could not be determined for skr-webhook")
 		return
@@ -65,16 +63,20 @@ func main() {
 
 	// handler
 	handler := &internal.Handler{
-		Client: client,
+		Client: restClient,
 		Logger: logger,
 	}
 	http.HandleFunc("/validate", handler.Handle)
 
 	// server
 	if parameters.tlsEnabled {
-		klog.Fatal(http.ListenAndServeTLS(":"+strconv.Itoa(parameters.port), parameters.certFile,
-			parameters.keyFile, nil))
+		err = http.ListenAndServeTLS(":"+strconv.Itoa(parameters.port), parameters.certFile,
+			parameters.keyFile, nil)
 	} else {
-		klog.Fatal(http.ListenAndServe(":"+strconv.Itoa(parameters.port), nil))
+		err = http.ListenAndServe(":"+strconv.Itoa(parameters.port), nil)
+	}
+	if err != nil {
+		logger.Error(err, "error starting skr-webhook server")
+		return
 	}
 }

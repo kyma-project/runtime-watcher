@@ -3,6 +3,7 @@ package internal_test
 import (
 	"context"
 	"net/http"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -55,10 +56,18 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	// set env variables
+	Expect(os.Setenv("WEBHOOK_SIDE_CAR", "false")).NotTo(HaveOccurred())
 	//+kubebuilder:scaffold:scheme
 })
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	Expect(testEnv.Stop()).To(Succeed())
+
+	// unset env variables
+	Expect(os.Unsetenv("WEBHOOK_SIDE_CAR")).NotTo(HaveOccurred())
+
+	cancel()
 })
