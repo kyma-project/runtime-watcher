@@ -54,10 +54,11 @@ type WatcherReconciler struct {
 	Config     *util.WatcherConfig
 }
 
+// +kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers/finalizers,verbs=update
+//
 //nolint:lll
-//+kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers/finalizers,verbs=update
 func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName(req.NamespacedName.String())
 	logger.Info("Reconciliation loop starting for", "resource", req.NamespacedName.String())
