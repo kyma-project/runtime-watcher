@@ -6,9 +6,9 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - component.kyma-project.io
+  - kyma-project.io
   resources:
-  - watchers
+  - kymas
   verbs:
   - create
   - delete
@@ -18,15 +18,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - component.kyma-project.io
+  - kyma-project.io
   resources:
-  - watchers/finalizers
+  - kymas/finalizers
   verbs:
   - update
 - apiGroups:
-  - component.kyma-project.io
+  - kyma-project.io
   resources:
-  - watchers/status
+  - kymas/status
   verbs:
   - get
   - patch

@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the component v1alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=component.kyma-project.io
+// +kubebuilder:object:generate=true
+// +groupName=component.kyma-project.io
 package v1alpha1
 
 import (
@@ -24,9 +24,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
+const (
+	WatcherKind   = "Watcher"
+	WatcherPlural = "watchers"
+	Version       = "v1alpha1"
+)
+
 var (
 	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "component.kyma-project.io", Version: "v1alpha1"} //nolint:gochecknoglobals
+	GroupVersion = schema.GroupVersion{Group: "component.kyma-project.io", Version: Version} //nolint:gochecknoglobals
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion} //nolint:gochecknoglobals

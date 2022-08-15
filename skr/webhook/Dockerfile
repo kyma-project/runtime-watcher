@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/static:nonroot as dev-env
+FROM golang:1.19-alpine as dev-env
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY . /app/
 
 RUN CGO_ENABLED=0 go build -o /webhook ./webhook/main.go
 
-FROM alpine:3.10 as runtime
+FROM gcr.io/distroless/static AS runtime
 
 COPY --from=build-env /webhook /usr/local/bin/webhook
 RUN chmod +x /usr/local/bin/webhook
