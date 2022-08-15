@@ -1,6 +1,9 @@
+
 # Image URL to use all building/pushing image targets
-# Include valid image value before executing any kustomize targets
-IMG ?= <your-own-skr-watcher-image>
+APP_NAME = kyma-watcher-skr
+IMG_REPO := $(DOCKER_PUSH_REPOSITORY)$(DOCKER_PUSH_DIRECTORY)
+IMG_NAME := $(IMG_REPO)/$(APP_NAME)
+IMG := $(IMG_NAME):$(DOCKER_TAG)
 
 HELM_CHART_TEMPLATES_DIR=$(shell pwd)/chart/templates
 
@@ -129,7 +132,7 @@ GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.8.0
+CONTROLLER_TOOLS_VERSION ?= v0.9.2
 GOLANG_CI_LINT_VERSION ?= v1.46.2
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
