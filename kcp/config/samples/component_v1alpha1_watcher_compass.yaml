@@ -1,0 +1,15 @@
+apiVersion: component.kyma-project.io/v1alpha1
+kind: Watcher
+metadata:
+  name: watcher-compass-sample
+spec:
+  contractVersion: "1"
+  componentName: "compass"
+  serviceInfo:
+    servicePort: 9092
+    serviceName: "compass-event-service"
+  gvrsToWatch:
+  - gvr:
+      group: "component.kyma-project.io"
+      version: "v1alpha1"
+      resource: "compasses"

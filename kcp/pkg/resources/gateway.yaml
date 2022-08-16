@@ -8,7 +8,7 @@ spec:
     istio: ingressgateway
   servers:
     - hosts:
-        - '*'
+        - "*"
       port:
         name: http
         number: 80
@@ -23,11 +23,11 @@ spec:
   gateways:
     - default/kyma-gateway
   hosts:
-    - '*'
+    - "*"
   http:
     - match:
         - uri:
-            regex: \/v.*\/kyma\/event
+            prefix: /v1/kyma/event
       route:
         - destination:
             host: operator-kyma-event-service
@@ -35,7 +35,7 @@ spec:
               number: 8082
     - match:
         - uri:
-            regex: \/v.*\/manifest\/event
+            prefix: /v1/manifest/event
       route:
         - destination:
             host: operator-manifest-event-service
