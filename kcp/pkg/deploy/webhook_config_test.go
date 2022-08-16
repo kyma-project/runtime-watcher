@@ -1,7 +1,9 @@
 package deploy_test
 
 import (
+	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/deploy"
@@ -33,14 +35,13 @@ var _ = Describe("deploy watcher", func() {
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
 		err = k8sYamlDec.Decode(webhookConfig)
 		Expect(err).ShouldNot(HaveOccurred())
-		checkRes, err := checkRenderedWebhookConfig(webhookConfig.Webhooks)
+		checkRes, err := checkRenderedWebhookConfig(watchableRes, webhookConfig.Webhooks)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(checkRes).To(BeTrue())
-		//check deployed resources
+		// check deployed resources
 		checkRes, err = checkInstalledChartResources(k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(checkRes).To(BeTrue())
-
 	})
 })
 
@@ -58,8 +59,30 @@ func checkInstalledChartResources(k8sClient client.Client) (bool, error) {
 	return true, nil
 }
 
-func checkRenderedWebhookConfig(webhookConfigs []admissionv1.ValidatingWebhook) (bool, error) {
-	//TODO: add verification of webhook configs
+func checkRenderedWebhookConfig(watchableRes []*deploy.WatchableResourcesByModule,
+	webhookConfigs []admissionv1.ValidatingWebhook,
+) (bool, error) {
+	for idx, watchableResource := range watchableRes {
+		webhook := webhookConfigs[idx]
+		moduleName := watchableResource.ModuleName
+
+		configName := fmt.Sprintf("%s.%s", moduleName, deploy.KymaProjectWebhookFQDN)
+		if webhook.Name != configName {
+			return false, fmt.Errorf("webhook name mismatch")
+		}
+		rules, labels := deploy.RulesAndLabelsFromGvrsToWatch(watchableResource.GvrsToWatch)
+		if !reflect.DeepEqual(webhook.ObjectSelector.MatchLabels, labels) {
+			return false, fmt.Errorf("webhook labels mismatch")
+		}
+
+		if !reflect.DeepEqual(webhook.Rules, rules) {
+			return false, fmt.Errorf("webhook rules mismatch")
+		}
+		servicePath := fmt.Sprintf(deploy.WebhookHandlerURLPathPattern, watchableResource.ModuleName)
+		if *webhook.ClientConfig.Service.Path != servicePath {
+			return false, fmt.Errorf("webhook service path mismatch")
+		}
+	}
 	return true, nil
 }
 

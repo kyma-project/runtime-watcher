@@ -12,7 +12,6 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 
-	// k8sapiyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"github.com/slok/go-helm-template/helm"
 	k8sapiyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/rest"
@@ -21,12 +20,12 @@ import (
 )
 
 const (
-	webhookHandlerURLPathPattern = "/%s/validate"
+	WebhookHandlerURLPathPattern = "/%s/validate"
 	firstElementIdx              = 0
 	FileWritePermissions         = 0o644
 	DecodeBufferSize             = 2048
 	renderedWebhookConfigSuffix  = "rendered"
-	kymaProjectDomain            = "webhook.kyma-project.io"
+	KymaProjectWebhookFQDN       = "webhook.kyma-project.io"
 	HelmTemplatesDirName         = "templates"
 	webhookAPIVersion            = "admissionregistration.k8s.io/v1"
 	webhookConfigKind            = "ValidatingWebhookConfiguration"
@@ -42,7 +41,6 @@ type WatchableResourcesByModule struct {
 func RedeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableResources []*WatchableResourcesByModule,
 	helmRepoFile, releaseName, namespace, webhookChartPath, webhookConfigFileName string,
 ) error {
-
 	// 1.step: update webhook helm chart
 	err := updateWebhookChart(ctx, watchableResources,
 		releaseName, namespace, webhookChartPath, webhookConfigFileName)
@@ -139,9 +137,9 @@ func webhooksConfigsFromBaseWebhookAndWatchableResources(baseWebhook *admissionv
 	for _, watchableResource := range watchableResources {
 		webhook := *baseWebhook.DeepCopy()
 		moduleName := watchableResource.ModuleName
-		configName := fmt.Sprintf("%s.%s", moduleName, kymaProjectDomain)
-		rules, labels := rulesAndLabelsFromGvrsToWatch(watchableResource.GvrsToWatch)
-		servicePath := fmt.Sprintf(webhookHandlerURLPathPattern, watchableResource.ModuleName)
+		configName := fmt.Sprintf("%s.%s", moduleName, KymaProjectWebhookFQDN)
+		rules, labels := RulesAndLabelsFromGvrsToWatch(watchableResource.GvrsToWatch)
+		servicePath := fmt.Sprintf(WebhookHandlerURLPathPattern, watchableResource.ModuleName)
 		webhook.Name = configName
 		webhook.ObjectSelector.MatchLabels = labels
 		webhook.Rules = rules
@@ -151,7 +149,7 @@ func webhooksConfigsFromBaseWebhookAndWatchableResources(baseWebhook *admissionv
 	return webhooks
 }
 
-func rulesAndLabelsFromGvrsToWatch(gvrsToWatch []*v1alpha1.WatchableGvr) (
+func RulesAndLabelsFromGvrsToWatch(gvrsToWatch []*v1alpha1.WatchableGvr) (
 	[]admissionv1.RuleWithOperations, map[string]string,
 ) {
 	l := len(gvrsToWatch)
@@ -175,8 +173,11 @@ func rulesAndLabelsFromGvrsToWatch(gvrsToWatch []*v1alpha1.WatchableGvr) (
 	return rules, aggregateLabels(labelsArray, labelsMapCapacity)
 }
 
-func aggregateLabels(maps []map[string]string, cap int) map[string]string {
-	result := make(map[string]string, cap)
+func aggregateLabels(maps []map[string]string, capacity int) map[string]string {
+	if capacity <= 0 {
+		return nil
+	}
+	result := make(map[string]string, capacity)
 	for _, mx := range maps {
 		for k, v := range mx {
 			result[k] = v
