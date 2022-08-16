@@ -24,12 +24,11 @@ const (
 	webhookHandlerURLPathPattern = "/%s/validate"
 	firstElementIdx              = 0
 	FileWritePermissions         = 0o644
-	allWildCard                  = "*"
 	DecodeBufferSize             = 2048
 	renderedWebhookConfigSuffix  = "rendered"
 	kymaProjectDomain            = "webhook.kyma-project.io"
 	HelmTemplatesDirName         = "templates"
-	webhookApiVersion            = "admissionregistration.k8s.io/v1"
+	webhookAPIVersion            = "admissionregistration.k8s.io/v1"
 	webhookConfigKind            = "ValidatingWebhookConfiguration"
 )
 
@@ -40,7 +39,7 @@ type WatchableResourcesByModule struct {
 
 // watchableResources are result of the config merge operation
 // config merge will be implemented by https://github.com/kyma-project/kyma-watcher/issues/16
-func DeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableResources []*WatchableResourcesByModule,
+func RedeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableResources []*WatchableResourcesByModule,
 	helmRepoFile, releaseName, namespace, webhookChartPath, webhookConfigFileName string,
 ) error {
 
@@ -119,12 +118,13 @@ func lookupWebhookConfigInYaml(yaml string) (*admissionv1.ValidatingWebhookConfi
 }
 
 func isWebhookConfig(apiVersion, kind string) bool {
-	return apiVersion == webhookApiVersion && kind == webhookConfigKind
+	return apiVersion == webhookAPIVersion && kind == webhookConfigKind
 }
 
 func RenderedConfigFilePath(webhookChartPath, webhookConfigFileName string) string {
 	fileNameArray := strings.Split(webhookConfigFileName, ".")
-	renderedWebhookConfigFileName := fmt.Sprintf("%s-%s.%s", fileNameArray[0], renderedWebhookConfigSuffix, fileNameArray[1])
+	renderedWebhookConfigFileName := fmt.Sprintf("%s-%s.%s", fileNameArray[0],
+		renderedWebhookConfigSuffix, fileNameArray[1])
 	return path.Join(webhookChartPath, HelmTemplatesDirName, renderedWebhookConfigFileName)
 }
 
@@ -151,11 +151,13 @@ func webhooksConfigsFromBaseWebhookAndWatchableResources(baseWebhook *admissionv
 	return webhooks
 }
 
-func rulesAndLabelsFromGvrsToWatch(gvrsToWatch []*v1alpha1.WatchableGvr) ([]admissionv1.RuleWithOperations, map[string]string) {
-	cap := len(gvrsToWatch)
-	labelsArray := make([]map[string]string, 0, cap)
+func rulesAndLabelsFromGvrsToWatch(gvrsToWatch []*v1alpha1.WatchableGvr) (
+	[]admissionv1.RuleWithOperations, map[string]string,
+) {
+	l := len(gvrsToWatch)
+	labelsArray := make([]map[string]string, 0, l)
 	labelsMapCapacity := 0
-	rules := make([]admissionv1.RuleWithOperations, 0, cap)
+	rules := make([]admissionv1.RuleWithOperations, 0, l)
 	for _, gvr := range gvrsToWatch {
 		rule := admissionv1.RuleWithOperations{
 			Operations: []admissionv1.OperationType{admissionv1.OperationAll},
