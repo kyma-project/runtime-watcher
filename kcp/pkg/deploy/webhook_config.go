@@ -41,7 +41,7 @@ type WatchableResourcesByModule struct {
 // watchableResources are result of the config merge operation
 // config merge will be implemented by https://github.com/kyma-project/kyma-watcher/issues/16
 func DeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableResources []*WatchableResourcesByModule,
-	releaseName, namespace, webhookChartPath, webhookConfigFileName string,
+	helmRepoFile, releaseName, namespace, webhookChartPath, webhookConfigFileName string,
 ) error {
 
 	// 1.step: update webhook helm chart
@@ -59,7 +59,7 @@ func DeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableRes
 			ReleaseName: releaseName,
 		},
 	}
-	err = deployWatcherHelmChart(ctx, restConfig, releaseName, skrWatcherDeployInfo, argsVal)
+	err = deployWatcherHelmChart(ctx, restConfig, helmRepoFile, releaseName, skrWatcherDeployInfo, argsVal)
 	if err != nil {
 		return err
 	}
@@ -183,14 +183,16 @@ func aggregateLabels(maps []map[string]string, cap int) map[string]string {
 	return result
 }
 
-func deployWatcherHelmChart(ctx context.Context, restConfig *rest.Config, releaseName string,
+func deployWatcherHelmChart(ctx context.Context, restConfig *rest.Config, helmRepoFile, releaseName string,
 	deployInfo manifestLib.DeployInfo, argsVals map[string]interface{},
 ) error {
 	logger := logf.FromContext(ctx)
 	args := make(map[string]map[string]interface{}, 1)
 	args["set"] = argsVals
 	ops, err := manifestLib.NewOperations(&logger, restConfig, releaseName,
-		cli.New(), args)
+		&cli.EnvSettings{
+			RepositoryConfig: helmRepoFile,
+		}, args)
 	if err != nil {
 		return err
 	}

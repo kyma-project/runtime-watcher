@@ -20,9 +20,10 @@ var _ = Describe("deploy watcher", func() {
 	webhookChartPath := "assets/sample-chart"
 	releaseName := "watcher"
 	namespace := "kyma-system"
+	helmRepoFile := "assets/repositories.yaml"
 	renderedTplFilePath := deploy.RenderedConfigFilePath(webhookChartPath, webhookConfigFileName)
 	It("deploy watcher helm chart with correct webhook config", func() {
-		err := deploy.DeploySKRWebhook(ctx, testEnv.Config, watchableRes, releaseName, namespace, webhookChartPath, webhookConfigFileName)
+		err := deploy.DeploySKRWebhook(ctx, testEnv.Config, watchableRes, helmRepoFile, releaseName, namespace, webhookChartPath, webhookConfigFileName)
 		Expect(err).ShouldNot(HaveOccurred())
 		// check rendered configs
 		yamlFile, err := os.Open(renderedTplFilePath)
