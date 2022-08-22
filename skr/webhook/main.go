@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
+	"adityabhatia.kyma.io/skr/webhook/internal"
 	"github.com/kyma-project/manifest-operator/operator/pkg/util"
 
 	ctrl "sigs.k8s.io/controller-runtime"

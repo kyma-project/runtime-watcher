@@ -5,10 +5,11 @@ replicas: 1
 image:
   # -- Image repository
   repository: aditya
+  name: skr-webhook
   # -- Image tag
   tag: ""
   # -- Image pull policy
-  pullPolicy: ""
+  pullPolicy: "Always"
 # -- Image pull secrets
 imagePullSecrets: []
 # -- Pod security content
@@ -43,4 +44,7 @@ service:
   # -- Target port
   targetPort: 8443
   # -- Target port
-  contactVersion: 8443
+  contactVersion: "v1"
+kcp:
+  loadbalancerIP: host.k3d.internal
+  loadbalancerPort: 9080

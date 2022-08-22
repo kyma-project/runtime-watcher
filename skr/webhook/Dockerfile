@@ -1,18 +1,23 @@
-FROM golang:1.19-alpine as dev-env
+FROM golang:1.19-alpine as builder
 
 WORKDIR /app
 
-FROM dev-env as build-env
-COPY go.mod /go.sum /app/
+#FROM dev-env as build-env
+COPY go.mod go.mod
+COPY go.sum go.sum
+
 RUN go mod download
 
-COPY . /app/
+COPY main.go main.go
+COPY internal/ internal/
 
-RUN CGO_ENABLED=0 go build -o /webhook ./webhook/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o webhook main.go
 
-FROM gcr.io/distroless/static AS runtime
+FROM gcr.io/distroless/static:nonroot
+WORKDIR /
+#WORKDIR /usr/local/bin
 
-COPY --from=build-env /webhook /usr/local/bin/webhook
-RUN chmod +x /usr/local/bin/webhook
+COPY --from=builder /app/webhook .
+USER 65532:65532
 
-ENTRYPOINT ["webhook"]
+ENTRYPOINT ["/webhook"]
