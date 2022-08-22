@@ -1,13 +1,13 @@
 module github.com/kyma-project/kyma-watcher/kcp
 
-go 1.18
+go 1.19
 
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
 	github.com/kyma-project/kyma-operator/operator v0.0.0-20220729165444-2d389d2df996
 	github.com/kyma-project/manifest-operator/operator v0.0.0-20220726131454-83e937e2eb36
-	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.21.0
@@ -23,6 +23,7 @@ require (
 )
 
 require (
+	github.com/onsi/ginkgo v1.16.5 // indirect
 	cloud.google.com/go/compute v1.7.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect

@@ -27,7 +27,7 @@ import (
 
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
 	"github.com/kyma-project/kyma-watcher/kcp/controllers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	yaml "k8s.io/apimachinery/pkg/util/yaml"
