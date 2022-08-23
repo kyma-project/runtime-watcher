@@ -48,7 +48,11 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 
 	// start web server
 	const defaultTimeout = time.Second * 60
-	server := &http.Server{Addr: l.Addr, Handler: router, ReadHeaderTimeout: defaultTimeout, ReadTimeout: defaultTimeout}
+	server := &http.Server{
+		Addr: l.Addr, Handler: router,
+		ReadHeaderTimeout: defaultTimeout, ReadTimeout: defaultTimeout,
+		WriteTimeout: defaultTimeout,
+	}
 	go func() {
 		l.Logger.WithValues(
 			"Addr", l.Addr,
