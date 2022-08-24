@@ -5,9 +5,9 @@ go 1.18
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
-	github.com/kyma-project/kyma-operator/operator v0.0.0-20220729165444-2d389d2df996
+	github.com/kyma-project/kyma-operator/operator v0.0.0-20220822043215-329b320b453c
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.19.0
+	github.com/onsi/gomega v1.20.0
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.21.0
 	istio.io/api v0.0.0-20220728184806-7837c4e62d82

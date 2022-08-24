@@ -6,8 +6,7 @@ import (
 	"strconv"
 
 	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
-	"github.com/kyma-project/manifest-operator/operator/pkg/util"
-
+	"github.com/kyma-project/kyma-watcher/skr/webhook/pkg/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
