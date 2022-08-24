@@ -1,12 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"strconv"
 
 	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
-	"github.com/kyma-project/kyma-watcher/skr/webhook/pkg/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,9 +50,9 @@ func main() {
 	parameters.keyFile = os.Getenv("TLS_KEY")
 
 	// rest client
-	restConfig, err := util.GetConfig("", "")
-	if err != nil {
-		logger.Error(err, "rest config could not be determined for skr-webhook")
+	restConfig := config.GetConfigOrDie()
+	if restConfig == nil {
+		logger.Error(fmt.Errorf("rest config could not be determined for"), "skr-webhook")
 		return
 	}
 	restClient, err := client.New(restConfig, client.Options{})
