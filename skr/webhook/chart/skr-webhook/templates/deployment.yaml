@@ -55,15 +55,9 @@ spec:
             - name: TLS_ENABLED
               value: "true"
             - name: TLS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: skr-webhook-tls
-                  key: tls.key
+              value: "/app/etc/ssl/tls.key"
             - name: TLS_CERT
-              valueFrom:
-                secretKeyRef:
-                  name: skr-webhook-tls
-                  key: tls.cert
+              value: "/app/etc/ssl/tls.crt"
             - name: KCP_IP
               value: "<load-balancer-ip-here>"
             - name: KCP_PORT
@@ -72,8 +66,22 @@ spec:
               value: {{.Values.service.contactVersion}}
             - name: WEBHOOK_SIDE_CAR
               value: {{ if eq .Values.sidecar true }} "true" {{ else }} "false" {{ end }}
+          volumeMounts:
+            - name: ssl
+              mountPath: /app/etc/ssl
+            - name: request
+              mountPath: /tmp
           image: adityabhatia/webhook:0.1.1
           imagePullPolicy: Always
           ports:
             - containerPort: {{.Values.service.targetPort}}
               name: watcher-container-port
+      volumes:
+        - name: ssl
+          secret:
+            secretName: {{.Release.Name}}-webhook-tls
+            items:
+              - key: tls.key
+                path: tls.key
+              - key: tls.crt
+                path: tls.crt
