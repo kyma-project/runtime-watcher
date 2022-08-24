@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"strconv"
+
+
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
 	ctrl "sigs.k8s.io/controller-runtime"
