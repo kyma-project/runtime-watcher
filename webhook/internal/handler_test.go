@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 
-	"adityabhatia.kyma.io/skr/webhook/internal"
+	"github.com/kyma-project/kyma-watcher/webhook/internal"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
