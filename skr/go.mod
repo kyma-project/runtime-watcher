@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/go-logr/logr v1.2.3
-	github.com/kyma-project/runtime-watcher/kcp v0.0.0-20220825135506-9d6877ea9fee
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
