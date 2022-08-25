@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/listener"
+	"github.com/kyma-project/runtime-watcher/listener"
 
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 

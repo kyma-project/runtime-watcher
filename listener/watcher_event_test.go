@@ -1,10 +1,9 @@
 package listener_test
 
 import (
+	"github.com/kyma-project/runtime-watcher/listener"
 	"net/http"
 	"testing"
-
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/listener"
 
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 
