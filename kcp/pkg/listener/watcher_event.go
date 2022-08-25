@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

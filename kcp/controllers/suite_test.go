@@ -26,7 +26,7 @@ import (
 	"time"
 
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
-	"github.com/kyma-project/kyma-watcher/kcp/controllers"
+	"github.com/kyma-project/runtime-watcher/kcp/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -72,7 +72,7 @@ var _ = BeforeSuite(func() {
 
 	watcherCrd := &v1.CustomResourceDefinition{}
 	res, err := http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/kyma-watcher/main/kcp/config/crd/bases/component.kyma-project.io_watchers.yaml") //nolint:lll
+		"https://raw.githubusercontent.com/kyma-project/runtime-watcher/main/kcp/config/crd/bases/component.kyma-project.io_watchers.yaml") //nolint:lll
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
 	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(watcherCrd)).To(Succeed())

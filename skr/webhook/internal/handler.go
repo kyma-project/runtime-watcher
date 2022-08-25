@@ -16,8 +16,8 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
-	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/config"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"

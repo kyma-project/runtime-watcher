@@ -1,10 +1,9 @@
-module github.com/kyma-project/kyma-watcher/skr
+module github.com/kyma-project/runtime-watcher/skr
 
 go 1.19
 
 require (
 	github.com/go-logr/logr v1.2.3
-	github.com/kyma-project/kyma-watcher/kcp v0.0.0-20220823054606-7bae3de12050
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
@@ -58,6 +57,7 @@ require (
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/testify v1.8.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect

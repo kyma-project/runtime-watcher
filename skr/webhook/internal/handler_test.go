@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 
-	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
+	"github.com/kyma-project/runtime-watcher/skr/webhook/internal"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 

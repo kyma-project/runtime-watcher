@@ -12,8 +12,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: /kyma-watcher
+  newName: /runtime-watcher
 - name: controller-manager
-  newName: docker.io/jaythedevil666/kyma-watcher
-- name: kyma-watcher
-  newName: k3d-registry.localhost:4000/kyma-watcher
+  newName: docker.io/jaythedevil666/runtime-watcher
+- name: runtime-watcher
+  newName: k3d-registry.localhost:4000/runtime-watcher
