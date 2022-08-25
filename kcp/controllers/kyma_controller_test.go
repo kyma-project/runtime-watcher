@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
-	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/kyma-watcher/kcp/controllers"
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"

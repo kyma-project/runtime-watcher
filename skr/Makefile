@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-APP_NAME = kyma-watcher-skr
+APP_NAME = runtime-watcher-skr
 IMG_REPO := $(DOCKER_PUSH_REPOSITORY)$(DOCKER_PUSH_DIRECTORY)
 IMG_NAME := $(IMG_REPO)/$(APP_NAME)
 IMG := $(IMG_NAME):$(DOCKER_TAG)
@@ -67,11 +67,11 @@ test: manifests generate fmt vet envtest ## Run tests.
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build kyma-watcher binary.
+build: generate fmt vet ## Build runtime-watcher binary.
 	go build -o bin/manager main.go
 
 .PHONY: run
-run: manifests generate fmt vet ## Run kyma-watcher from your host.
+run: manifests generate fmt vet ## Run runtime-watcher from your host.
 	go run ./main.go
 
 .PHONY: docker-build
@@ -103,7 +103,7 @@ uninstall: manifests kustomize ## NOT SUPPORTED - Uninstall CRDs from the K8s cl
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image runtime-watcher=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy
@@ -112,7 +112,7 @@ undeploy: ## NOT SUPPORTED - Undeploy controller from the K8s cluster specified 
 
 .PHONY: helm-prepare
 helm-prepare: manifests kustomize ## Generates k8s manifests and writes them as a Helm template in the watcher helm-chart
-	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image runtime-watcher=${IMG}
 	$(KUSTOMIZE) build config/default > ${HELM_CHART_TEMPLATES_DIR}/skr-watcher-manifests.yaml
 
 

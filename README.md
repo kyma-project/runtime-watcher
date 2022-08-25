@@ -1,5 +1,5 @@
 
-# Kyma-Watcher (PoC)
+# Runtime-Watcher (PoC)
 
 > Modify the title and insert the name of your project. Use Heading 1 (H1).
 
@@ -31,7 +31,7 @@ The Listener implementation is in the [kcp directory](./kcp).
 > Explain how to use the project. You can create multiple subsections (H3). Include the instructions or provide links to the related documentation.
 1. Have a running kubernetes cluster and exported the corresponding KubeConfig in the environment-variable: `KUBECONFIG`
 2. Insert the IP-Adress of the KCP Gateway in: `operator/config/default/manager_auth_proxy_patch.yaml`
-3. Set IMG to a valid image repository path (i.e. DockerHub <username>/kyma-watcher:latest) in: `./operator/Makefile`
+3. Set IMG to a valid image repository path (i.e. DockerHub <username>/runtime-watcher:latest) in: `./operator/Makefile`
 4. `cd operator`
 5.  `make docker-build`
 6.  `make docker-push`

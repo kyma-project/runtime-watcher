@@ -7,8 +7,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
 	manifestLib "github.com/kyma-project/manifest-operator/operator/pkg/manifest"
+	"github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"helm.sh/helm/v3/pkg/cli"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 
@@ -37,7 +37,7 @@ type WatchableResourcesByModule struct {
 }
 
 // watchableResources are result of the config merge operation
-// config merge will be implemented by https://github.com/kyma-project/kyma-watcher/issues/16
+// config merge will be implemented by https://github.com/kyma-project/runtime-watcher/issues/16
 func RedeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableResources []*WatchableResourcesByModule,
 	helmRepoFile, releaseName, namespace, webhookChartPath, webhookConfigFileName string,
 ) error {
