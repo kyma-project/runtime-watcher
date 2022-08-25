@@ -84,3 +84,5 @@ out.txt
 */__debug_bin
 skr/bin/**
 kcp/bin/**
+skr/webhook/bin
+webhook/bin
