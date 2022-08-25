@@ -2,11 +2,6 @@ module github.com/kyma-project/kyma-watcher/webhook
 
 go 1.19
 
-// replace (
-// 	github.com/kyma-project/kyma-watcher/kcp => ../../kcp
-// 	github.com/kyma-project/kyma-watcher/skr => ../
-// )
-
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/kyma-project/kyma-watcher/kcp v0.0.0-20220817064106-457dfa874f7f
@@ -18,8 +13,6 @@ require (
 	k8s.io/apimachinery v0.24.4
 	sigs.k8s.io/controller-runtime v0.12.3
 )
-
-require gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -65,6 +58,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
