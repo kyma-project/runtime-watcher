@@ -85,5 +85,4 @@ out.txt
 skr/bin/**
 kcp/bin/**
 skr/webhook/bin
-webhook/bin
 kcp/pkg/deploy/assets/sample-chart/templates/webhook-config-rendered.yaml

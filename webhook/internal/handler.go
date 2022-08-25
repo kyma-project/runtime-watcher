@@ -360,62 +360,62 @@ func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
 	return h.validAdmissionReviewObj("", "")
 }
 
-func (h *Handler) getKymaAndResourceListFromConfigMap(ctx context.Context) (*unstructured.Unstructured, []Resource) {
-	// fetch resource mapping ConfigMap
-	configMap := v1.ConfigMap{}
-	err := h.Client.Get(ctx, client.ObjectKey{
-		Name:      "skr-webhook-resource-mapping",
-		Namespace: "default",
-	}, &configMap)
-	if err != nil {
-		h.Logger.Error(err, "could not fetch resource mapping ConfigMap")
-		return nil, nil
-	}
+// func (h *Handler) getKymaAndResourceListFromConfigMap(ctx context.Context) (*unstructured.Unstructured, []Resource) {
+// 	// fetch resource mapping ConfigMap
+// 	configMap := v1.ConfigMap{}
+// 	err := h.Client.Get(ctx, client.ObjectKey{
+// 		Name:      "skr-webhook-resource-mapping",
+// 		Namespace: "default",
+// 	}, &configMap)
+// 	if err != nil {
+// 		h.Logger.Error(err, "could not fetch resource mapping ConfigMap")
+// 		return nil, nil
+// 	}
 
-	// parse ConfigMap for kyma GVK
-	kymaGvkStringified, kymaExists := configMap.Data["kyma"]
-	if !kymaExists {
-		h.Logger.Error(fmt.Errorf("failed to fetch kyma GVK from resource mapping"), "")
-		return nil, nil
-	}
-	kymaGvr := schema.GroupVersionKind{}
-	err = yaml.Unmarshal([]byte(kymaGvkStringified), &kymaGvr)
-	if err != nil {
-		h.Logger.Error(err, "kyma GVK could not me unmarshalled")
-		return nil, nil
-	}
+// 	// parse ConfigMap for kyma GVK
+// 	kymaGvkStringified, kymaExists := configMap.Data["kyma"]
+// 	if !kymaExists {
+// 		h.Logger.Error(fmt.Errorf("failed to fetch kyma GVK from resource mapping"), "")
+// 		return nil, nil
+// 	}
+// 	kymaGvr := schema.GroupVersionKind{}
+// 	err = yaml.Unmarshal([]byte(kymaGvkStringified), &kymaGvr)
+// 	if err != nil {
+// 		h.Logger.Error(err, "kyma GVK could not me unmarshalled")
+// 		return nil, nil
+// 	}
 
-	// get SKR kyma
-	kymasList := unstructured.UnstructuredList{}
-	kymasList.SetGroupVersionKind(kymaGvr)
-	err = h.Client.List(ctx, &kymasList)
-	if err != nil {
-		h.Logger.Error(err, "could not list kyma resources")
-		return nil, nil
-	}
-	if len(kymasList.Items) != 1 {
-		// h.Logger.Error(nil, "")
-		h.Logger.Error(fmt.Errorf("more than one Kyma exists in SKR"), "abort")
-		return nil, nil
-	}
-	// else if len(kymasList.Items) > 1 {
-	// 	h.Logger.Error(fmt.Errorf("no Kyma exists in SKR"), "abort")
-	// 	return nil, nil
-	// }
+// 	// get SKR kyma
+// 	kymasList := unstructured.UnstructuredList{}
+// 	kymasList.SetGroupVersionKind(kymaGvr)
+// 	err = h.Client.List(ctx, &kymasList)
+// 	if err != nil {
+// 		h.Logger.Error(err, "could not list kyma resources")
+// 		return nil, nil
+// 	}
+// 	if len(kymasList.Items) != 1 {
+// 		// h.Logger.Error(nil, "")
+// 		h.Logger.Error(fmt.Errorf("more than one Kyma exists in SKR"), "abort")
+// 		return nil, nil
+// 	}
+// 	// else if len(kymasList.Items) > 1 {
+// 	// 	h.Logger.Error(fmt.Errorf("no Kyma exists in SKR"), "abort")
+// 	// 	return nil, nil
+// 	// }
 
-	resourceListStringified, listExists := configMap.Data["resources"]
-	if !listExists {
-		h.Logger.Error(fmt.Errorf("failed to fetch resources list resource mapping"), "")
-	}
-	var resources []Resource
-	err = yaml.Unmarshal([]byte(resourceListStringified), &resources)
-	if err != nil {
-		h.Logger.Error(err, "resources list could not me unmarshalled")
-		return nil, nil
-	}
+// 	resourceListStringified, listExists := configMap.Data["resources"]
+// 	if !listExists {
+// 		h.Logger.Error(fmt.Errorf("failed to fetch resources list resource mapping"), "")
+// 	}
+// 	var resources []Resource
+// 	err = yaml.Unmarshal([]byte(resourceListStringified), &resources)
+// 	if err != nil {
+// 		h.Logger.Error(err, "resources list could not me unmarshalled")
+// 		return nil, nil
+// 	}
 
-	return &kymasList.Items[0], resources
-}
+// 	return &kymasList.Items[0], resources
+// }
 
 // Uncomment lines below to throw http errors
 // func (h *Handler) httpError(writer http.ResponseWriter, code int, err error) {
