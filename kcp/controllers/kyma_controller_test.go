@@ -3,7 +3,7 @@ package controllers_test
 import (
 	"time"
 
-	"github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
+	"github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
 	. "github.com/onsi/ginkgo/v2"

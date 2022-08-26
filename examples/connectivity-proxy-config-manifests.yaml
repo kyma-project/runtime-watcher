@@ -46,7 +46,7 @@ metadata:
   name: moduletemplate-sample-connectivity-proxy-stable
   namespace: default
   labels:
-    "operator.kyma-project.io/managed-by": "kyma-operator"
+    "operator.kyma-project.io/managed-by": "lifecycle-manager"
     "operator.kyma-project.io/controller-name": "connectivity-proxy"
 spec:
   channel: stable

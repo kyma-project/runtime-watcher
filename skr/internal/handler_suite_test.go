@@ -42,7 +42,7 @@ var _ = BeforeSuite(func() {
 
 	kymaCrd := &v1.CustomResourceDefinition{}
 	res, err := http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/" +
+		"https://raw.githubusercontent.com/kyma-project/lifecycle-manager/main/operator/" +
 			"config/crd/bases/operator.kyma-project.io_kymas.yaml")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))

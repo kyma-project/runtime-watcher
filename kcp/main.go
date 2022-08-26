@@ -20,7 +20,7 @@ import (
 	"flag"
 	"os"
 
-	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
+	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
