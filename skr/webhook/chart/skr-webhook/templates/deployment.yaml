@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: skr-webhook
-  namespace: default
+  name: {{.Release.Name}}-webhook
+  namespace: {{.Release.Namespace}}
 spec:
   selector:
     #selector for deployment labels (key, values)
@@ -17,8 +17,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: skr-webhook
-  namespace: default
+  name: {{.Release.Name}}-webhook
+  namespace: {{.Release.Namespace}}
   labels:
     app: skr-webhook
 spec:
@@ -31,6 +31,7 @@ spec:
       labels:
         app: skr-webhook
     spec:
+      serviceAccountName: {{.Release.Name}}-webhook-sa
       containers:
         {{- if eq .Values.sidecar true }}
         - name: request-sidecar
@@ -41,8 +42,8 @@ spec:
             - "sleep 60m"
           imagePullPolicy: Always
           volumeMounts:
-            - name: request
-              mountPath: /tmp
+          - name: request
+            mountPath: /tmp
         {{- end }}
         - name: server
           env:
@@ -66,22 +67,27 @@ spec:
               value: {{.Values.service.contactVersion}}
             - name: WEBHOOK_SIDE_CAR
               value: {{ if eq .Values.sidecar true }} "true" {{ else }} "false" {{ end }}
+          image: {{.Values.image.name}}
+          imagePullPolicy: {{.Values.image.pullPolicy}}
           volumeMounts:
-            - name: ssl
-              mountPath: /app/etc/ssl
-            - name: request
-              mountPath: /tmp
-          image: adityabhatia/webhook:0.1.1
-          imagePullPolicy: Always
+          - name: ssl
+            mountPath: /app/etc/ssl
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "500m"
+            limits:
+              memory: "256Mi"
+              cpu: "800m"
           ports:
             - containerPort: {{.Values.service.targetPort}}
-              name: watcher-container-port
+              name: watcher-port
       volumes:
-        - name: ssl
-          secret:
-            secretName: {{.Release.Name}}-webhook-tls
-            items:
-              - key: tls.key
-                path: tls.key
-              - key: tls.crt
-                path: tls.crt
+      - name: ssl
+        secret:
+          secretName: {{.Release.Name}}-webhook-tls
+          items:
+          - key: tls.key
+            path: tls.key
+          - key: tls.crt
+            path: tls.crt

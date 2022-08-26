@@ -1,14 +1,13 @@
 package internal_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 
-	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
+	"github.com/kyma-project/kyma-watcher/webhook/internal"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -18,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
+	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -27,60 +27,6 @@ var (
 	testEnv   *envtest.Environment //nolint:gochecknoglobals
 	k8sClient client.Client        //nolint:gochecknoglobals
 )
-
-const (
-	uid = "someUid"
-)
-
-func getHTTPRequest(operation admissionv1.Operation, crdName string) (*http.Request, *httptest.ResponseRecorder) {
-	admissionReview, err := createAdmissionRequest(operation, crdName)
-	Expect(err).ShouldNot(HaveOccurred())
-	bytesRequest, err := json.Marshal(admissionReview)
-	Expect(err).ShouldNot(HaveOccurred())
-	req := httptest.NewRequest(http.MethodGet, "/validate", bytes.NewBuffer(bytesRequest))
-	w := httptest.NewRecorder()
-	return req, w
-}
-
-func createAdmissionRequest(operation admissionv1.Operation, crdName string) (*admissionv1.AdmissionReview, error) {
-	admissionReview := &admissionv1.AdmissionReview{
-		Request: &admissionv1.AdmissionRequest{
-			Name: crdName,
-			Kind: metav1.GroupVersionKind{
-				Kind:    "Manifest",
-				Version: "v1alpha1",
-				Group:   "component.kyma-project.io",
-			},
-			Operation: operation,
-			UID:       uid,
-		},
-	}
-
-	objectWatched := &internal.ObjectWatched{
-		Metadata: internal.Metadata{
-			Name:      "manifestObj",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: map[string]interface{}{
-			"specField": "value",
-		},
-		Kind: "Manifest",
-	}
-
-	rawBytes, err := json.Marshal(objectWatched)
-	Expect(err).ShouldNot(HaveOccurred())
-
-	// change watched field
-	objectWatchedOld := objectWatched
-	objectWatchedOld.Spec["specField"] = "oldValue"
-	rawBytesOld, err := json.Marshal(objectWatchedOld)
-	Expect(err).ShouldNot(HaveOccurred())
-
-	admissionReview.Request.Object.Raw = rawBytes
-	admissionReview.Request.OldObject.Raw = rawBytesOld
-
-	return admissionReview, nil
-}
 
 var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 	configMap := v1.ConfigMap{}
@@ -112,6 +58,7 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		Expect(k8sClient.Create(ctx, &kyma)).Should(Succeed())
+
 	})
 
 	AfterAll(func() {
@@ -125,9 +72,23 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 			Logger: ctrl.Log.WithName("skr-watcher-test"),
 		}
 
-		request, recorder := getHTTPRequest(admissionv1.Update, "crdName")
-
+		request, err := MockApiServerHTTPRequest(admissionv1.Create, "crName", "manifest", metav1.GroupVersionKind{
+			Kind:    "Manifest",
+			Version: "v1alpha1",
+			Group:   "component.kyma-project.io",
+		})
+		Expect(err).ShouldNot(HaveOccurred())
+		recorder := httptest.NewRecorder()
 		handler.Handle(recorder, request)
+
+		//verify KCP payload
+		kcpPayload, err := io.ReadAll(kcpResponseRecorder.Body)
+		Expect(err).ShouldNot(HaveOccurred())
+		watcherEvt := &types.WatcherEvent{}
+		Expect(json.Unmarshal(kcpPayload, watcherEvt)).To(Succeed())
+		Expect(watcherEvt.KymaCr).To(Equal("kyma-sample"))
+		Expect(watcherEvt.Name).To(Equal("crName"))
+		Expect(watcherEvt.Namespace).To(Equal(metav1.NamespaceDefault))
 
 		admissionReview := admissionv1.AdmissionReview{}
 		bytes, err := io.ReadAll(recorder.Body)
@@ -135,8 +96,94 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 		_, _, err = internal.UniversalDeserializer.Decode(bytes, nil, &admissionReview)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(admissionReview.Response.Allowed).Should(BeTrue())
-		Expect(admissionReview.Response.Result.Message).To(Equal("sent requests to KCP for Spec"))
-		// since the KCP request is not sent - metav1.StatusFailure expected
-		Expect(admissionReview.Response.Result.Status).To(Equal(metav1.StatusFailure))
+		Expect(admissionReview.Response.Result.Message).To(Equal("kcp request succeeded"))
+		Expect(admissionReview.Response.Result.Status).To(Equal(metav1.StatusSuccess))
+	})
+})
+
+var _ = Describe("Watching Kyma CR scenarios", Ordered, func() {
+	configMap := v1.ConfigMap{}
+	BeforeAll(func() {
+		configMapContent, err := os.Open("./assets/configmap.yaml")
+		Expect(err).ShouldNot(HaveOccurred())
+		if configMapContent != nil {
+			err = yaml.NewYAMLOrJSONDecoder(configMapContent, 2048).Decode(&configMap)
+			Expect(err).ShouldNot(HaveOccurred())
+			err = configMapContent.Close()
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+		Expect(k8sClient.Create(ctx, &configMap)).Should(Succeed())
+	})
+
+	AfterAll(func() {
+		Expect(k8sClient.Delete(ctx, &configMap)).Should(Succeed())
+	})
+
+	It("should validate admission request and send correct payload to KCP when kyma CR is created", func() {
+		handler := &internal.Handler{
+			Client: k8sClient,
+			Logger: ctrl.Log.WithName("skr-watcher-test"),
+		}
+
+		request, err := MockApiServerHTTPRequest(admissionv1.Create, "kyma-sample", "kyma", metav1.GroupVersionKind{
+			Kind:    "Kyma",
+			Version: "v1alpha1",
+			Group:   "operator.kyma-project.io",
+		})
+		Expect(err).ShouldNot(HaveOccurred())
+		recorder := httptest.NewRecorder()
+		handler.Handle(recorder, request)
+
+		//verify KCP payload
+		kcpPayload, err := io.ReadAll(kcpResponseRecorder.Body)
+		Expect(err).ShouldNot(HaveOccurred())
+		watcherEvt := &types.WatcherEvent{}
+		Expect(json.Unmarshal(kcpPayload, watcherEvt)).To(Succeed())
+		Expect(watcherEvt.KymaCr).To(Equal("kyma-sample"))
+		Expect(watcherEvt.Name).To(Equal("kyma-sample"))
+		Expect(watcherEvt.Namespace).To(Equal(metav1.NamespaceDefault))
+
+		admissionReview := admissionv1.AdmissionReview{}
+		bytes, err := io.ReadAll(recorder.Body)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, _, err = internal.UniversalDeserializer.Decode(bytes, nil, &admissionReview)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(admissionReview.Response.Allowed).Should(BeTrue())
+		Expect(admissionReview.Response.Result.Message).To(Equal("kcp request succeeded"))
+		Expect(admissionReview.Response.Result.Status).To(Equal(metav1.StatusSuccess))
+	})
+
+	It("should send correct payload to KCP when kyma CR is deleted", func() {
+		handler := &internal.Handler{
+			Client: k8sClient,
+			Logger: ctrl.Log.WithName("skr-watcher-test"),
+		}
+
+		request, err := MockApiServerHTTPRequest(admissionv1.Delete, "kyma-sample", "kyma", metav1.GroupVersionKind{
+			Kind:    "Kyma",
+			Version: "v1alpha1",
+			Group:   "operator.kyma-project.io",
+		})
+		Expect(err).ShouldNot(HaveOccurred())
+		recorder := httptest.NewRecorder()
+		handler.Handle(recorder, request)
+
+		//verify KCP payload
+		kcpPayload, err := io.ReadAll(kcpResponseRecorder.Body)
+		Expect(err).ShouldNot(HaveOccurred())
+		watcherEvt := &types.WatcherEvent{}
+		Expect(json.Unmarshal(kcpPayload, watcherEvt)).To(Succeed())
+		Expect(watcherEvt.KymaCr).To(Equal("kyma-sample"))
+		Expect(watcherEvt.Name).To(Equal("kyma-sample"))
+		Expect(watcherEvt.Namespace).To(Equal(metav1.NamespaceDefault))
+
+		admissionReview := admissionv1.AdmissionReview{}
+		bytes, err := io.ReadAll(recorder.Body)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, _, err = internal.UniversalDeserializer.Decode(bytes, nil, &admissionReview)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(admissionReview.Response.Allowed).Should(BeTrue())
+		Expect(admissionReview.Response.Result.Message).To(Equal("kcp request succeeded"))
+		Expect(admissionReview.Response.Result.Status).To(Equal(metav1.StatusSuccess))
 	})
 })

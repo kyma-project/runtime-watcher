@@ -2,12 +2,12 @@
 sidecar: false
 # -- Replicas
 replicas: 1
-image:
+image: 
   # -- Image repository
-  repository: aditya
-  name: skr-webhook
+  # repository: adityabhatia
+  name: adityabhatia/webhook:0.1.1
   # -- Image tag
-  tag: ""
+  # tag: "0.1.1"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets

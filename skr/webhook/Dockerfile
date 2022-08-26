@@ -2,7 +2,6 @@ FROM golang:1.19-alpine as builder
 
 WORKDIR /app
 
-#FROM dev-env as build-env
 COPY go.mod go.mod
 COPY go.sum go.sum
 
@@ -15,7 +14,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o webhook main.go
 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
-#WORKDIR /usr/local/bin
 
 COPY --from=builder /app/webhook .
 USER 65532:65532

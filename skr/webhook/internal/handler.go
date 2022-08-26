@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
 	"sync"
 
@@ -18,7 +17,6 @@ import (
 
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
-
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// type kcpClient struct {
+// 	http.Client
+// 	lastReq
+// }
 
 type Handler struct {
 	Client client.Client
@@ -75,14 +78,34 @@ const (
 	validationMessage   = "validated from webhook"
 	defaultBufferSize   = 2048
 	requestStorePath    = "/tmp/request"
+	handlerPathPrefix   = "validate"
+	kymaModuleName      = "kyma"
+	urlPathPattern      = "/validate/%s"
 )
 
 //nolint:gochecknoglobals
 var UniversalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 
+func getModuleName(urlPath string) (string, error) {
+	var moduleName string
+	_, err := fmt.Sscanf(urlPath, urlPathPattern, &moduleName)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", fmt.Errorf("could not parse url path")
+	}
+
+	if err != nil && errors.Is(err, io.EOF) || moduleName == "" {
+		return "", fmt.Errorf("module name cannot be empty")
+	}
+
+	return moduleName, nil
+}
+
 func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
-	ctx := context.TODO()
-	kyma, resourceList := h.getKymaAndResourceListFromConfigMap(ctx)
+	moduleName, err := getModuleName(req.URL.Path)
+	if err != nil {
+		h.Logger.Error(err, "failed to get module name")
+		return
+	}
 
 	// read incoming request to bytes
 	body, err := io.ReadAll(req.Body)
@@ -99,7 +122,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	resourceValidation := h.validateResources(admissionReview, resourceList, kyma.GetName())
+	resourceValidation := h.validateResources(admissionReview, nil, moduleName)
 
 	h.Logger.Info(
 		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.Kind),
@@ -170,66 +193,88 @@ func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 }
 
 func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview,
-	resourcesList []Resource, kymaName string,
+	resourcesList []Resource, moduleName string,
 ) validateResource {
-	if admissionReview.Request.Operation != admissionv1.Update {
-		return h.validAdmissionReviewObj(
-			fmt.Sprintf("%s operation not supported", admissionReview.Request.Operation), metav1.StatusFailure,
-		)
-	}
 
-	var resource Resource
-	for _, resourceItem := range resourcesList {
-		if admissionReview.Request.Kind.String() != resourceItem.GroupVersionKind.String() {
-			continue
+	if admissionReview.Request.Operation == admissionv1.Delete {
+		oldObjectWatched := ObjectWatched{}
+		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
+			&oldObjectWatched)
+		if !validatedResource.allowed {
+			return validatedResource
 		}
-		resource = resourceItem
+		msg := h.sendRequestToKcp(moduleName, oldObjectWatched)
+		// send valid admission response - under all circumstances!
+		return h.validAdmissionReviewObj(msg)
 	}
 
-	// Note: OldObject is nil for "CONNECT" and "CREATE" operations
-	// old object
-	oldObjectWatched := ObjectWatched{}
-	validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
-		&oldObjectWatched)
-	if !validatedResource.allowed {
-		return validatedResource
-	}
-
-	// new object
 	objectWatched := ObjectWatched{}
-	validatedResource = h.unmarshalRawObj(admissionReview.Request.Object.Raw,
+	validatedResource := h.unmarshalRawObj(admissionReview.Request.Object.Raw,
 		&objectWatched)
 	if !validatedResource.allowed {
 		return validatedResource
 	}
 
+	msg := h.sendRequestToKcp(moduleName, objectWatched)
 	// send valid admission response - under all circumstances!
-	return h.validAdmissionReviewObj(h.evaluateRequestForKcp(resource, oldObjectWatched, objectWatched, kymaName))
+	return h.validAdmissionReviewObj(msg)
 }
 
-func (h *Handler) evaluateRequestForKcp(resource Resource, oldObjectWatched ObjectWatched,
-	objectWatched ObjectWatched, kymaName string,
-) (string, string) {
-	var message, status string
-	if resource.Status {
-		if !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status) {
-			message = "sent requests to KCP for Status"
-		}
+func getKymaFromConfigMap(r client.Reader) (*unstructured.UnstructuredList, error) {
+	// fetch resource mapping ConfigMap
+	ctx := context.TODO()
+	configMap := v1.ConfigMap{}
+	err := r.Get(ctx, client.ObjectKey{
+		Name:      "skr-webhook-resource-mapping",
+		Namespace: "default",
+	}, &configMap)
+	if err != nil {
+		// h.Logger.Error(err, "could not fetch resource mapping ConfigMap")
+		return nil, fmt.Errorf("could not fetch resource mapping ConfigMap: %w", err)
 	}
 
-	if resource.Spec && message == "" {
-		if !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec) {
-			message = "sent requests to KCP for Spec"
-		}
+	// parse ConfigMap for kyma GVK
+	kymaGvkStringified, kymaExists := configMap.Data["kyma"]
+	if !kymaExists {
+		// h.Logger.Error(fmt.Errorf("failed to fetch kyma GVK from resource mapping"), "")
+		return nil, fmt.Errorf("failed to fetch kyma GVK from resource mapping")
+	}
+	kymaGvr := schema.GroupVersionKind{}
+	err = yaml.Unmarshal([]byte(kymaGvkStringified), &kymaGvr)
+	if err != nil {
+		// h.Logger.Error(err, "kyma GVK could not me unmarshalled")
+		return nil, fmt.Errorf("kyma GVK could not me unmarshalled: %w", err)
 	}
 
-	if message != "" {
-		status = h.sendRequestToKcp(kymaName, objectWatched)
+	// get SKR kyma
+	kymasList := unstructured.UnstructuredList{}
+	kymasList.SetGroupVersionKind(kymaGvr)
+	err = r.List(ctx, &kymasList)
+	if err != nil {
+		// h.Logger.Error(err, "could not list kyma resources")
+		return nil, fmt.Errorf("could not list kyma resources: %w", err)
 	}
-	return message, status
+	return &kymasList, nil
 }
 
-func (h *Handler) sendRequestToKcp(kymaName string, watched ObjectWatched) string {
+func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) string {
+	var kymaName string
+	if moduleName == kymaModuleName {
+		kymaName = watched.Metadata.Name
+	} else {
+		// get kyma name
+		kymaList, err := getKymaFromConfigMap(h.Client)
+		if err != nil {
+			h.Logger.Error(err, "failed to get kyma list")
+			return "kcp request failed"
+		}
+		if len(kymaList.Items) != 1 {
+			h.Logger.Error(nil, fmt.Sprintf("found %d kyma resources, expected 1", len(kymaList.Items)))
+			return "kcp request failed"
+		}
+		kymaName = kymaList.Items[0].GetName()
+	}
+
 	// send request to kcp
 	watcherEvent := &types.WatcherEvent{
 		KymaCr:    kymaName,
@@ -239,7 +284,7 @@ func (h *Handler) sendRequestToKcp(kymaName string, watched ObjectWatched) strin
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
 		h.Logger.Error(err, "")
-		return metav1.StatusFailure
+		return "kcp request failed"
 	}
 
 	responseBody := bytes.NewBuffer(postBody)
@@ -247,30 +292,29 @@ func (h *Handler) sendRequestToKcp(kymaName string, watched ObjectWatched) strin
 	kcpIP := os.Getenv("KCP_IP")
 	kcpPort := os.Getenv("KCP_PORT")
 	contract := os.Getenv("KCP_CONTRACT")
-	component := "manifest"
+	// component := "manifest"
 
 	if kcpIP == "" || kcpPort == "" || contract == "" {
-		return metav1.StatusFailure
+		return "kcp request failed"
 	}
 
 	url := fmt.Sprintf("http://%s/%s/%s/%s", net.JoinHostPort(kcpIP, kcpPort),
-		contract, component, config.EventEndpoint)
+		contract, moduleName, config.EventEndpoint)
 
-	h.Logger.Info("KCP", "url", url)
+	h.Logger.V(1).Info("KCP", "url", url)
 	//nolint:gosec
 	resp, err := http.Post(url, "application/json", responseBody)
 	if err != nil {
 		h.Logger.Error(err, "")
-		return metav1.StatusFailure
+		return "kcp request failed"
+	}
+	if resp.StatusCode != http.StatusOK {
+		h.Logger.Error(err, "")
+		return "kcp request failed"
 	}
 
-	var response interface{}
-	if err = yaml.NewYAMLOrJSONDecoder(resp.Body, defaultBufferSize).Decode(response); err != nil {
-		h.Logger.Error(err, "response from KCP could not be unmarshalled")
-		return metav1.StatusFailure
-	}
-	h.Logger.Info("response", response)
-	return metav1.StatusSuccess
+	h.Logger.Info("sent request to KCP successfully")
+	return "kcp request succeeded"
 }
 
 func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
@@ -279,69 +323,8 @@ func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
 		h.Logger.Error(fmt.Errorf("admission review resource object could not be unmarshaled %s%s %w",
 			admissionError, errorSeparator, err), "")
 	}
-	return h.validAdmissionReviewObj("", "")
+	return h.validAdmissionReviewObj("")
 }
-
-func (h *Handler) getKymaAndResourceListFromConfigMap(ctx context.Context) (*unstructured.Unstructured, []Resource) {
-	// fetch resource mapping ConfigMap
-	configMap := v1.ConfigMap{}
-	err := h.Client.Get(ctx, client.ObjectKey{
-		Name:      "skr-webhook-resource-mapping",
-		Namespace: "default",
-	}, &configMap)
-	if err != nil {
-		h.Logger.Error(err, "could not fetch resource mapping ConfigMap")
-		return nil, nil
-	}
-
-	// parse ConfigMap for kyma GVK
-	kymaGvkStringified, kymaExists := configMap.Data["kyma"]
-	if !kymaExists {
-		h.Logger.Error(fmt.Errorf("failed to fetch kyma GVK from resource mapping"), "")
-		return nil, nil
-	}
-	kymaGvr := schema.GroupVersionKind{}
-	err = yaml.Unmarshal([]byte(kymaGvkStringified), &kymaGvr)
-	if err != nil {
-		h.Logger.Error(err, "kyma GVK could not me unmarshalled")
-		return nil, nil
-	}
-
-	// get SKR kyma
-	kymasList := unstructured.UnstructuredList{}
-	kymasList.SetGroupVersionKind(kymaGvr)
-	err = h.Client.List(ctx, &kymasList)
-	if err != nil {
-		h.Logger.Error(err, "could not list kyma resources")
-		return nil, nil
-	}
-	if len(kymasList.Items) > 1 {
-		h.Logger.Error(fmt.Errorf("more than one Kyma exists in SKR"), "abort")
-		return nil, nil
-	} else if len(kymasList.Items) > 1 {
-		h.Logger.Error(fmt.Errorf("no Kyma exists in SKR"), "abort")
-		return nil, nil
-	}
-
-	resourceListStringified, listExists := configMap.Data["resources"]
-	if !listExists {
-		h.Logger.Error(fmt.Errorf("failed to fetch resources list resource mapping"), "")
-	}
-	var resources []Resource
-	err = yaml.Unmarshal([]byte(resourceListStringified), &resources)
-	if err != nil {
-		h.Logger.Error(err, "resources list could not me unmarshalled")
-		return nil, nil
-	}
-
-	return &kymasList.Items[0], resources
-}
-
-// Uncomment lines below to throw http errors
-// func (h *Handler) httpError(writer http.ResponseWriter, code int, err error) {
-//	h.Logger.Error(err, "")
-//	http.Error(writer, err.Error(), code)
-//}
 
 func (h *Handler) getAdmissionRequestFromBytes(body []byte) *admissionv1.AdmissionReview {
 	admissionReview := admissionv1.AdmissionReview{}
@@ -357,10 +340,10 @@ func (h *Handler) getAdmissionRequestFromBytes(body []byte) *admissionv1.Admissi
 	return &admissionReview
 }
 
-func (h *Handler) validAdmissionReviewObj(message string, status string) validateResource {
+func (h *Handler) validAdmissionReviewObj(message string) validateResource {
 	return validateResource{
 		allowed: true,
 		message: message,
-		status:  status,
+		status:  metav1.StatusSuccess,
 	}
 }

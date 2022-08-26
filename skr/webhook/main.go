@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"net/http"
 	"os"
 	"strconv"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"github.com/kyma-project/kyma-watcher/webhook/internal"
 
-	"github.com/kyma-project/kyma-watcher/skr/webhook/internal"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 type ServerParameters struct {
@@ -24,6 +24,16 @@ var parameters ServerParameters //nolint:gochecknoglobals
 
 func main() {
 	logger := ctrl.Log.WithName("skr-webhook")
+
+	opts := zap.Options{
+		Development: true,
+	}
+
+	opts.BindFlags(flag.CommandLine)
+	flag.Parse()
+
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
 	var err error
 
 	// port
@@ -51,11 +61,18 @@ func main() {
 	parameters.keyFile = os.Getenv("TLS_KEY")
 
 	// rest client
-	restConfig := config.GetConfigOrDie()
-	if restConfig == nil {
-		logger.Error(fmt.Errorf("rest config could not be determined for"), "skr-webhook")
-		return
-	}
+	// restConfig, err := util.GetConfig("", "")
+	// env variable
+	restConfig := ctrl.GetConfigOrDie()
+	// if len(os.Getenv("KUBECONFIG")) > 0 {
+	// 	fmt.Println("Found config from env")
+	// 	restConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	// 	if err != nil {
+	// 		logger.Error(err, "rest config could not be determined for skr-webhook")
+	// 		return
+	// 	}
+	// }
+
 	restClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		logger.Error(err, "rest client could not be determined for skr-webhook")
@@ -67,9 +84,10 @@ func main() {
 		Client: restClient,
 		Logger: logger,
 	}
-	http.HandleFunc("/validate", handler.Handle)
+	http.HandleFunc("/validate/", handler.Handle)
 
 	// server
+	logger.Info("starting web server", "Port:", parameters.port)
 	if parameters.tlsEnabled {
 		err = http.ListenAndServeTLS(":"+strconv.Itoa(parameters.port), parameters.certFile,
 			parameters.keyFile, nil)
