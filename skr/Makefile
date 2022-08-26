@@ -82,7 +82,6 @@ docker-build: #test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
-
 .PHONY: clean
 clean: ## Deletes built binaries
 	rm -rf bin

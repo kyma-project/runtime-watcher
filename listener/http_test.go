@@ -73,7 +73,7 @@ func TestHandler(t *testing.T) {
 	testWatcherEvt := &types.WatcherEvent{
 		KymaCr:    "kyma",
 		Name:      "kyma-sample",
-		Namespace: "kyma-operator",
+		Namespace: "lifecycle-manager",
 	}
 	req := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt)
 	testEvt := GenericTestEvt{}

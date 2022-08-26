@@ -84,4 +84,6 @@ out.txt
 */__debug_bin
 skr/bin/**
 kcp/bin/**
-kcp/pkg/deploy/assets/sample-chart/templates/webhook-config-rendered.yaml
+
+# ignore go.work
+go.work*

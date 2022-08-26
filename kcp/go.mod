@@ -4,17 +4,17 @@ go 1.19
 
 require (
 	github.com/go-logr/logr v1.2.3
-	github.com/kyma-project/kyma-operator/operator v0.0.0-20220822043215-329b320b453c
-	github.com/kyma-project/manifest-operator/operator v0.0.0-20220726131454-83e937e2eb36
+	github.com/kyma-project/lifecycle-manager/operator v0.0.0-20220826075552-79bd8c668c10
+	github.com/kyma-project/module-manager/operator v0.0.0-20220826100203-30ba39d62b0b
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
 	github.com/slok/go-helm-template v0.2.0
-	helm.sh/helm/v3 v3.9.1
-	istio.io/api v0.0.0-20220728184806-7837c4e62d82
+	helm.sh/helm/v3 v3.9.4
+	istio.io/api v0.0.0-20220825141607-b5f730f29ce4
 	istio.io/client-go v1.14.3
 	k8s.io/api v0.24.3
 	k8s.io/apiextensions-apiserver v0.24.3
-	k8s.io/apimachinery v0.25.0
+	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.3
 	sigs.k8s.io/controller-runtime v0.12.3
 	sigs.k8s.io/yaml v1.3.0
@@ -29,7 +29,7 @@ require (
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
-	github.com/BurntSushi/toml v1.1.0 // indirect
+	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
@@ -85,7 +85,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.15.7 // indirect
+	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lib/pq v1.10.6 // indirect
@@ -122,19 +122,18 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.5.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.4.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
-	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
+	go.starlark.net v0.0.0-20220714194419-4cadf0a12139 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
 	golang.org/x/oauth2 v0.0.0-20220722155238-128564f6959c // indirect
-	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.7 // indirect
@@ -152,7 +151,7 @@ require (
 	k8s.io/component-base v0.24.3 // indirect
 	k8s.io/klog/v2 v2.70.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
-	k8s.io/kubectl v0.24.2 // indirect
+	k8s.io/kubectl v0.24.3 // indirect
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 	oras.land/oras-go v1.2.0 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect

@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
+	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -79,7 +79,7 @@ var _ = BeforeSuite(func() {
 
 	kymaCrd := &v1.CustomResourceDefinition{}
 	res, err = http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml") //nolint:lll
+		"https://raw.githubusercontent.com/kyma-project/lifecycle-manager/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml") //nolint:lll
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
 	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(kymaCrd)).To(Succeed())
