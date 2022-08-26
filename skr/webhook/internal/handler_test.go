@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"os"
 
-	"github.com/kyma-project/kyma-watcher/webhook/internal"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"jellyfish.io/skr/webhook/internal"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"

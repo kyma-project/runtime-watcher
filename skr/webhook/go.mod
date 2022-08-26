@@ -1,4 +1,5 @@
-module github.com/kyma-project/kyma-watcher/webhook
+//temporarily changing webhook module name until we cleanup old watcher impl
+module jellyfish.io/skr/webhook
 
 go 1.19
 

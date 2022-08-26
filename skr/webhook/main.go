@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/kyma-project/kyma-watcher/webhook/internal"
+	"jellyfish.io/skr/webhook/internal"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,18 +60,7 @@ func main() {
 	parameters.certFile = os.Getenv("TLS_CERT")
 	parameters.keyFile = os.Getenv("TLS_KEY")
 
-	// rest client
-	// restConfig, err := util.GetConfig("", "")
-	// env variable
 	restConfig := ctrl.GetConfigOrDie()
-	// if len(os.Getenv("KUBECONFIG")) > 0 {
-	// 	fmt.Println("Found config from env")
-	// 	restConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
-	// 	if err != nil {
-	// 		logger.Error(err, "rest config could not be determined for skr-webhook")
-	// 		return
-	// 	}
-	// }
 
 	restClient, err := client.New(restConfig, client.Options{})
 	if err != nil {

@@ -28,11 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// type kcpClient struct {
-// 	http.Client
-// 	lastReq
-// }
-
 type Handler struct {
 	Client client.Client
 	Logger logr.Logger
