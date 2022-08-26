@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 
-	kcptypes "github.com/kyma-project/kyma-watcher/kcp/pkg/types"
+	kcptypes "github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

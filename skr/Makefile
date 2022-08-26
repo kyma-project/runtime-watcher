@@ -63,19 +63,19 @@ test: fmt vet envtest ## Run tests.
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build kyma-watcher binary.
+build: generate fmt vet ## Build runtime-watcher binary.
 	go build -o bin/webhook main.go
 
 .PHONY: run
-run: fmt vet ## Run kyma-watcher from your host.
+run: fmt vet ## Run runtime-watcher from your host.
 	go run ./main.go
 
 .PHONY: docker-build
-docker-build: #test ## Build docker image with the manager.
+docker-build: #test ## Build docker image for the webhook.
 	docker build -t ${IMG} .
 
 .PHONY: docker-push
-docker-push: ## Push docker image with the manager.
+docker-push: ## Push docker image for the webhook.
 	docker push ${IMG}
 
 .PHONY: clean
