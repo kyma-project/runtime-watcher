@@ -3,6 +3,7 @@ package internal_test
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -24,8 +25,11 @@ func TestAPIs(t *testing.T) {
 }
 
 var (
-	ctx    context.Context    //nolint:gochecknoglobals
-	cancel context.CancelFunc //nolint:gochecknoglobals
+	ctx                 context.Context                           //nolint:gochecknoglobals
+	cancel              context.CancelFunc                        //nolint:gochecknoglobals
+	kcpModulesList      = []string{"kyma", "manifest", "compass"} //nolint:gochecknoglobals
+	kcpResponseRecorder *httptest.ResponseRecorder                //nolint:gochecknoglobals
+	kcpMockServer       *http.Server                              //nolint:gochecknoglobals
 )
 
 var _ = BeforeSuite(func() {
@@ -60,14 +64,35 @@ var _ = BeforeSuite(func() {
 	// set env variables
 	Expect(os.Setenv("WEBHOOK_SIDE_CAR", "false")).NotTo(HaveOccurred())
 	//+kubebuilder:scaffold:scheme
+
+	//set KCP env vars
+	err = os.Setenv("KCP_IP", "localhost")
+	Expect(err).ShouldNot(HaveOccurred())
+	err = os.Setenv("KCP_PORT", "10080")
+	Expect(err).ShouldNot(HaveOccurred())
+	err = os.Setenv("KCP_CONTRACT", "v1")
+	Expect(err).ShouldNot(HaveOccurred())
+
+	kcpTestHandler := BootStrapKcpMockHandlers()
+	kcpResponseRecorder = kcpTestHandler.Recorder
+	kcpMockServer = &http.Server{
+		Addr:    ":10080",
+		Handler: kcpTestHandler,
+	}
+	//start kcp web server
+	go func() {
+		kcpMockServer.ListenAndServe()
+	}()
 })
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	Expect(testEnv.Stop()).To(Succeed())
 
-	// unset env variables
-	Expect(os.Unsetenv("WEBHOOK_SIDE_CAR")).NotTo(HaveOccurred())
+	// clear env variables
+	os.Clearenv()
+	//shutdown KCP server
+	Expect(kcpMockServer.Shutdown(context.Background())).Should(Succeed())
 
 	cancel()
 })
