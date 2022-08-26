@@ -26,7 +26,7 @@ import (
 	"github.com/go-logr/logr"
 
 	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
-	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"

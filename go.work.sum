@@ -26,7 +26,12 @@ github.com/google/uuid v1.2.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+
 github.com/gorilla/handlers v1.5.1/go.mod h1:t8XrUpc4KVXb7HGyJ4/cEnwQiaxrX/hz1Zv/4g96P1Q=
 github.com/imdario/mergo v0.3.12/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
+github.com/kyma-project/kyma-watcher/kcp v0.0.0-20220817064106-457dfa874f7f h1:guZAo8DFEt17eBrfVWkgGbZp2viNUz2PRvwXBiI+b4k=
+github.com/kyma-project/kyma-watcher/kcp v0.0.0-20220817064106-457dfa874f7f/go.mod h1:jtnfrHIwYlPRPJcYpbrySe/A5IJZHgKa4I4GutTITN8=
+github.com/kyma-project/kyma-watcher/kcp v0.0.0-20220823054606-7bae3de12050 h1:e8pX5FdDkGa9S/gYs+V4DKwl90OlhdlGFITQKpIVDLw=
+github.com/kyma-project/kyma-watcher/kcp v0.0.0-20220823054606-7bae3de12050/go.mod h1:b7vROUV04AXtjiB4Wllsu/ROgNI2vLU3Rt4RddQQMi8=
 github.com/mattn/go-shellwords v1.0.12/go.mod h1:EZzvwXDESEeg03EKmM+RmDnNOPKG4lLtQsUlTZDWQ8Y=
+github.com/onsi/ginkgo v1.16.5/go.mod h1:+E8gABHa3K6zRBolWtd+ROzc/U5bkGt0FwiG042wbpU=
 github.com/onsi/gomega v1.15.0/go.mod h1:cIuvLEne0aoVhAgh/O6ac0Op8WWw9H6eYCriF+tEHG0=
 github.com/onsi/gomega v1.19.0/go.mod h1:LY+I3pBVzYsTBU1AnDwOSxaYi9WoWiqgwooUqq9yPro=
 github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=

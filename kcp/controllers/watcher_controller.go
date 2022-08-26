@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/util"
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	istioclientapiv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	v1 "k8s.io/api/core/v1"
@@ -295,7 +295,7 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	// this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
+	// this will be implemented as part of another step: see https://github.com/kyma-project/runtime-watcher/issues/33
 	return nil
 }
 
@@ -380,7 +380,7 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 		return false, err
 	}
 
-	// this will be implemented as part of another step: see https://github.com/kyma-project/kyma-watcher/issues/33
+	// this will be implemented as part of another step: see https://github.com/kyma-project/runtime-watcher/issues/33
 	return true, nil
 }
 

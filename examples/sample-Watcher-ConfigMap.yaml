@@ -3,7 +3,7 @@ apiVersion: v1
 metadata:
   name: kcp-watcher-modules
   labels:
-    operator.kyma-project.io/controller-name: kyma-watcher
+    operator.kyma-project.io/controller-name: runtime-watcher
 data:
   example-module-name-stable: |
     {

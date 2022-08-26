@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/listener"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/listener"
 
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 
 	"github.com/stretchr/testify/require"
 )

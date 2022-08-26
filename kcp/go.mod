@@ -1,4 +1,4 @@
-module github.com/kyma-project/kyma-watcher/kcp
+module github.com/kyma-project/runtime-watcher/kcp
 
 go 1.19
 
