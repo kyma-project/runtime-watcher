@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/google/uuid"
-	"jellyfish.io/skr/webhook/internal"
+	"github.com/kyma-project/runtime-watcher/skr/internal"
 
 	kcptypes "github.com/kyma-project/kyma-watcher/kcp/pkg/types"
 	admissionv1 "k8s.io/api/admission/v1"

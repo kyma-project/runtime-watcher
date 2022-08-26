@@ -16,7 +16,6 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
-	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const EventEndpoint = "event"
 
 type Handler struct {
 	Client client.Client
@@ -294,7 +295,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	}
 
 	url := fmt.Sprintf("http://%s/%s/%s/%s", net.JoinHostPort(kcpIP, kcpPort),
-		contract, moduleName, config.EventEndpoint)
+		contract, moduleName, EventEndpoint)
 
 	h.Logger.V(1).Info("KCP", "url", url)
 	//nolint:gosec

@@ -44,13 +44,9 @@ help: ## Display this help.
 
 ##@ Development
 
-.PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
-.PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+.PHONY: resolve
+resolve: ## Run go mod tidy against code.
+	go mod tidy
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -61,17 +57,17 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 ##@ Build
 
 .PHONY: build
 build: generate fmt vet ## Build kyma-watcher binary.
-	go build -o bin/manager main.go
+	go build -o bin/webhook main.go
 
 .PHONY: run
-run: manifests generate fmt vet ## Run kyma-watcher from your host.
+run: fmt vet ## Run kyma-watcher from your host.
 	go run ./main.go
 
 .PHONY: docker-build
@@ -92,31 +88,6 @@ clean: ## Deletes built binaries
 ifndef ignore-not-found
   ignore-not-found = false
 endif
-## Will not be used
-.PHONY: install
-install: manifests kustomize ## NOT SUPPORTED - Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
-## Will not be used
-.PHONY: uninstall
-uninstall: manifests kustomize ## NOT SUPPORTED - Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
-.PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
-
-.PHONY: undeploy
-undeploy: ## NOT SUPPORTED - Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
-.PHONY: helm-prepare
-helm-prepare: manifests kustomize ## Generates k8s manifests and writes them as a Helm template in the watcher helm-chart
-	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
-	$(KUSTOMIZE) build config/default > ${HELM_CHART_TEMPLATES_DIR}/skr-watcher-manifests.yaml
-
-
-##@ Build Dependencies
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
@@ -124,25 +95,12 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v4.5.6
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
 GOLANG_CI_LINT_VERSION ?= v1.46.2
-
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
-$(KUSTOMIZE): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/kustomize/kustomize/v4@$(KUSTOMIZE_VERSION)
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
@@ -151,5 +109,6 @@ $(ENVTEST): $(LOCALBIN)
 
 .PHONY: lint
 lint: ## Run golangci-lint against code.
+	go mod vendor
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run
