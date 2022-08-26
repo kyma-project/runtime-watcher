@@ -17,8 +17,8 @@ The Listener implementation is in the [kcp directory](./kcp).
 ![](./docs/assets/watcher_workflow_network_arc.svg)
 
 ### GitHub Issues
-- [MVP](https://github.com/kyma-project/kyma-operator/issues/33)
-- [PoC](https://github.com/kyma-project/kyma-operator/issues/10)
+- [MVP](https://github.com/kyma-project/lifecycle-manager/issues/33)
+- [PoC](https://github.com/kyma-project/lifecycle-manager/issues/10)
 ## Prerequisites
 
 - Go 1.18

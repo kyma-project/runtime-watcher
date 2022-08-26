@@ -7,7 +7,13 @@ import (
 	"path"
 	"strings"
 
-	manifestLib "github.com/kyma-project/manifest-operator/operator/pkg/manifest"
+	"github.com/go-logr/logr"
+	"github.com/kyma-project/module-manager/operator/pkg/custom"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	lifecycleLib "github.com/kyma-project/module-manager/operator/pkg/manifest"
 	"github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"helm.sh/helm/v3/pkg/cli"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -50,10 +56,22 @@ func RedeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableR
 	// 2.step: deploy helm chart
 	argsVal := make(map[string]interface{}, 1)
 	argsVal["isWebhookConfigRendered"] = true
-	skrWatcherDeployInfo := manifestLib.DeployInfo{
-		ChartInfo: &manifestLib.ChartInfo{
+	restClient, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return err
+	}
+	skrWatcherDeployInfo := lifecycleLib.InstallInfo{
+		ChartInfo: &lifecycleLib.ChartInfo{
 			ChartPath:   webhookChartPath,
 			ReleaseName: releaseName,
+		},
+		RemoteInfo: custom.RemoteInfo{
+			RemoteClient: &restClient,
+			RemoteConfig: restConfig,
+		},
+		CheckFn: func(ctx context.Context, u *unstructured.Unstructured, logger *logr.Logger, info custom.RemoteInfo,
+		) (bool, error) {
+			return true, nil
 		},
 	}
 	err = deployWatcherHelmChart(ctx, restConfig, helmRepoFile, releaseName, skrWatcherDeployInfo, argsVal)
@@ -187,15 +205,15 @@ func aggregateLabels(maps []map[string]string, capacity int) map[string]string {
 }
 
 func deployWatcherHelmChart(ctx context.Context, restConfig *rest.Config, helmRepoFile, releaseName string,
-	deployInfo manifestLib.DeployInfo, argsVals map[string]interface{},
+	deployInfo lifecycleLib.InstallInfo, argsVals map[string]interface{},
 ) error {
 	logger := logf.FromContext(ctx)
 	args := make(map[string]map[string]interface{}, 1)
 	args["set"] = argsVals
-	ops, err := manifestLib.NewOperations(&logger, restConfig, releaseName,
+	ops, err := lifecycleLib.NewOperations(&logger, restConfig, releaseName,
 		&cli.EnvSettings{
 			RepositoryConfig: helmRepoFile,
-		}, args)
+		}, args, nil)
 	if err != nil {
 		return err
 	}

@@ -101,7 +101,7 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 
 		// base kyma resource
 		response, err := http.DefaultClient.Get(
-			"https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/config/samples/" +
+			"https://raw.githubusercontent.com/kyma-project/lifecycle-manager/main/operator/config/samples/" +
 				"component-integration-installed/operator_v1alpha1_kyma.yaml")
 		Expect(err).ShouldNot(HaveOccurred())
 		body, err := io.ReadAll(response.Body)
