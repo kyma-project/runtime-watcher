@@ -109,6 +109,5 @@ $(ENVTEST): $(LOCALBIN)
 
 .PHONY: lint
 lint: ## Run golangci-lint against code.
-	go mod vendor
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run
