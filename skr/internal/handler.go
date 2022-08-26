@@ -72,11 +72,11 @@ const (
 	errorSeparator      = ":"
 	invalidationMessage = "invalidated from webhook"
 	validationMessage   = "validated from webhook"
-	defaultBufferSize   = 2048
 	requestStorePath    = "/tmp/request"
-	handlerPathPrefix   = "validate"
 	kymaModuleName      = "kyma"
 	urlPathPattern      = "/validate/%s"
+	KcpReqFailedMsg     = "kcp request failed"
+	KcpReqSucceededMsg  = "kcp request succeeded"
 )
 
 //nolint:gochecknoglobals
@@ -191,7 +191,6 @@ func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview,
 	resourcesList []Resource, moduleName string,
 ) validateResource {
-
 	if admissionReview.Request.Operation == admissionv1.Delete {
 		oldObjectWatched := ObjectWatched{}
 		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
@@ -216,11 +215,11 @@ func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview
 	return h.validAdmissionReviewObj(msg)
 }
 
-func getKymaFromConfigMap(r client.Reader) (*unstructured.UnstructuredList, error) {
+func getKymaFromConfigMap(reader client.Reader) (*unstructured.UnstructuredList, error) {
 	// fetch resource mapping ConfigMap
 	ctx := context.TODO()
 	configMap := v1.ConfigMap{}
-	err := r.Get(ctx, client.ObjectKey{
+	err := reader.Get(ctx, client.ObjectKey{
 		Name:      "skr-webhook-resource-mapping",
 		Namespace: "default",
 	}, &configMap)
@@ -245,7 +244,7 @@ func getKymaFromConfigMap(r client.Reader) (*unstructured.UnstructuredList, erro
 	// get SKR kyma
 	kymasList := unstructured.UnstructuredList{}
 	kymasList.SetGroupVersionKind(kymaGvr)
-	err = r.List(ctx, &kymasList)
+	err = reader.List(ctx, &kymasList)
 	if err != nil {
 		// h.Logger.Error(err, "could not list kyma resources")
 		return nil, fmt.Errorf("could not list kyma resources: %w", err)
@@ -262,11 +261,11 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 		kymaList, err := getKymaFromConfigMap(h.Client)
 		if err != nil {
 			h.Logger.Error(err, "failed to get kyma list")
-			return "kcp request failed"
+			return KcpReqFailedMsg
 		}
 		if len(kymaList.Items) != 1 {
 			h.Logger.Error(nil, fmt.Sprintf("found %d kyma resources, expected 1", len(kymaList.Items)))
-			return "kcp request failed"
+			return KcpReqFailedMsg
 		}
 		kymaName = kymaList.Items[0].GetName()
 	}
@@ -280,7 +279,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
 		h.Logger.Error(err, "")
-		return "kcp request failed"
+		return KcpReqFailedMsg
 	}
 
 	responseBody := bytes.NewBuffer(postBody)
@@ -291,7 +290,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	// component := "manifest"
 
 	if kcpIP == "" || kcpPort == "" || contract == "" {
-		return "kcp request failed"
+		return KcpReqFailedMsg
 	}
 
 	url := fmt.Sprintf("http://%s/%s/%s/%s", net.JoinHostPort(kcpIP, kcpPort),
@@ -302,15 +301,15 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	resp, err := http.Post(url, "application/json", responseBody)
 	if err != nil {
 		h.Logger.Error(err, "")
-		return "kcp request failed"
+		return KcpReqFailedMsg
 	}
 	if resp.StatusCode != http.StatusOK {
 		h.Logger.Error(err, "")
-		return "kcp request failed"
+		return KcpReqFailedMsg
 	}
 
 	h.Logger.Info("sent request to KCP successfully")
-	return "kcp request succeeded"
+	return KcpReqSucceededMsg
 }
 
 func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,

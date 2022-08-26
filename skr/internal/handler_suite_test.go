@@ -32,6 +32,8 @@ var (
 	kcpMockServer       *http.Server                              //nolint:gochecknoglobals
 )
 
+const DefaultBufferSize = 2048
+
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel = context.WithCancel(context.TODO())
@@ -44,7 +46,7 @@ var _ = BeforeSuite(func() {
 			"config/crd/bases/operator.kyma-project.io_kymas.yaml")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
-	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(kymaCrd)).To(Succeed())
+	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, DefaultBufferSize).Decode(kymaCrd)).To(Succeed())
 
 	testEnv = &envtest.Environment{
 		CRDs:                  []*v1.CustomResourceDefinition{kymaCrd},
@@ -65,7 +67,7 @@ var _ = BeforeSuite(func() {
 	Expect(os.Setenv("WEBHOOK_SIDE_CAR", "false")).NotTo(HaveOccurred())
 	//+kubebuilder:scaffold:scheme
 
-	//set KCP env vars
+	// set KCP env vars
 	err = os.Setenv("KCP_IP", "localhost")
 	Expect(err).ShouldNot(HaveOccurred())
 	err = os.Setenv("KCP_PORT", "10080")
@@ -79,9 +81,9 @@ var _ = BeforeSuite(func() {
 		Addr:    ":10080",
 		Handler: kcpTestHandler,
 	}
-	//start kcp web server
+
 	go func() {
-		kcpMockServer.ListenAndServe()
+		_ = kcpMockServer.ListenAndServe()
 	}()
 })
 
@@ -91,7 +93,7 @@ var _ = AfterSuite(func() {
 
 	// clear env variables
 	os.Clearenv()
-	//shutdown KCP server
+
 	Expect(kcpMockServer.Shutdown(context.Background())).Should(Succeed())
 
 	cancel()

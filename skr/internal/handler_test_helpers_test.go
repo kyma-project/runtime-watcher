@@ -17,8 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const kcpListenerUrlPattern = "/v1/%s/event"
-
 type CustomRouter struct {
 	*http.ServeMux
 	Recorder *httptest.ResponseRecorder
@@ -31,43 +29,44 @@ func NewCustomRouter() *CustomRouter {
 	}
 }
 
-func (cr *CustomRouter) ServeHTTP(_ http.ResponseWriter, r *http.Request) {
-	w := cr.Recorder
-	if r.RequestURI == "*" {
-		if r.ProtoAtLeast(1, 1) {
-			w.Header().Set("Connection", "close")
+func (cr *CustomRouter) ServeHTTP(_ http.ResponseWriter, request *http.Request) {
+	if request.RequestURI == "*" {
+		if request.ProtoAtLeast(1, 1) {
+			cr.Recorder.Header().Set("Connection", "close")
 		}
-		w.WriteHeader(http.StatusBadRequest)
+		cr.Recorder.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	h, _ := cr.Handler(r)
-	h.ServeHTTP(w, r)
+	h, _ := cr.Handler(request)
+	h.ServeHTTP(cr.Recorder, request)
 }
 
 func BootStrapKcpMockHandlers() *CustomRouter {
 	kcpTestHandler := NewCustomRouter()
 	for _, kcpModule := range kcpModulesList {
-		handleFnPattern := fmt.Sprintf(kcpListenerUrlPattern, kcpModule)
-		kcpTestHandler.HandleFunc(handleFnPattern, func(w http.ResponseWriter, r *http.Request) {
+		handleFnPattern := fmt.Sprintf("/v1/%s/event", kcpModule)
+		kcpTestHandler.HandleFunc(handleFnPattern, func(response http.ResponseWriter, r *http.Request) {
 			reqBytes, err := io.ReadAll(r.Body)
 			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
+				response.WriteHeader(http.StatusBadRequest)
 			}
 			watcherEvt := &kcptypes.WatcherEvent{}
 			err = json.Unmarshal(reqBytes, watcherEvt)
 			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
+				response.WriteHeader(http.StatusBadRequest)
 			}
-			_, err = w.Write(reqBytes)
+			_, err = response.Write(reqBytes)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
+				response.WriteHeader(http.StatusInternalServerError)
 			}
 		})
 	}
 	return kcpTestHandler
 }
 
-func MockApiServerHTTPRequest(operation admissionv1.Operation, crName, moduleName string, crGVK metav1.GroupVersionKind) (*http.Request, error) {
+func MockAPIServerHTTPRequest(operation admissionv1.Operation, crName, moduleName string,
+	crGVK metav1.GroupVersionKind,
+) (*http.Request, error) {
 	admissionReview, err := createAdmissionRequest(operation, crName, crGVK)
 	if err != nil {
 		return nil, err
@@ -80,7 +79,9 @@ func MockApiServerHTTPRequest(operation admissionv1.Operation, crName, moduleNam
 	return req, nil
 }
 
-func createAdmissionRequest(operation admissionv1.Operation, crName string, crGVK metav1.GroupVersionKind) (*admissionv1.AdmissionReview, error) {
+func createAdmissionRequest(operation admissionv1.Operation, crName string,
+	crGVK metav1.GroupVersionKind,
+) (*admissionv1.AdmissionReview, error) {
 	admissionReview := &admissionv1.AdmissionReview{
 		Request: &admissionv1.AdmissionRequest{
 			Name:      crName,

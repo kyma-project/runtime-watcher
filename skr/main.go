@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,7 +21,35 @@ type ServerParameters struct {
 	tlsEnabled bool   // indicates if TLS is enabled
 }
 
-var parameters ServerParameters //nolint:gochecknoglobals
+const (
+	defaultPort           = 8443
+	defaultTLSEnabledMode = false
+)
+
+func serverParams(logger logr.Logger) ServerParameters {
+	parameters := ServerParameters{}
+
+	// port
+	portEnv := os.Getenv("WEBHOOK_PORT")
+	port, err := strconv.Atoi(portEnv)
+	if err != nil {
+		logger.V(1).Error(err, "failed parsing web-hook server port")
+		parameters.port = defaultPort
+	}
+	parameters.port = port
+
+	// tls
+	tlsEnabledEnv := os.Getenv("TLS_ENABLED")
+	tlsEnabled, err := strconv.ParseBool(tlsEnabledEnv)
+	if err != nil {
+		logger.V(1).Error(err, "failed parsing  tls flag")
+		parameters.tlsEnabled = defaultTLSEnabledMode
+	}
+	parameters.tlsEnabled = tlsEnabled
+	parameters.certFile = os.Getenv("TLS_CERT")
+	parameters.keyFile = os.Getenv("TLS_KEY")
+	return parameters
+}
 
 func main() {
 	logger := ctrl.Log.WithName("skr-webhook")
@@ -34,31 +63,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	var err error
-
-	// port
-	portEnv := os.Getenv("WEBHOOK_PORT")
-	defaultPort := 8443
-	if portEnv != "" {
-		defaultPort, err = strconv.Atoi(portEnv)
-		if err != nil {
-			logger.Error(err, "Error parsing Webhook server port")
-		}
-	}
-	parameters.port = defaultPort
-
-	// tls
-	tlsEnabledEnv := os.Getenv("TLS_ENABLED")
-	tlsEnabled := false
-	if tlsEnabledEnv != "" {
-		tlsEnabled, err = strconv.ParseBool(tlsEnabledEnv)
-		if err != nil {
-			logger.Error(err, "Error parsing tls flag")
-		}
-	}
-	parameters.tlsEnabled = tlsEnabled
-	parameters.certFile = os.Getenv("TLS_CERT")
-	parameters.keyFile = os.Getenv("TLS_KEY")
+	params := serverParams(logger)
 
 	restConfig := ctrl.GetConfigOrDie()
 
@@ -76,12 +81,12 @@ func main() {
 	http.HandleFunc("/validate/", handler.Handle)
 
 	// server
-	logger.Info("starting web server", "Port:", parameters.port)
-	if parameters.tlsEnabled {
-		err = http.ListenAndServeTLS(":"+strconv.Itoa(parameters.port), parameters.certFile,
-			parameters.keyFile, nil)
+	logger.Info("starting web server", "Port:", params.port)
+	if params.tlsEnabled {
+		err = http.ListenAndServeTLS(":"+strconv.Itoa(params.port), params.certFile,
+			params.keyFile, nil)
 	} else {
-		err = http.ListenAndServe(":"+strconv.Itoa(parameters.port), nil)
+		err = http.ListenAndServe(":"+strconv.Itoa(params.port), nil)
 	}
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")
