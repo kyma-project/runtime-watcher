@@ -7,8 +7,6 @@ import (
 
 	"github.com/kyma-project/runtime-watcher/listener"
 
-	"github.com/kyma-project/runtime-watcher/listener"
-
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 
 	"github.com/stretchr/testify/require"
