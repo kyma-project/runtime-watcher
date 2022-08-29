@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
-	"github.com/kyma-project/kyma-watcher/kcp/controllers"
-	. "github.com/onsi/ginkgo"
+	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/controllers"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	yaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -36,12 +36,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -61,9 +60,7 @@ func TestAPIs(t *testing.T) {
 	t.Parallel()
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Controller Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -75,14 +72,14 @@ var _ = BeforeSuite(func() {
 
 	watcherCrd := &v1.CustomResourceDefinition{}
 	res, err := http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/kyma-watcher/main/kcp/config/crd/bases/component.kyma-project.io_watchers.yaml") //nolint:lll
+		"https://raw.githubusercontent.com/kyma-project/runtime-watcher/main/kcp/config/crd/bases/component.kyma-project.io_watchers.yaml") //nolint:lll
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
 	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(watcherCrd)).To(Succeed())
 
 	kymaCrd := &v1.CustomResourceDefinition{}
 	res, err = http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/kyma-operator/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml") //nolint:lll
+		"https://raw.githubusercontent.com/kyma-project/lifecycle-manager/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml") //nolint:lll
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
 	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(kymaCrd)).To(Succeed())

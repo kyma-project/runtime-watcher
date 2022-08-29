@@ -20,14 +20,14 @@ import (
 	"flag"
 	"os"
 
-	kyma "github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
+	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/kyma-watcher/kcp/controllers"
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/util"
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/controllers"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

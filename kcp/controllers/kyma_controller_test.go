@@ -3,14 +3,13 @@ package controllers_test
 import (
 	"time"
 
-	"github.com/kyma-project/kyma-operator/operator/api/v1alpha1"
-	componentv1alpha1 "github.com/kyma-project/kyma-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/kyma-watcher/kcp/controllers"
-	. "github.com/onsi/ginkgo"
+	"github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/controllers"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -74,7 +73,7 @@ func NewTestKyma(name string) *v1alpha1.Kyma {
 	return &v1alpha1.Kyma{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.GroupVersion.String(),
-			Kind:       v1alpha1.KymaKind,
+			Kind:       string(v1alpha1.KymaKind),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -86,11 +85,9 @@ func NewTestKyma(name string) *v1alpha1.Kyma {
 					Name:           componentName,
 					ControllerName: "",
 					Channel:        componentChannel,
-					Settings:       unstructured.Unstructured{},
 				},
 			},
 			Channel: v1alpha1.DefaultChannel,
-			Profile: v1alpha1.DefaultProfile,
 		},
 	}
 }
@@ -122,7 +119,7 @@ func NewTestWatcherCR(name string, labels map[string]string) *componentv1alpha1.
 					Gvr: componentv1alpha1.Gvr{
 						Group:    v1alpha1.GroupVersion.Group,
 						Version:  v1alpha1.GroupVersion.Version,
-						Resource: v1alpha1.KymaPlural,
+						Resource: "kymas",
 					},
 					LabelsToWatch: map[string]string{},
 				},

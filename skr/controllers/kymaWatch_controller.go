@@ -24,12 +24,12 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kyma-project/kyma-watcher/kcp/pkg/types"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 
-	"github.com/kyma-project/kyma-watcher/skr/pkg/factory"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/factory"
 
 	"github.com/go-logr/logr"
-	"github.com/kyma-project/kyma-watcher/skr/pkg/config"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/config"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"

@@ -2,7 +2,7 @@ domain: my.domain
 layout:
 - go.kubebuilder.io/v3
 projectName: skr
-repo: github.com/kyma-project/kyma-watcher
+repo: github.com/kyma-project/runtime-watcher
 resources:
 - controller: true
   domain: my.domain

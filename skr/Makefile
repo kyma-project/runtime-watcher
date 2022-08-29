@@ -1,6 +1,5 @@
-
 # Image URL to use all building/pushing image targets
-APP_NAME = kyma-watcher-skr
+APP_NAME = runtime-watcher-skr
 IMG_REPO := $(DOCKER_PUSH_REPOSITORY)$(DOCKER_PUSH_DIRECTORY)
 IMG_NAME := $(IMG_REPO)/$(APP_NAME)
 IMG := $(IMG_NAME):$(DOCKER_TAG)
@@ -8,7 +7,7 @@ IMG := $(IMG_NAME):$(DOCKER_TAG)
 HELM_CHART_TEMPLATES_DIR=$(shell pwd)/chart/templates
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.23
+ENVTEST_K8S_VERSION = 1.24.1
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -68,11 +67,11 @@ test: manifests generate fmt vet envtest ## Run tests.
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build kyma-watcher binary.
+build: generate fmt vet ## Build runtime-watcher binary.
 	go build -o bin/manager main.go
 
 .PHONY: run
-run: manifests generate fmt vet ## Run kyma-watcher from your host.
+run: manifests generate fmt vet ## Run runtime-watcher from your host.
 	go run ./main.go
 
 .PHONY: docker-build
@@ -82,7 +81,6 @@ docker-build: #test ## Build docker image with the manager.
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
-
 
 .PHONY: clean
 clean: ## Deletes built binaries
@@ -104,7 +102,7 @@ uninstall: manifests kustomize ## NOT SUPPORTED - Uninstall CRDs from the K8s cl
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image runtime-watcher=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy
@@ -113,7 +111,7 @@ undeploy: ## NOT SUPPORTED - Undeploy controller from the K8s cluster specified 
 
 .PHONY: helm-prepare
 helm-prepare: manifests kustomize ## Generates k8s manifests and writes them as a Helm template in the watcher helm-chart
-	cd config/manager && $(KUSTOMIZE) edit set image kyma-watcher=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image runtime-watcher=${IMG}
 	$(KUSTOMIZE) build config/default > ${HELM_CHART_TEMPLATES_DIR}/skr-watcher-manifests.yaml
 
 
@@ -131,15 +129,14 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v3.8.7
+KUSTOMIZE_VERSION ?= v4.5.6
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
 GOLANG_CI_LINT_VERSION ?= v1.46.2
 
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)
-	curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/kustomize/kustomize/v4@$(KUSTOMIZE_VERSION)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -153,6 +150,5 @@ $(ENVTEST): $(LOCALBIN)
 
 .PHONY: lint
 lint: ## Run golangci-lint against code.
-	go mod vendor
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run

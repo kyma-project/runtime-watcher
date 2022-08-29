@@ -31,7 +31,7 @@ spec:
             - /manager
           args:
             - --leader-elect
-          image: docker.io/jaythedevil666/kyma-watcher:latest
+          image: docker.io/jaythedevil666/runtime-watcher:latest
           name: manager
           securityContext:
             allowPrivilegeEscalation: false
