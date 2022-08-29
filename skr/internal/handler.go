@@ -224,20 +224,17 @@ func getKymaFromConfigMap(reader client.Reader) (*unstructured.UnstructuredList,
 		Namespace: "default",
 	}, &configMap)
 	if err != nil {
-		// h.Logger.Error(err, "could not fetch resource mapping ConfigMap")
 		return nil, fmt.Errorf("could not fetch resource mapping ConfigMap: %w", err)
 	}
 
 	// parse ConfigMap for kyma GVK
 	kymaGvkStringified, kymaExists := configMap.Data["kyma"]
 	if !kymaExists {
-		// h.Logger.Error(fmt.Errorf("failed to fetch kyma GVK from resource mapping"), "")
 		return nil, fmt.Errorf("failed to fetch kyma GVK from resource mapping")
 	}
 	kymaGvr := schema.GroupVersionKind{}
 	err = yaml.Unmarshal([]byte(kymaGvkStringified), &kymaGvr)
 	if err != nil {
-		// h.Logger.Error(err, "kyma GVK could not me unmarshalled")
 		return nil, fmt.Errorf("kyma GVK could not me unmarshalled: %w", err)
 	}
 
@@ -246,7 +243,6 @@ func getKymaFromConfigMap(reader client.Reader) (*unstructured.UnstructuredList,
 	kymasList.SetGroupVersionKind(kymaGvr)
 	err = reader.List(ctx, &kymasList)
 	if err != nil {
-		// h.Logger.Error(err, "could not list kyma resources")
 		return nil, fmt.Errorf("could not list kyma resources: %w", err)
 	}
 	return &kymasList, nil
@@ -287,7 +283,6 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	kcpIP := os.Getenv("KCP_IP")
 	kcpPort := os.Getenv("KCP_PORT")
 	contract := os.Getenv("KCP_CONTRACT")
-	// component := "manifest"
 
 	if kcpIP == "" || kcpPort == "" || contract == "" {
 		return KcpReqFailedMsg

@@ -100,21 +100,15 @@ var _ = Describe("Kyma with multiple module CRs", Ordered, func() {
 })
 
 type testCase struct {
-	// description string
 	params  testCaseParams
 	results testCaseResults
 }
 
 type testCaseResults struct {
-	// kymaCRName      string
-	// objectName      string
-	// objectNamespace string
-	// allowed         bool
 	resultMsg    string
 	resultStatus string
 }
 type testCaseParams struct {
-	// handler    *internal.Handler
 	operation  admissionv1.Operation
 	crName     string
 	moduleName string
