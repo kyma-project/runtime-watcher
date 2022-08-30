@@ -65,6 +65,9 @@ type ServiceInfo struct {
 
 	// ServiceName describes the service name for the operator.
 	ServiceName string `json:"serviceName"`
+
+	// ServiceNamespace describes the service namespace for the operator.
+	ServiceNamespace string `json:"serviceNamespace"`
 }
 
 // +kubebuilder:validation:Enum=Processing;Deleting;Ready;Error

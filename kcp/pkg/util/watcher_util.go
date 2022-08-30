@@ -24,8 +24,8 @@ import (
 const (
 	gwPortVarName           = "LISTENER_GW_PORT"
 	requeueIntervalVarName  = "REQUEUE_INTERVAL"
-	defaultIstioGatewayPort = 80
-	defaultRequeueInterval  = 500
+	DefaultIstioGatewayPort = 80
+	DefaultRequeueInterval  = 500
 	httpProtocol            = "HTTP"
 	istioGWSelectorMapKey   = "istio"
 	istioGWSelectorMapValue = "ingressgateway"
@@ -33,12 +33,16 @@ const (
 	firstElementIdx         = 0
 	// defaultOperatorWatcherCRLabel is a label indicating that watcher CR applies to all Kymas.
 	defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
-	ConfigMapResourceName         = "kcp-watcher-kyma-mapping"
+	ConfigMapResourceName         = "kcp-watcher-modules"
+	//TODO: add ConfigMapNamespace as a parameter in WatcherConfig
+	ConfigMapNamespace     = metav1.NamespaceDefault
+	IstioGatewayGVR        = "gateways.networking.istio.io/v1beta1"
+	IstioVirtualServiceGVR = "virtualservices.networking.istio.io/v1beta1"
 )
 
 type WatcherConfig struct {
 	// ListenerIstioGatewayHost represents hostname or IP address
-
+	// to which the watcher on SKR will send events
 	ListenerIstioGatewayHost string
 	// ListenerIstioGatewayPort represents port on which KCP listeners will be reachable for SKR watchers
 	ListenerIstioGatewayPort uint32
@@ -78,12 +82,12 @@ func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
 	gwPortVarValue, isSet := os.LookupEnv(gwPortVarName)
 	if !isSet {
 		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", gwPortVarName))
-		config.ListenerIstioGatewayPort = defaultIstioGatewayPort
+		config.ListenerIstioGatewayPort = DefaultIstioGatewayPort
 	}
 	requeueIntervalVarValue, isSet := os.LookupEnv(requeueIntervalVarName)
 	if !isSet {
 		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", requeueIntervalVarName))
-		config.RequeueInterval = defaultRequeueInterval
+		config.RequeueInterval = DefaultRequeueInterval
 		return config
 	}
 	gwPortIntValue, err := strconv.Atoi(gwPortVarValue)
@@ -128,12 +132,12 @@ func isRouteConfigEqual(route1 *istioapiv1beta1.HTTPRoute, route2 *istioapiv1bet
 }
 
 func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.VirtualService,
-	obj *componentv1alpha1.Watcher, gwName string,
+	obj *componentv1alpha1.Watcher, gwName, gwNamespace string,
 ) bool {
 	if len(virtualService.Spec.Gateways) != 1 {
 		return true
 	}
-	if virtualService.Spec.Gateways[firstElementIdx] != gwName {
+	if virtualService.Spec.Gateways[firstElementIdx] != gateway(gwName, gwNamespace) {
 		return true
 	}
 	if len(virtualService.Spec.Hosts) != 1 {
@@ -150,14 +154,14 @@ func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.Virtual
 }
 
 func UpdateVirtualServiceConfig(virtualService *istioclientapiv1beta1.VirtualService,
-	obj *componentv1alpha1.Watcher, gwName string,
+	obj *componentv1alpha1.Watcher, gwName, gwNamespace string,
 ) {
 	if virtualService == nil {
 		return
 	}
 	istioHTTPRoute := prepareIstioHTTPRouteForCR(obj)
 	virtualService.Spec = istioapiv1beta1.VirtualService{
-		Gateways: []string{gwName},
+		Gateways: []string{gateway(gwName, gwNamespace)},
 		Hosts:    []string{istioHostsWildcard},
 		Http:     []*istioapiv1beta1.HTTPRoute{istioHTTPRoute},
 	}
@@ -177,7 +181,7 @@ func prepareIstioHTTPRouteForCR(obj *componentv1alpha1.Watcher) *istioapiv1beta1
 		Route: []*istioapiv1beta1.HTTPRouteDestination{
 			{
 				Destination: &istioapiv1beta1.Destination{
-					Host: obj.Spec.ServiceInfo.ServiceName,
+					Host: destinationHost(obj.Spec.ServiceInfo.ServiceName, obj.Spec.ServiceInfo.ServiceNamespace),
 					Port: &istioapiv1beta1.PortSelector{
 						Number: uint32(obj.Spec.ServiceInfo.ServicePort),
 					},
@@ -185,6 +189,10 @@ func prepareIstioHTTPRouteForCR(obj *componentv1alpha1.Watcher) *istioapiv1beta1
 			},
 		},
 	}
+}
+
+func destinationHost(serviceName, serviceNamespace string) string {
+	return fmt.Sprintf("%s.%s.svc.cluster.local", serviceName, serviceNamespace)
 }
 
 func isCrdInstalled(err error) (bool, error) {
@@ -263,11 +271,11 @@ func PerformConfigMapCheck(ctx context.Context, reader client.Reader,
 }
 
 func PerformIstioGWCheck(ctx context.Context, istioClientSet *istioclient.Clientset,
-	gwPort uint32, gwResourceName, gwGVR, namespace string,
+	gwPort uint32, gwResourceName, namespace string,
 ) (bool, error) {
 	gateway, apiErr := istioClientSet.NetworkingV1beta1().
 		Gateways(namespace).Get(ctx, gwResourceName, metav1.GetOptions{})
-	ready, err := IstioResourcesErrorCheck(gwGVR, apiErr)
+	ready, err := IstioResourcesErrorCheck(IstioGatewayGVR, apiErr)
 	if !ready {
 		return true, err
 	}
@@ -282,20 +290,24 @@ func PerformIstioGWCheck(ctx context.Context, istioClientSet *istioclient.Client
 }
 
 func PerformIstioVirtualServiceCheck(ctx context.Context, istioClientSet *istioclient.Clientset,
-	obj *componentv1alpha1.Watcher, virtualServiceGVR, gwName string,
+	obj *componentv1alpha1.Watcher, gwName, gwNamespace string,
 ) (bool, error) {
 	watcherObjKey := client.ObjectKeyFromObject(obj)
 	virtualService, apiErr := istioClientSet.NetworkingV1beta1().
 		VirtualServices(watcherObjKey.Namespace).Get(ctx, watcherObjKey.Name, metav1.GetOptions{})
-	ready, err := IstioResourcesErrorCheck(virtualServiceGVR, apiErr)
+	ready, err := IstioResourcesErrorCheck(IstioVirtualServiceGVR, apiErr)
 	if !ready {
 		return true, err
 	}
 	if k8sapierrors.IsNotFound(apiErr) {
 		return true, nil
 	}
-	if IsVirtualServiceConfigChanged(virtualService, obj, gwName) {
+	if IsVirtualServiceConfigChanged(virtualService, obj, gwName, gwNamespace) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func gateway(gwName, gwNamespace string) string {
+	return fmt.Sprintf("%s/%s", gwNamespace, gwName)
 }

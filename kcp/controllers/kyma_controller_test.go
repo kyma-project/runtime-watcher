@@ -26,7 +26,7 @@ const (
 	interval = time.Millisecond * 250
 )
 
-var _ = Describe("Correct WatcherCR Setup", func() {
+var _ = Describe("Correct WatcherCR Setup", Ordered, func() {
 	testKyma := NewTestKyma("test-kyma")
 	testConfigMap := NewTestConfigMap(configMapName)
 	testWatcherCR := NewTestWatcherCR(watcherName, map[string]string{controllers.DefaultOperatorWatcherCRLabel: "true"})
@@ -43,7 +43,7 @@ var _ = Describe("Correct WatcherCR Setup", func() {
 	})
 })
 
-var _ = Describe("WatcherCR applies to all Kymas - Configmap stores no data", func() {
+var _ = Describe("WatcherCR applies to all Kymas - Configmap stores no data", Ordered, func() {
 	testKyma := NewTestKyma("test-kyma")
 	testConfigMap := NewTestConfigMap(configMapName)
 	testWatcherCR := NewTestWatcherCR(watcherName, map[string]string{})
@@ -57,12 +57,12 @@ var _ = Describe("WatcherCR applies to all Kymas - Configmap stores no data", fu
 })
 
 func SetupTestEnvironment(kyma *v1alpha1.Kyma, configmap *v1.ConfigMap, watcher *componentv1alpha1.Watcher) {
-	BeforeEach(func() {
+	BeforeAll(func() {
 		Expect(k8sClient.Create(ctx, configmap)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, watcher)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, kyma)).Should(Succeed())
 	})
-	AfterEach(func() {
+	AfterAll(func() {
 		Expect(k8sClient.Delete(ctx, configmap)).Should(Succeed())
 		Expect(k8sClient.Delete(ctx, watcher)).Should(Succeed())
 		Expect(k8sClient.Delete(ctx, kyma)).Should(Succeed())

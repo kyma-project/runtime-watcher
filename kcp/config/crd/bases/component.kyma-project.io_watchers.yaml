@@ -84,6 +84,10 @@ spec:
                   serviceName:
                     description: ServiceName describes the service name for the operator.
                     type: string
+                  serviceNamespace:
+                    description: ServiceNamespace describes the service namespace
+                      for the operator.
+                    type: string
                   servicePort:
                     description: ServicePort describes the port on which operator
                       service can be reached.
@@ -91,6 +95,7 @@ spec:
                     type: integer
                 required:
                 - serviceName
+                - serviceNamespace
                 - servicePort
                 type: object
             required:
