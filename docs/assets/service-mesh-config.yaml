@@ -1,0 +1,51 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: kyma-gateway
+  namespace: operator-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - hosts:
+        - "*"
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: kyma-events
+  namespace: operator-system
+spec:
+  gateways:
+    - kyma-gateway
+  hosts:
+    - "*"
+  http:
+    - match:
+        - uri:
+            prefix: /v1/kyma/event
+      route:
+        - destination:
+            host: kyma-listener.operator-system.svc.cluster.local
+            port:
+              number: 8082
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kyma-listener
+  namespace: operator-system
+  labels:
+    service: kyma-listener
+spec:
+  selector:
+    control-plane: controller-manager
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8082
+      targetPort: 8082
