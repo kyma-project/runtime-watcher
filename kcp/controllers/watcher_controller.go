@@ -187,7 +187,7 @@ func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Lo
 func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
 	cmObjectKey := client.ObjectKey{
 		Name:      util.ConfigMapResourceName,
-		Namespace: obj.GetNamespace(),
+		Namespace: util.ConfigMapNamespace,
 	}
 	configMap := &v1.ConfigMap{}
 	err := r.Get(ctx, cmObjectKey, configMap)
