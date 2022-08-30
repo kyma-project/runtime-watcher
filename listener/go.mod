@@ -2,8 +2,6 @@ module github.com/kyma-project/runtime-watcher/listener
 
 go 1.19
 
-replace github.com/kyma-project/runtime-watcher/kcp => ../kcp
-
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
