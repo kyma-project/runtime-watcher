@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/kyma-project/runtime-watcher/listener"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 
@@ -94,10 +95,8 @@ func TestHandler(t *testing.T) {
 	defer testEvt.mu.Unlock()
 	assert.NotEqual(t, nil, testEvt.evt,
 		"error reading event from channel: expected non nil event, got %v", testEvt.evt)
-	assert.Equal(t, testWatcherEvt.Name, testEvt.evt.Object.GetName(),
-		"mismatching event object name: expected %s, got %s",
-		testWatcherEvt.Name, testEvt.evt.Object.GetName())
-	assert.Equal(t, testWatcherEvt.Namespace, testEvt.evt.Object.GetNamespace(),
-		"mismatching event object namespace: expected %s, got %s",
-		testWatcherEvt.Namespace, testEvt.evt.Object.GetNamespace())
+	testWatcherEvtContents := listener.UnstructuredContent(testWatcherEvt)
+	assert.Equal(t, testWatcherEvtContents, testEvt.evt.Object.(*unstructured.Unstructured).Object,
+		"mismatching event object contents: expected %v, got %v",
+		testWatcherEvtContents, testEvt.evt.Object.(*unstructured.Unstructured).Object)
 }
