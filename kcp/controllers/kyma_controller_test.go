@@ -6,11 +6,12 @@ import (
 	"github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -26,16 +27,19 @@ const (
 	interval = time.Millisecond * 250
 )
 
-var _ = Describe("Correct WatcherCR Setup", Ordered, func() {
+var _ = Describe("Correct WatcherCR Setup", func() {
 	testKyma := NewTestKyma("test-kyma")
-	testConfigMap := NewTestConfigMap(configMapName)
+	cmObjKey := client.ObjectKey{
+		Name:      util.ConfigMapResourceName,
+		Namespace: util.ConfigMapNamespace,
+	}
 	testWatcherCR := NewTestWatcherCR(watcherName, map[string]string{controllers.DefaultOperatorWatcherCRLabel: "true"})
 
-	SetupTestEnvironment(testKyma, testConfigMap, testWatcherCR)
+	SetupTestEnvironment(testKyma, testWatcherCR)
 
 	It("should insert testKyma in the ConfigMap of the example-module WatcherCR", func() {
 		By("checking the data of the ConfigMap")
-		Eventually(GetConfigMapData(testConfigMap), 5*time.Second, interval).
+		Eventually(GetConfigMapData(cmObjKey), 5*time.Second, interval).
 			Should(Equal(map[string]string{
 				"example-module-stable": "{\"kymaCrList\":[{\"kymaCr\":\"test-kyma\",\"kymaNamespace\":\"default\"}]}",
 			},
@@ -43,29 +47,36 @@ var _ = Describe("Correct WatcherCR Setup", Ordered, func() {
 	})
 })
 
-var _ = Describe("WatcherCR applies to all Kymas - Configmap stores no data", Ordered, func() {
+var _ = Describe("WatcherCR applies to all Kymas - Configmap stores no data", func() {
 	testKyma := NewTestKyma("test-kyma")
-	testConfigMap := NewTestConfigMap(configMapName)
 	testWatcherCR := NewTestWatcherCR(watcherName, map[string]string{})
 
-	SetupTestEnvironment(testKyma, testConfigMap, testWatcherCR)
+	SetupTestEnvironment(testKyma, testWatcherCR)
 
 	It("should not throw an error in reconcile loop an ConfigMap should not be initialised nor updated", func() {
+		cmObjKey := client.ObjectKey{
+			Name:      util.ConfigMapResourceName,
+			Namespace: util.ConfigMapNamespace,
+		}
 		By("checking the data of the ConfigMap")
-		Eventually(GetConfigMapData(testConfigMap), 5*time.Second, interval).Should(BeEmpty())
+		Eventually(GetConfigMapData(cmObjKey), 5*time.Second, interval).Should(BeEmpty())
 	})
 })
 
-func SetupTestEnvironment(kyma *v1alpha1.Kyma, configmap *v1.ConfigMap, watcher *componentv1alpha1.Watcher) {
+func SetupTestEnvironment(kyma *v1alpha1.Kyma, watcher *componentv1alpha1.Watcher) {
 	BeforeEach(func() {
-		Expect(k8sClient.Create(ctx, configmap)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, watcher)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, kyma)).Should(Succeed())
 	})
 	AfterEach(func() {
-		Expect(k8sClient.Delete(ctx, configmap)).Should(Succeed())
-		Expect(k8sClient.Delete(ctx, watcher)).Should(Succeed())
 		Expect(k8sClient.Delete(ctx, kyma)).Should(Succeed())
+		watcherObjKey := client.ObjectKeyFromObject(watcher)
+		currentWatcherCR := &componentv1alpha1.Watcher{}
+		Expect(k8sClient.Get(ctx, watcherObjKey, currentWatcherCR)).To(Succeed())
+		Expect(k8sClient.Delete(ctx, currentWatcherCR)).To(Succeed())
+		Eventually(isCRDeletetionSuccessful(watcherObjKey)).WithTimeout(2 * time.Second).
+			WithPolling(20 * time.Microsecond).Should(BeTrue())
+
 	})
 }
 
@@ -89,14 +100,6 @@ func NewTestKyma(name string) *v1alpha1.Kyma {
 			},
 			Channel: v1alpha1.DefaultChannel,
 		},
-	}
-}
-
-func NewTestConfigMap(name string) *v1.ConfigMap {
-	return &v1.ConfigMap{
-		TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-		Data:       make(map[string]string),
 	}
 }
 
@@ -129,13 +132,10 @@ func NewTestWatcherCR(name string, labels map[string]string) *componentv1alpha1.
 	}
 }
 
-func GetConfigMapData(configMap *v1.ConfigMap) func() map[string]string {
+func GetConfigMapData(cmObjKey client.ObjectKey) func() map[string]string {
 	return func() map[string]string {
 		createdConfigMap := &v1.ConfigMap{}
-		err := k8sClient.Get(ctx, types.NamespacedName{
-			Name:      configMap.GetName(),
-			Namespace: configMap.GetNamespace(),
-		}, createdConfigMap)
+		err := k8sClient.Get(ctx, cmObjKey, createdConfigMap)
 		if err != nil {
 			return map[string]string{}
 		}
