@@ -22,7 +22,6 @@ const (
 	serviceName      = "test-service"
 	servicePort      = 8083
 	watcherName      = componentName + "-" + componentChannel
-	configMapName    = "kcp-watcher-modules"
 
 	interval = time.Millisecond * 250
 )
@@ -76,7 +75,6 @@ func SetupTestEnvironment(kyma *v1alpha1.Kyma, watcher *componentv1alpha1.Watche
 		Expect(k8sClient.Delete(ctx, currentWatcherCR)).To(Succeed())
 		Eventually(isCRDeletetionSuccessful(watcherObjKey)).WithTimeout(2 * time.Second).
 			WithPolling(20 * time.Microsecond).Should(BeTrue())
-
 	})
 }
 

@@ -41,7 +41,7 @@ import (
 
 const (
 	IstioGatewayResourceName = "kcp-listener-gw"
-	//TODO: add IstioGatewayNamespace as a parameter in WatcherConfig
+	// TODO: add IstioGatewayNamespace as a parameter in WatcherConfig.
 	IstioGatewayNamespace = metav1.NamespaceDefault
 	watcherFinalizer      = "component.kyma-project.io/watcher"
 )
@@ -239,7 +239,8 @@ func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context,
 		gateway.SetName(IstioGatewayResourceName)
 		gateway.SetNamespace(IstioGatewayNamespace)
 		util.UpdateIstioGWConfig(gateway, r.Config.ListenerIstioGatewayPort)
-		_, apiErr = istioClientSet.NetworkingV1beta1().Gateways(IstioGatewayNamespace).Create(ctx, gateway, metav1.CreateOptions{})
+		_, apiErr = istioClientSet.NetworkingV1beta1().Gateways(IstioGatewayNamespace).
+			Create(ctx, gateway, metav1.CreateOptions{})
 		if apiErr != nil {
 			return apiErr
 		}
@@ -373,7 +374,8 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 		return false, err
 	}
 	// 3.step: istio VirtualService check
-	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj, IstioGatewayResourceName, IstioGatewayNamespace)
+	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj, IstioGatewayResourceName,
+		IstioGatewayNamespace)
 	if returns {
 		return false, err
 	}

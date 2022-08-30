@@ -34,7 +34,7 @@ const (
 	// defaultOperatorWatcherCRLabel is a label indicating that watcher CR applies to all Kymas.
 	defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
 	ConfigMapResourceName         = "kcp-watcher-modules"
-	//TODO: add ConfigMapNamespace as a parameter in WatcherConfig
+	// TODO: add ConfigMapNamespace as a parameter in WatcherConfig.
 	ConfigMapNamespace     = metav1.NamespaceDefault
 	IstioGatewayGVR        = "gateways.networking.istio.io/v1beta1"
 	IstioVirtualServiceGVR = "virtualservices.networking.istio.io/v1beta1"

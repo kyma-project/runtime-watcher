@@ -49,7 +49,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg        *rest.Config
+	cfg        *rest.Config         //nolint:gochecknoglobals
 	k8sClient  client.Client        //nolint:gochecknoglobals
 	k8sManager manager.Manager      //nolint:gochecknoglobals
 	testEnv    *envtest.Environment //nolint:gochecknoglobals

@@ -71,21 +71,21 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 			err = decoder.Decode(&crd)
 			if err == nil {
 				istioCrdList.Items = append(istioCrdList.Items, crd)
-				//create istio CRD
+				// create istio CRD
 				Expect(k8sClient.Create(ctx, &crd)).To(Succeed())
 			}
 			if errors.Is(err, io.EOF) {
 				break
 			}
 		}
-
 	})
 
 	AfterAll(func() {
-		//clean up config map
+		// clean up config map
 		cm := &v1.ConfigMap{}
 		Expect(k8sClient.Get(ctx, cmObjectKey, cm)).To(Succeed())
 		Expect(k8sClient.Delete(ctx, cm)).To(Succeed())
+		//nolint:gosec
 		for _, crd := range istioCrdList.Items {
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		}
@@ -93,16 +93,16 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 
 	DescribeTable("should reconcile istio service mesh resources according to watcher CR config",
 		func(watcherCR *watcherapiv1alpha1.Watcher) {
-			//create watcher CR
+			// create watcher CR
 			Expect(k8sClient.Create(ctx, watcherCR)).Should(Succeed())
-			//verify CR status
+
 			watcherObjKey := client.ObjectKeyFromObject(watcherCR)
 			Eventually(watcherCRState(watcherObjKey)).WithTimeout(3 * time.Second).
 				WithPolling(30 * time.Microsecond).
 				Should(Equal(watcherapiv1alpha1.WatcherStateReady))
-			//verify config map exists
+
 			Expect(k8sClient.Get(ctx, cmObjectKey, &v1.ConfigMap{})).To(Succeed())
-			//verify istio config
+			// verify istio config
 			istioClientSet, err := istioclient.NewForConfig(cfg)
 			Expect(err).ToNot(HaveOccurred())
 			returns, err := util.PerformIstioGWCheck(ctx, istioClientSet, gatewayPortNumber,
@@ -114,12 +114,12 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returns).To(BeFalse())
 
-			//update watcher CR
+			// update watcher CR
 			currentWatcherCR := &watcherapiv1alpha1.Watcher{}
 			Expect(k8sClient.Get(ctx, watcherObjKey, currentWatcherCR)).To(Succeed())
 			currentWatcherCR.SetLabels(map[string]string{"label-name": "label-value"})
 			Expect(k8sClient.Update(ctx, currentWatcherCR)).Should(Succeed())
-			//verify CR status
+
 			Eventually(watcherCRState(watcherObjKey)).WithTimeout(2 * time.Second).
 				WithPolling(20 * time.Microsecond).
 				Should(Equal(watcherapiv1alpha1.WatcherStateReady))
@@ -134,12 +134,10 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returns).To(BeFalse())
 
-			//delete watcher CR
 			Expect(k8sClient.Get(ctx, watcherObjKey, currentWatcherCR)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, currentWatcherCR)).To(Succeed())
 			Eventually(isCRDeletetionSuccessful(watcherObjKey)).WithTimeout(2 * time.Second).
 				WithPolling(20 * time.Microsecond).Should(BeTrue())
-
 		}, watcherCREntries)
 })
 
@@ -161,5 +159,4 @@ func watcherCRState(watcherObjKey client.ObjectKey) func(g Gomega) watcherapiv1a
 		g.Expect(err).NotTo(HaveOccurred())
 		return watcherCR.Status.State
 	}
-
 }
