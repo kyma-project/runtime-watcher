@@ -13,5 +13,5 @@ The **listener** package implements a listener endpoint which triggers a reconci
 
 The **kcp-watcher** implementation is in the [kcp directory](./kcp).
 
-![]<img src="./docs/assets/runtime-watcher.drawio.svg" width="1000" height="1000">
+<img src="./docs/assets/runtime-watcher.drawio.svg" width="1000">
 
