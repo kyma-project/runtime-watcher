@@ -26,6 +26,10 @@ all: build
 
 ##@ Development
 
+.PHONY: resolve
+resolve: ## Run go mod tidy against code.
+	go mod tidy
+
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...

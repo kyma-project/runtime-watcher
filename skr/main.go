@@ -18,100 +18,94 @@ package main
 
 import (
 	"flag"
+	"net/http"
 	"os"
+	"strconv"
 
-	v1 "k8s.io/api/core/v1"
+	"github.com/go-logr/logr"
+	"github.com/kyma-project/runtime-watcher/skr/internal"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/kyma-project/runtime-watcher/skr/controllers"
-	"github.com/kyma-project/runtime-watcher/skr/pkg/config"
-	//+kubebuilder:scaffold:imports
 )
 
-var (
-	scheme   = runtime.NewScheme()        //nolint:gochecknoglobals
-	setupLog = ctrl.Log.WithName("setup") //nolint:gochecknoglobals
-)
+type ServerParameters struct {
+	port       int    // webhook server port
+	certFile   string // path to TLS certificate for https
+	keyFile    string // path to TLS key matching for certificate
+	tlsEnabled bool   // indicates if TLS is enabled
+}
 
 const (
-	port = 9443
+	defaultPort           = 8443
+	defaultTLSEnabledMode = false
 )
 
-func init() { //nolint:gochecknoinits
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(v1.AddToScheme(scheme))
+func serverParams(logger logr.Logger) ServerParameters {
+	parameters := ServerParameters{}
 
-	//+kubebuilder:scaffold:scheme
+	// port
+	portEnv := os.Getenv("WEBHOOK_PORT")
+	port, err := strconv.Atoi(portEnv)
+	if err != nil {
+		logger.V(1).Error(err, "failed parsing web-hook server port")
+		parameters.port = defaultPort
+	}
+	parameters.port = port
+
+	// tls
+	tlsEnabledEnv := os.Getenv("TLS_ENABLED")
+	tlsEnabled, err := strconv.ParseBool(tlsEnabledEnv)
+	if err != nil {
+		logger.V(1).Error(err, "failed parsing  tls flag")
+		parameters.tlsEnabled = defaultTLSEnabledMode
+	}
+	parameters.tlsEnabled = tlsEnabled
+	parameters.certFile = os.Getenv("TLS_CERT")
+	parameters.keyFile = os.Getenv("TLS_KEY")
+	return parameters
 }
 
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	var kcpIP, kcpPort string
+	logger := ctrl.Log.WithName("skr-webhook")
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8083", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8084", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&kcpIP, "kcp-ip", config.KcpIP, "IP-Address of KCP")
-	flag.StringVar(&kcpPort, "kcp-port", config.KcpPort, "Exposed event port of KCP")
 	opts := zap.Options{
 		Development: true,
 	}
+
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   port,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "893110f8.kyma-project.io",
-	})
+	params := serverParams(logger)
+
+	restConfig := ctrl.GetConfigOrDie()
+
+	restClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		logger.Error(err, "rest client could not be determined for skr-webhook")
+		return
 	}
 
-	if err = (&controllers.KymaWatcherReconciler{
-		Client:  mgr.GetClient(),
-		Scheme:  mgr.GetScheme(),
-		Logger:  mgr.GetLogger(),
-		KcpIP:   kcpIP,
-		KcpPort: kcpPort,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KymaWatcherReconciler")
-		os.Exit(1)
+	// handler
+	handler := &internal.Handler{
+		Client: restClient,
+		Logger: logger,
 	}
+	http.HandleFunc("/validate/", handler.Handle)
 
-	//+kubebuilder:scaffold:builder
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
+	// server
+	logger.Info("starting web server", "Port:", params.port)
+	if params.tlsEnabled {
+		err = http.ListenAndServeTLS(":"+strconv.Itoa(params.port), params.certFile,
+			params.keyFile, nil)
+	} else {
+		err = http.ListenAndServe(":"+strconv.Itoa(params.port), nil)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
-	}
-
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+	if err != nil {
+		logger.Error(err, "error starting skr-webhook server")
+		return
 	}
 }

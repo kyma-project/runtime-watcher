@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: game-demo
-  labels:
-    app: kyma
-data:
-  player_initial_lives: "3"
