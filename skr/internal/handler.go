@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"sync"
 
@@ -118,7 +119,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	resourceValidation := h.validateResources(admissionReview, nil, moduleName)
+	resourceValidation := h.validateResources(admissionReview, moduleName)
 
 	h.Logger.Info(
 		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.Kind),
@@ -188,9 +189,29 @@ func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 	return admissionReviewBytes
 }
 
-func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview,
-	resourcesList []Resource, moduleName string,
-) validateResource {
+func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview, moduleName string) validateResource {
+	if admissionReview.Request.Operation == admissionv1.Update {
+		oldObjectWatched := ObjectWatched{}
+		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
+			&oldObjectWatched)
+		if !validatedResource.allowed {
+			return validatedResource
+		}
+		objectWatched := ObjectWatched{}
+		validatedResource = h.unmarshalRawObj(admissionReview.Request.Object.Raw,
+			&objectWatched)
+		if !validatedResource.allowed {
+			return validatedResource
+		}
+		resource, err := getResource(h.Client, admissionReview.Request.Kind)
+		if err != nil {
+			// send valid admission response - under all circumstances!
+			return h.validAdmissionReviewObj(err.Error())
+		}
+		msg := h.evaluateRequestForKcp(resource, oldObjectWatched, objectWatched, moduleName)
+		// send valid admission response - under all circumstances!
+		return h.validAdmissionReviewObj(msg)
+	}
 	if admissionReview.Request.Operation == admissionv1.Delete {
 		oldObjectWatched := ObjectWatched{}
 		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
@@ -217,14 +238,9 @@ func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview
 
 func getKymaFromConfigMap(reader client.Reader) (*unstructured.UnstructuredList, error) {
 	// fetch resource mapping ConfigMap
-	ctx := context.TODO()
-	configMap := v1.ConfigMap{}
-	err := reader.Get(ctx, client.ObjectKey{
-		Name:      "skr-webhook-resource-mapping",
-		Namespace: "default",
-	}, &configMap)
+	configMap, err := getConfigMap(reader)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch resource mapping ConfigMap: %w", err)
+		return nil, err
 	}
 
 	// parse ConfigMap for kyma GVK
@@ -239,6 +255,7 @@ func getKymaFromConfigMap(reader client.Reader) (*unstructured.UnstructuredList,
 	}
 
 	// get SKR kyma
+	ctx := context.TODO()
 	kymasList := unstructured.UnstructuredList{}
 	kymasList.SetGroupVersionKind(kymaGvr)
 	err = reader.List(ctx, &kymasList)
@@ -246,6 +263,61 @@ func getKymaFromConfigMap(reader client.Reader) (*unstructured.UnstructuredList,
 		return nil, fmt.Errorf("could not list kyma resources: %w", err)
 	}
 	return &kymasList, nil
+}
+
+func getConfigMap(reader client.Reader) (*v1.ConfigMap, error) {
+	ctx := context.TODO()
+	configMap := &v1.ConfigMap{}
+	err := reader.Get(ctx, client.ObjectKey{
+		Name:      "skr-webhook-resource-mapping",
+		Namespace: "default",
+	}, configMap)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch resource mapping ConfigMap: %w", err)
+	}
+	return configMap, nil
+}
+
+func getResource(reader client.Reader, objectGVK metav1.GroupVersionKind) (*Resource, error) {
+	configMap, err := getConfigMap(reader)
+	if err != nil {
+		return nil, err
+	}
+	resourceListStringified, ok := configMap.Data["resources"]
+	if !ok {
+		return nil, fmt.Errorf("failed to fetch resources list resource mapping")
+	}
+	var resources []Resource
+	err = yaml.Unmarshal([]byte(resourceListStringified), &resources)
+	if err != nil {
+		// h.Logger.Error(err, "resources list could not me unmarshalled")
+		return nil, fmt.Errorf("resources list could not me unmarshalled: %w", err)
+	}
+
+	var resource Resource
+	found := false
+	for _, resourceItem := range resources {
+		if objectGVK.String() == resourceItem.GroupVersionKind.String() {
+			found = true
+			resource = resourceItem
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("resource not found")
+	}
+	return &resource, nil
+}
+
+func (h *Handler) evaluateRequestForKcp(resource *Resource, oldObjectWatched, objectWatched ObjectWatched,
+	moduleName string,
+) string {
+	noSpecChangeFilter := resource.Spec && !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec)
+	noStatusChangeFilter := resource.Status && !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
+
+	if noSpecChangeFilter && noStatusChangeFilter {
+		return "KCP request not sent"
+	}
+	return h.sendRequestToKcp(moduleName, objectWatched)
 }
 
 func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) string {

@@ -16,3 +16,8 @@ data:
       kind: Manifest
       spec: true
       status: false
+    - group: operator.kyma-project.io
+      version: v1alpha1
+      kind: Kyma
+      spec: true
+      status: true

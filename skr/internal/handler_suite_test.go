@@ -77,7 +77,7 @@ var _ = BeforeSuite(func() {
 
 	kcpTestHandler := BootStrapKcpMockHandlers()
 	kcpResponseRecorder = kcpTestHandler.Recorder
-	//nolint:gosec
+
 	kcpMockServer = &http.Server{
 		Addr:    ":10080",
 		Handler: kcpTestHandler,
