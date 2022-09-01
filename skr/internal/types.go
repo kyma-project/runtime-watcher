@@ -8,6 +8,6 @@ import (
 // TODO: remove after moving to runtime-watcher/listener
 type WatchEvent struct {
 	Owner      client.ObjectKey        `json:"owner"`
-	Watched    client.ObjectKey        `json:"Watched"`
+	Watched    client.ObjectKey        `json:"watched"`
 	WatchedGvk metav1.GroupVersionKind `json:"watchedGvk"`
 }
