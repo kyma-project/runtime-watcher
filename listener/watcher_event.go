@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const contentMapCapacity = 4
+const contentMapCapacity = 3
 
 type UnmarshalError struct {
 	Message       string
@@ -57,6 +57,5 @@ func UnstructuredContent(watcherEvt *types.WatcherEvent) map[string]interface{} 
 	content["name"] = watcherEvt.Name
 	content["namespace"] = watcherEvt.Namespace
 	content["kyma-name"] = watcherEvt.KymaCr
-	content["modules"] = watcherEvt.KymaModules
 	return content
 }
