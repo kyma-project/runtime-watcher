@@ -48,3 +48,8 @@ service:
 kcp:
   loadbalancerIP: host.k3d.internal
   loadbalancerPort: 9080
+modules:
+  - name: kyma
+    statusOnly: false
+  - name: manifest
+    statusOnly: true
