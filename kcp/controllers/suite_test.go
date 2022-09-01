@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"testing"
-	"time"
 
 	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
@@ -113,18 +112,12 @@ var _ = BeforeSuite(func() {
 	err = (&controllers.WatcherReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: scheme.Scheme,
-	}).SetupWithManager(k8sManager)
-
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&controllers.WatcherReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: scheme.Scheme,
 		Config: &util.WatcherConfig{
 			RequeueInterval:          util.DefaultRequeueInterval,
 			ListenerIstioGatewayPort: util.DefaultIstioGatewayPort,
 		},
 	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
 		defer GinkgoRecover()
@@ -134,12 +127,9 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
+	By("cancelling the context for the manager to shutdown")
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
-	// Set 4 with random, to avoid `timeout waiting for process kube-apiserver to stop`
-	if err != nil {
-		time.Sleep(4 * time.Second)
-	}
-	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })

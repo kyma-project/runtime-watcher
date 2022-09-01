@@ -35,10 +35,10 @@ var watcherCREntries = []TableEntry{
 		},
 		ObjectMeta: metav1.ObjectMeta{Name: "watcher-sample", Namespace: metav1.NamespaceDefault},
 		Spec: watcherapiv1alpha1.WatcherSpec{
-			ContractVersion: contractVersion,
+			ContractVersion: "v1",
 			ComponentName:   "lifecycle-manager",
 			ServiceInfo: watcherapiv1alpha1.ServiceInfo{
-				ServicePort:      servicePort,
+				ServicePort:      8082,
 				ServiceName:      "lifecycle-manager-svc",
 				ServiceNamespace: metav1.NamespaceDefault,
 			},
