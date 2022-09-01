@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 
-	kcptypes "github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,6 +19,16 @@ import (
 type CustomRouter struct {
 	*http.ServeMux
 	Recorder *httptest.ResponseRecorder
+}
+
+const (
+	testResourceKind  = "testResourceKind"
+	DefaultBufferSize = 2048
+)
+
+var ownerLabels = map[string]string{
+	internal.ManagedByLabel: "lifecycle-manager",
+	internal.OwnedByLabel:   "ownerNamespace/ownerName",
 }
 
 func NewCustomRouter() *CustomRouter {
@@ -41,7 +50,7 @@ func (cr *CustomRouter) ServeHTTP(_ http.ResponseWriter, request *http.Request) 
 	h.ServeHTTP(cr.Recorder, request)
 }
 
-func BootStrapKcpMockHandlers() *CustomRouter {
+func bootStrapKcpMockHandlers() *CustomRouter {
 	kcpTestHandler := NewCustomRouter()
 	for _, kcpModule := range kcpModulesList {
 		handleFnPattern := fmt.Sprintf("/v1/%s/event", kcpModule)
@@ -50,7 +59,7 @@ func BootStrapKcpMockHandlers() *CustomRouter {
 			if err != nil {
 				response.WriteHeader(http.StatusBadRequest)
 			}
-			watcherEvt := &kcptypes.WatcherEvent{}
+			watcherEvt := &internal.WatchEvent{}
 			err = json.Unmarshal(reqBytes, watcherEvt)
 			if err != nil {
 				response.WriteHeader(http.StatusBadRequest)
@@ -64,10 +73,10 @@ func BootStrapKcpMockHandlers() *CustomRouter {
 	return kcpTestHandler
 }
 
-func MockAPIServerHTTPRequest(operation admissionv1.Operation, crName, moduleName string,
-	crGVK metav1.GroupVersionKind,
+func getAdmissionHTTPRequest(operation admissionv1.Operation, crName, moduleName string,
+	labels map[string]string,
 ) (*http.Request, error) {
-	admissionReview, err := createAdmissionRequest(operation, crName, crGVK)
+	admissionReview, err := createAdmissionRequest(operation, crName, labels)
 	if err != nil {
 		return nil, err
 	}
@@ -75,23 +84,21 @@ func MockAPIServerHTTPRequest(operation admissionv1.Operation, crName, moduleNam
 	if err != nil {
 		return nil, err
 	}
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/validate/%s", moduleName), bytes.NewBuffer(bytesRequest))
-	return req, nil
+	return httptest.NewRequest(http.MethodGet, fmt.Sprintf("/validate/%s", moduleName),
+		bytes.NewBuffer(bytesRequest)), nil
 }
 
 func createAdmissionRequest(operation admissionv1.Operation, crName string,
-	crGVK metav1.GroupVersionKind,
-) (*admissionv1.AdmissionReview, error) {
+	labels map[string]string) (*admissionv1.AdmissionReview, error) {
 	admissionReview := &admissionv1.AdmissionReview{
 		Request: &admissionv1.AdmissionRequest{
 			Name:      crName,
-			Kind:      crGVK,
 			Operation: operation,
 			UID:       types.UID(uuid.NewString()),
 		},
 	}
 	if operation == admissionv1.Delete {
-		oldRawObject, err := generateAdmissionRequestRawObject(crName, crGVK.Kind, "oldSpecValue")
+		oldRawObject, err := generateAdmissionRequestRawObject(crName, labels, "oldSpecValue")
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +106,7 @@ func createAdmissionRequest(operation admissionv1.Operation, crName string,
 		return admissionReview, nil
 	}
 	if operation == admissionv1.Create || operation == admissionv1.Connect {
-		rawObject, err := generateAdmissionRequestRawObject(crName, crGVK.Kind, "specValue")
+		rawObject, err := generateAdmissionRequestRawObject(crName, labels, "specValue")
 		if err != nil {
 			return nil, err
 		}
@@ -107,13 +114,13 @@ func createAdmissionRequest(operation admissionv1.Operation, crName string,
 		return admissionReview, nil
 	}
 
-	rawObject, err := generateAdmissionRequestRawObject(crName, crGVK.Kind, "specValue")
+	rawObject, err := generateAdmissionRequestRawObject(crName, labels, "specValue")
 	if err != nil {
 		return nil, err
 	}
 	admissionReview.Request.Object.Raw = rawObject
 
-	oldRawObject, err := generateAdmissionRequestRawObject(crName, crGVK.Kind, "oldSpecValue")
+	oldRawObject, err := generateAdmissionRequestRawObject(crName, labels, "oldSpecValue")
 	if err != nil {
 		return nil, err
 	}
@@ -122,16 +129,18 @@ func createAdmissionRequest(operation admissionv1.Operation, crName string,
 	return admissionReview, nil
 }
 
-func generateAdmissionRequestRawObject(objectName, objectKind, specValue string) ([]byte, error) {
+func generateAdmissionRequestRawObject(objectName string, labels map[string]string, specValue string,
+) ([]byte, error) {
 	objectWatched := &internal.ObjectWatched{
 		Metadata: internal.Metadata{
 			Name:      objectName,
 			Namespace: metav1.NamespaceDefault,
+			Labels:    labels,
 		},
 		Spec: map[string]interface{}{
 			"specField": specValue,
 		},
-		Kind: objectKind,
+		Kind: testResourceKind,
 	}
 	rawObject, err := json.Marshal(objectWatched)
 	if err != nil {

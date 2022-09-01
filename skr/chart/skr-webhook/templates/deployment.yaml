@@ -33,18 +33,6 @@ spec:
     spec:
       serviceAccountName: {{.Release.Name}}-webhook-sa
       containers:
-        {{- if eq .Values.sidecar true }}
-        - name: request-sidecar
-          image: alpine
-          command:
-            - /bin/sh
-            - "-c"
-            - "sleep 60m"
-          imagePullPolicy: Always
-          volumeMounts:
-          - name: request
-            mountPath: /tmp
-        {{- end }}
         - name: server
           env:
             - name: POD_NAME
@@ -67,11 +55,13 @@ spec:
               value: {{.Values.service.contactVersion}}
             - name: WEBHOOK_SIDE_CAR
               value: {{ if eq .Values.sidecar true }} "true" {{ else }} "false" {{ end }}
-          image: {{.Values.image.name}}
+          image: kcp-registry.localhost:3131/webhook:latest
           imagePullPolicy: {{.Values.image.pullPolicy}}
           volumeMounts:
           - name: ssl
             mountPath: /app/etc/ssl
+          - name: request
+            mountPath: /tmp
           resources:
             requests:
               memory: "128Mi"
@@ -82,6 +72,18 @@ spec:
           ports:
             - containerPort: {{.Values.service.targetPort}}
               name: watcher-port
+        {{- if eq .Values.sidecar true }}
+        - name: request-sidecar
+          image: alpine
+          command:
+            - /bin/sh
+            - "-c"
+            - "sleep 60m"
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: request
+              mountPath: /tmp
+        {{- end }}
       volumes:
       - name: ssl
         secret:
@@ -91,3 +93,5 @@ spec:
             path: tls.key
           - key: tls.crt
             path: tls.crt
+      - name: request
+        emptyDir: {}

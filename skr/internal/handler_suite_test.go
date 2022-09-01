@@ -25,14 +25,12 @@ func TestAPIs(t *testing.T) {
 }
 
 var (
-	ctx                 context.Context                           //nolint:gochecknoglobals
-	cancel              context.CancelFunc                        //nolint:gochecknoglobals
-	kcpModulesList      = []string{"kyma", "manifest", "compass"} //nolint:gochecknoglobals
-	kcpResponseRecorder *httptest.ResponseRecorder                //nolint:gochecknoglobals
-	kcpMockServer       *http.Server                              //nolint:gochecknoglobals
+	ctx            context.Context                           //nolint:gochecknoglobals
+	cancel         context.CancelFunc                        //nolint:gochecknoglobals
+	kcpModulesList = []string{"kyma", "manifest", "compass"} //nolint:gochecknoglobals
+	kcpRecorder    *httptest.ResponseRecorder                //nolint:gochecknoglobals
+	kcpMockServer  *http.Server                              //nolint:gochecknoglobals
 )
-
-const DefaultBufferSize = 2048
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
@@ -63,10 +61,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	// set env variables
-	Expect(os.Setenv("WEBHOOK_SIDE_CAR", "false")).NotTo(HaveOccurred())
-	//+kubebuilder:scaffold:scheme
-
 	// set KCP env vars
 	err = os.Setenv("KCP_IP", "localhost")
 	Expect(err).ShouldNot(HaveOccurred())
@@ -75,8 +69,10 @@ var _ = BeforeSuite(func() {
 	err = os.Setenv("KCP_CONTRACT", "v1")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	kcpTestHandler := BootStrapKcpMockHandlers()
-	kcpResponseRecorder = kcpTestHandler.Recorder
+	kcpTestHandler := bootStrapKcpMockHandlers()
+	kcpRecorder = kcpTestHandler.Recorder
+
+	// start listener server
 	//nolint:gosec
 	kcpMockServer = &http.Server{
 		Addr:    ":10080",
