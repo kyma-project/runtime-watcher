@@ -28,16 +28,6 @@ func TestUnmarshalSKREvent(t *testing.T) {
 		KymaCr:    "kyma",
 		Name:      "kyma-sample",
 		Namespace: "kyma-control-plane",
-		KymaModules: []types.KymaModule{
-			{
-				Name:    "eventing",
-				Channel: "rapid",
-			},
-			{
-				Name:    "istio",
-				Channel: "stable",
-			},
-		},
 	}
 
 	testCases := []unmarshalTestCase{
