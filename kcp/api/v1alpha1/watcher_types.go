@@ -52,6 +52,7 @@ type Gvr struct {
 
 type WatchableGvr struct {
 	// Gvr describes the gvr that should be watched
+	// +kubebuilder:validation:Optional
 	Gvr Gvr `json:"gvr"`
 
 	// LabelsToWatch describes the labels that should be watched from the gvr

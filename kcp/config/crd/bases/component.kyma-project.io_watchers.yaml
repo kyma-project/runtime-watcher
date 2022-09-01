@@ -73,8 +73,6 @@ spec:
                       description: LabelsToWatch describes the labels that should
                         be watched from the gvr
                       type: object
-                  required:
-                  - gvr
                   type: object
                 type: array
               serviceInfo:

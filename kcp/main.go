@@ -54,7 +54,7 @@ func init() { //nolint:gochecknoinits
 	//+kubebuilder:scaffold:scheme
 }
 
-func main() { //nolint:funlen
+func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -95,13 +95,7 @@ func main() { //nolint:funlen
 		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
 		os.Exit(1)
 	}
-	if err = (&controllers.KymaReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Kyma")
-		os.Exit(1)
-	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

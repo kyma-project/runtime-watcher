@@ -1,10 +1,9 @@
 package listener_test
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
-
-	"github.com/kyma-project/runtime-watcher/listener"
 
 	"github.com/kyma-project/runtime-watcher/listener"
 
@@ -13,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const hostName = "http://localhost:8082"
+const hostname = "http://localhost:8082"
 
 type unmarshalTestCase struct {
 	name       string
@@ -29,6 +28,16 @@ func TestUnmarshalSKREvent(t *testing.T) {
 		KymaCr:    "kyma",
 		Name:      "kyma-sample",
 		Namespace: "kyma-control-plane",
+		KymaModules: []types.KymaModule{
+			{
+				Name:    "eventing",
+				Channel: "rapid",
+			},
+			{
+				Name:    "istio",
+				Channel: "stable",
+			},
+		},
 	}
 
 	testCases := []unmarshalTestCase{
@@ -53,7 +62,8 @@ func TestUnmarshalSKREvent(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			// GIVEN
-			req := newListenerRequest(t, http.MethodPost, hostName+testCase.urlPath, testWatcherEvt)
+			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
+			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt)
 			// WHEN
 			evtObject, err := listener.UnmarshalSKREvent(req)
 			// THEN
@@ -64,8 +74,8 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			}
 			require.Equal(t, testCase.errMsg, "")
 			require.Equal(t, testCase.httpStatus, http.StatusOK)
-			require.Equal(t, testCase.payload.Name, evtObject.GetName())
-			require.Equal(t, testCase.payload.Namespace, evtObject.GetNamespace())
+			testcasePayloadContent := listener.UnstructuredContent(testCase.payload)
+			require.Equal(t, testcasePayloadContent, evtObject.Object)
 		})
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const kymaNameLabel = "operator.kyma-project.io/kyma-name"
+const contentMapCapacity = 3
 
 type UnmarshalError struct {
 	Message       string
@@ -46,11 +46,16 @@ func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *Unmarsha
 	}
 
 	genericEvtObject := &unstructured.Unstructured{}
-	genericEvtObject.SetName(watcherEvent.Name)
-	genericEvtObject.SetNamespace(watcherEvent.Namespace)
-	labels := make(map[string]string, 1)
-	labels[kymaNameLabel] = watcherEvent.KymaCr
-	genericEvtObject.SetLabels(labels)
+	content := UnstructuredContent(watcherEvent)
+	genericEvtObject.SetUnstructuredContent(content)
 
 	return genericEvtObject, nil
+}
+
+func UnstructuredContent(watcherEvt *types.WatcherEvent) map[string]interface{} {
+	content := make(map[string]interface{}, contentMapCapacity)
+	content["name"] = watcherEvt.Name
+	content["namespace"] = watcherEvt.Namespace
+	content["kyma-name"] = watcherEvt.KymaCr
+	return content
 }

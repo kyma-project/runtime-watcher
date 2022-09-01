@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&controllers.KymaReconciler{
+	err = (&controllers.WatcherReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: scheme.Scheme,
 	}).SetupWithManager(k8sManager)
