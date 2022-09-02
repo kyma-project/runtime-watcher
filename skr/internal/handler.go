@@ -127,10 +127,14 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	h.Logger.Info(admissionResponseInfo.message)
 
 	// store incoming request
-	sideCarEnabled, err := strconv.ParseBool(os.Getenv("WEBHOOK_SIDE_CAR"))
-	if err != nil {
-		h.Logger.Error(fmt.Errorf("cannot parse sidecar enable env variable %w", err), "")
-		return
+	enableSideCarStr := os.Getenv("WEBHOOK_SIDE_CAR")
+	sideCarEnabled := false
+	if enableSideCarStr != "" {
+		sideCarEnabled, err = strconv.ParseBool(enableSideCarStr)
+		if err != nil {
+			h.Logger.Error(fmt.Errorf("cannot parse sidecar enable env variable %w", err), "")
+			return
+		}
 	}
 
 	if sideCarEnabled {
@@ -281,11 +285,13 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 		return ""
 	}
 
-	var ownerName, ownerNs string
-	if _, err = fmt.Sscanf(ownerKey, "%s/%s", &ownerNs, &ownerName); err != nil {
-		return fmt.Sprintf("label %s not set correctly on resource %s/%s", OwnedByLabel,
-			watched.Namespace, watched.Name)
+	ownerParts := strings.Split(ownerKey, ".")
+	if len(ownerParts) != 2 {
+		return fmt.Sprintf("label %s not set correctly on resource %s/%s: %s", OwnedByLabel,
+			watched.Namespace, watched.Name, err.Error())
 	}
+	ownerNs := ownerParts[0]
+	ownerName := ownerParts[1]
 
 	// send request to kcp
 	watcherEvent := &WatchEvent{
