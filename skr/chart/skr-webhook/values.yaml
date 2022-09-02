@@ -51,5 +51,7 @@ kcp:
 modules:
   - name: kyma
     statusOnly: false
+    label:
+      app: kyma 
   - name: manifest
     statusOnly: true
