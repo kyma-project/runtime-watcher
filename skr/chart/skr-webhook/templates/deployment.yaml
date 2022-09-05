@@ -48,14 +48,14 @@ spec:
             - name: TLS_CERT
               value: "/app/etc/ssl/tls.crt"
             - name: KCP_IP
-              value: "{{.Values.kcp.loadbalancerIP}}"
+              value: "{{.Values.kcp.IP}}"
             - name: KCP_PORT
-              value: "{{.Values.kcp.loadbalancerPort}}"
+              value: "{{.Values.kcp.port}}"
             - name: KCP_CONTRACT
               value: {{.Values.service.contactVersion}}
             - name: WEBHOOK_SIDE_CAR
               value: {{ if eq .Values.sidecar true }} "true" {{ else }} "false" {{ end }}
-          image: {{.Values.image.name}}:{{.Values.image.tag}}
+          image: "{{.Values.image.repository}}/{{.Values.image.name}}:{{.Values.image.tag}}"
           imagePullPolicy: {{.Values.image.pullPolicy}}
           volumeMounts:
           - name: ssl

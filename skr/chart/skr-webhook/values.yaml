@@ -4,10 +4,11 @@ sidecar: true
 replicas: 1
 image: 
   # -- Image repository
-  # repository: adityabhatia
-  name: "<your-image-name>"
+  repository: "kcp-registry.localhost:3131"
+  # -- Image name
+  name: "webhook"
   # -- Image tag
-  tag: "0.1.1"
+  tag: "latest"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets
@@ -46,5 +47,12 @@ service:
   # -- Target port
   contactVersion: v1
 kcp:
-  loadbalancerIP: host.k3d.internal
-  loadbalancerPort: 9080
+  IP: host.k3d.internal
+  port: 9080
+modules: |-
+  lifecycle-manager:
+    statusOnly: false
+    labels:
+      app: kyma 
+  module-manager:
+    statusOnly: true
