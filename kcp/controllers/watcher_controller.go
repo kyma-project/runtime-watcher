@@ -143,10 +143,6 @@ func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete service mesh config")
 	}
-	// err = r.deleteSKRWatcherConfigForCR(ctx, obj)
-	// if err != nil {
-	// 	return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete SKR config")
-	// }
 	updated := controllerutil.RemoveFinalizer(obj, watcherFinalizer)
 	if !updated {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to remove finalizer")
@@ -326,11 +322,6 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, ob
 	return nil
 }
 
-// func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-// 	deploy.RemoveSKRWebhook(ctx, webhookChartPath, releaseName, nil, r.RestConfig)
-// 	return nil
-// }
-
 func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *componentv1alpha1.Watcher,
 	state componentv1alpha1.WatcherState, msg string,
 ) error {
@@ -386,7 +377,6 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 		return false, err
 	}
 
-	// this will be implemented as part of another step: see https://github.com/kyma-project/runtime-watcher/issues/33
 	return true, nil
 }
 

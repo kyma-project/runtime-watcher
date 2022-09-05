@@ -18,28 +18,16 @@ import (
 	k8syaml "sigs.k8s.io/yaml"
 )
 
-const (
-	WebhookHandlerURLPathPattern = "/%s/validate"
-	firstElementIdx              = 0
-	FileWritePermissions         = 0o644
-	DecodeBufferSize             = 2048
-	renderedWebhookConfigSuffix  = "rendered"
-	KymaProjectWebhookFQDN       = "webhook.kyma-project.io"
-	HelmTemplatesDirName         = "templates"
-	webhookAPIVersion            = "admissionregistration.k8s.io/v1"
-	webhookConfigKind            = "ValidatingWebhookConfiguration"
-)
-
 type WatchableConfig struct {
 	Labels     map[string]string `json:"labels"`
 	StatusOnly bool              `json:"statusOnly"`
 }
 
-type DeployMode string
+type Mode string
 
 const (
-	DeployModeInstall   = DeployMode("install")
-	DeployModeUninstall = DeployMode("uninstall")
+	ModeInstall   = Mode("install")
+	ModeUninstall = Mode("uninstall")
 )
 
 func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
@@ -67,7 +55,7 @@ func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string
 			return true, nil
 		},
 	}
-	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, DeployModeInstall)
+	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, ModeInstall)
 }
 
 func RemoveSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
@@ -95,12 +83,12 @@ func RemoveSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
 			return true, nil
 		},
 	}
-	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, DeployModeUninstall)
+	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, ModeUninstall)
 
 }
 
 func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, releaseName string,
-	argsVals map[string]interface{}, deployInfo lifecycleLib.InstallInfo, mode DeployMode,
+	argsVals map[string]interface{}, deployInfo lifecycleLib.InstallInfo, mode Mode,
 ) error {
 	logger := logf.FromContext(ctx)
 	args := make(map[string]map[string]interface{}, 1)
@@ -110,7 +98,7 @@ func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, rel
 	if err != nil {
 		return err
 	}
-	if mode == DeployModeUninstall {
+	if mode == ModeUninstall {
 		uninstalled, err := ops.Uninstall(deployInfo)
 		if err != nil {
 			return err
