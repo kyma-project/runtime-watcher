@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	kymav1alpha1 "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	watcherapiv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
@@ -33,24 +32,19 @@ var watcherCREntries = []TableEntry{
 			Kind:       watcherapiv1alpha1.WatcherKind,
 			APIVersion: watcherapiv1alpha1.GroupVersion.String(),
 		},
-		ObjectMeta: metav1.ObjectMeta{Name: "watcher-sample", Namespace: metav1.NamespaceDefault},
+		ObjectMeta: metav1.ObjectMeta{Name: "watcher-sample", Namespace: metav1.NamespaceDefault, Labels: map[string]string{
+			util.ManagedBylabel: "lifecycle-manager",
+		}},
 		Spec: watcherapiv1alpha1.WatcherSpec{
-			ContractVersion: "v1",
-			ComponentName:   "lifecycle-manager",
 			ServiceInfo: watcherapiv1alpha1.ServiceInfo{
 				ServicePort:      8082,
 				ServiceName:      "lifecycle-manager-svc",
 				ServiceNamespace: metav1.NamespaceDefault,
 			},
-			GvrsToWatch: []watcherapiv1alpha1.WatchableGvr{
-				{
-					Gvr: watcherapiv1alpha1.Gvr{
-						Group:    kymav1alpha1.GroupVersion.Group,
-						Version:  kymav1alpha1.GroupVersion.Version,
-						Resource: "kymas",
-					},
-				},
+			LabelsToWatch: map[string]string{
+				"lifecycle-watchable": "true",
 			},
+			SubresourceToWatch: watcherapiv1alpha1.SubresourceTypeAll,
 		},
 	}),
 }
@@ -143,7 +137,6 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 
 func isCRDeletetionSuccessful(watcherObjKey client.ObjectKey) func(g Gomega) bool {
 	return func(g Gomega) bool {
-		// watcherCR := &watcherapiv1alpha1.Watcher{}
 		err := k8sClient.Get(ctx, watcherObjKey, &watcherapiv1alpha1.Watcher{})
 		if err == nil || !k8sapierrors.IsNotFound(err) {
 			return false

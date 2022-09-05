@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	istioclientapiv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
@@ -44,6 +45,9 @@ const (
 	// TODO: add IstioGatewayNamespace as a parameter in WatcherConfig.
 	IstioGatewayNamespace = metav1.NamespaceDefault
 	watcherFinalizer      = "component.kyma-project.io/watcher"
+	// TODO: add webhookChartPath as a parameter in WatcherConfig.
+	webhookChartPath = "../../skr/chart/skr-webhook"
+	releaseName      = "watcher"
 )
 
 // WatcherReconciler reconciles a Watcher object.
@@ -139,10 +143,10 @@ func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete service mesh config")
 	}
-	err = r.deleteSKRWatcherConfigForCR(ctx, obj)
-	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete SKR config")
-	}
+	// err = r.deleteSKRWatcherConfigForCR(ctx, obj)
+	// if err != nil {
+	// 	return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete SKR config")
+	// }
 	updated := controllerutil.RemoveFinalizer(obj, watcherFinalizer)
 	if !updated {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to remove finalizer")
@@ -295,7 +299,8 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	// this will be implemented as part of another step: see https://github.com/kyma-project/runtime-watcher/issues/33
+	watchableCfg := generateWatchableConfigForCR(obj)
+	deploy.InstallSKRWebhook(ctx, webhookChartPath, releaseName, watchableCfg, r.RestConfig)
 	return nil
 }
 
@@ -321,9 +326,10 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, ob
 	return nil
 }
 
-func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	return nil
-}
+// func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
+// 	deploy.RemoveSKRWebhook(ctx, webhookChartPath, releaseName, nil, r.RestConfig)
+// 	return nil
+// }
 
 func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *componentv1alpha1.Watcher,
 	state componentv1alpha1.WatcherState, msg string,
@@ -382,6 +388,17 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 
 	// this will be implemented as part of another step: see https://github.com/kyma-project/runtime-watcher/issues/33
 	return true, nil
+}
+
+func generateWatchableConfigForCR(obj *componentv1alpha1.Watcher) map[string]deploy.WatchableConfig {
+	statusOnly := obj.Spec.SubresourceToWatch == componentv1alpha1.SubresourceTypeStatus
+	return map[string]deploy.WatchableConfig{
+		obj.Labels[util.ManagedBylabel]: {
+			Labels:     obj.Spec.LabelsToWatch,
+			StatusOnly: statusOnly,
+		},
+	}
+
 }
 
 // SetupWithManager sets up the controller with the Manager.

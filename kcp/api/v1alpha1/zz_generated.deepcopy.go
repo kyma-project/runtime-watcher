@@ -160,11 +160,11 @@ func (in *WatcherList) DeepCopyObject() runtime.Object {
 func (in *WatcherSpec) DeepCopyInto(out *WatcherSpec) {
 	*out = *in
 	out.ServiceInfo = in.ServiceInfo
-	if in.GvrsToWatch != nil {
-		in, out := &in.GvrsToWatch, &out.GvrsToWatch
-		*out = make([]WatchableGvr, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+	if in.LabelsToWatch != nil {
+		in, out := &in.LabelsToWatch, &out.LabelsToWatch
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 }

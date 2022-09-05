@@ -24,20 +24,27 @@ import (
 
 // WatcherSpec defines the desired state of Watcher.
 type WatcherSpec struct {
-	// Watcher URL consists of <IngressEndpoint>:<IngressPort>/ContractVersion/ComponentName
-
-	// ContractVersion signifies the contract version appended to the Watcher endpoint.
-	ContractVersion string `json:"contractVersion"`
-
-	// ComponentName signifies the component name appended to the Watcher endpoint.
-	ComponentName string `json:"componentName"`
-
 	// ServiceInfo describes the service information of the operator
 	ServiceInfo ServiceInfo `json:"serviceInfo"`
 
-	// GvrsToWatch describes the gvr and their labels that should be watched
-	GvrsToWatch []WatchableGvr `json:"gvrsToWatch"`
+	// LabelsToWatch describes the labels that should be watched
+	LabelsToWatch map[string]string `json:"labelsToWatch"`
+
+	// SubresourceToWatch describes the subresource that should be watched
+	// Value can be one of ("Spec", "Status")
+	SubresourceToWatch SubresourceType `json:"subresourceToWatch"`
 }
+
+type SubresourceType string
+
+const (
+	// SubresourceTypeAll represents SubresourceType All, which indicates that all subresources
+	// will be watched
+	SubresourceTypeAll SubresourceType = "All"
+	// SubresourceTypeStatus represents SubresourceType Status, which indicates that only Status subresource
+	// will be watched
+	SubresourceTypeStatus SubresourceType = "Status"
+)
 
 type Gvr struct {
 	// Group describes the group of the watchable resource

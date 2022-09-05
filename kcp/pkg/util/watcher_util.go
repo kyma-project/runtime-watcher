@@ -38,6 +38,8 @@ const (
 	ConfigMapNamespace     = metav1.NamespaceDefault
 	IstioGatewayGVR        = "gateways.networking.istio.io/v1beta1"
 	IstioVirtualServiceGVR = "virtualservices.networking.istio.io/v1beta1"
+	ManagedBylabel         = "operator.kyma-project.io/managed-by"
+	contractVersion        = "v1"
 )
 
 type WatcherConfig struct {
@@ -173,7 +175,7 @@ func prepareIstioHTTPRouteForCR(obj *componentv1alpha1.Watcher) *istioapiv1beta1
 			{
 				Uri: &istioapiv1beta1.StringMatch{
 					MatchType: &istioapiv1beta1.StringMatch_Prefix{ //nolint:nosnakecase
-						Prefix: fmt.Sprintf("/v%s/%s/event", obj.Spec.ContractVersion, obj.Spec.ComponentName),
+						Prefix: fmt.Sprintf("/v%s/%s/event", contractVersion, obj.Labels[ManagedBylabel]),
 					},
 				},
 			},
