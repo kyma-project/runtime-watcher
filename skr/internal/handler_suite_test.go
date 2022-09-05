@@ -2,16 +2,18 @@ package internal_test
 
 import (
 	"context"
-	"net/http"
+	"fmt"
+	"net"
 	"net/http/httptest"
 	"os"
 	"testing"
 
+	"github.com/kyma-project/runtime-watcher/skr/internal"
+	util "github.com/kyma-project/runtime-watcher/skr/internal/test_util"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/util/yaml"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -25,14 +27,24 @@ func TestAPIs(t *testing.T) {
 }
 
 var (
-	ctx                 context.Context                           //nolint:gochecknoglobals
-	cancel              context.CancelFunc                        //nolint:gochecknoglobals
-	kcpModulesList      = []string{"kyma", "manifest", "compass"} //nolint:gochecknoglobals
-	kcpResponseRecorder *httptest.ResponseRecorder                //nolint:gochecknoglobals
-	kcpMockServer       *http.Server                              //nolint:gochecknoglobals
+	ctx           context.Context            //nolint:gochecknoglobals
+	cancel        context.CancelFunc         //nolint:gochecknoglobals
+	kcpRecorder   *httptest.ResponseRecorder //nolint:gochecknoglobals
+	kcpMockServer *httptest.Server           //nolint:gochecknoglobals
+
+	ownerLabels = map[string]string{ //nolint:gochecknoglobals
+		internal.ManagedByLabel: "lifecycle-manager",
+		internal.OwnedByLabel:   fmt.Sprintf("%s__%s", metav1.NamespaceDefault, ownerName),
+	}
+	testEnv   *envtest.Environment //nolint:gochecknoglobals
+	k8sClient client.Client        //nolint:gochecknoglobals
 )
 
-const DefaultBufferSize = 2048
+const (
+	moduleName = "kyma"
+	crName1    = "kyma-1"
+	ownerName  = "ownerName"
+)
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
@@ -40,16 +52,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment for skr-watcher tests")
 
-	kymaCrd := &v1.CustomResourceDefinition{}
-	res, err := http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/lifecycle-manager/main/operator/" +
-			"config/crd/bases/operator.kyma-project.io_kymas.yaml")
-	Expect(err).NotTo(HaveOccurred())
-	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
-	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, DefaultBufferSize).Decode(kymaCrd)).To(Succeed())
-
 	testEnv = &envtest.Environment{
-		CRDs:                  []*v1.CustomResourceDefinition{kymaCrd},
 		ErrorIfCRDPathMissing: false,
 	}
 
@@ -63,29 +66,21 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	// set env variables
-	Expect(os.Setenv("WEBHOOK_SIDE_CAR", "false")).NotTo(HaveOccurred())
-	//+kubebuilder:scaffold:scheme
+	kcpTestHandler := util.BootStrapKcpMockHandlers(moduleName)
+	kcpRecorder = kcpTestHandler.Recorder
+
+	// start listener server
+	kcpMockServer = httptest.NewServer(kcpTestHandler)
+	_, port, err := net.SplitHostPort(kcpMockServer.Listener.Addr().String())
+	Expect(err).ShouldNot(HaveOccurred())
 
 	// set KCP env vars
 	err = os.Setenv("KCP_IP", "localhost")
 	Expect(err).ShouldNot(HaveOccurred())
-	err = os.Setenv("KCP_PORT", "10080")
+	err = os.Setenv("KCP_PORT", port)
 	Expect(err).ShouldNot(HaveOccurred())
 	err = os.Setenv("KCP_CONTRACT", "v1")
 	Expect(err).ShouldNot(HaveOccurred())
-
-	kcpTestHandler := BootStrapKcpMockHandlers()
-	kcpResponseRecorder = kcpTestHandler.Recorder
-	//nolint:gosec
-	kcpMockServer = &http.Server{
-		Addr:    ":10080",
-		Handler: kcpTestHandler,
-	}
-
-	go func() {
-		_ = kcpMockServer.ListenAndServe()
-	}()
 })
 
 var _ = AfterSuite(func() {
@@ -95,7 +90,7 @@ var _ = AfterSuite(func() {
 	// clear env variables
 	os.Clearenv()
 
-	Expect(kcpMockServer.Shutdown(context.Background())).Should(Succeed())
+	kcpMockServer.Close()
 
 	cancel()
 })

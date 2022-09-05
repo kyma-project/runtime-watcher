@@ -1,0 +1,222 @@
+{
+  "kind": "AdmissionReview",
+  "apiVersion": "admission.k8s.io/v1",
+  "request": {
+    "uid": "53b89f11-eea2-4659-a2ae-da610698730e",
+    "kind": {
+      "group": "operator.kyma-project.io",
+      "version": "v1alpha1",
+      "kind": "Sample"
+    },
+    "resource": {
+      "group": "operator.kyma-project.io",
+      "version": "v1alpha1",
+      "resource": "samples"
+    },
+    "subResource": "status",
+    "requestKind": {
+      "group": "operator.kyma-project.io",
+      "version": "v1alpha1",
+      "kind": "Sample"
+    },
+    "requestResource": {
+      "group": "operator.kyma-project.io",
+      "version": "v1alpha1",
+      "resource": "samples"
+    },
+    "requestSubResource": "status",
+    "name": "sample-sample",
+    "namespace": "default",
+    "operation": "UPDATE",
+    "userInfo": {
+      "username": "system:admin",
+      "groups": [
+        "system:masters",
+        "system:authenticated"
+      ]
+    },
+    "object": {
+      "apiVersion": "operator.kyma-project.io/v1alpha1",
+      "kind": "Sample",
+      "metadata": {
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"operator.kyma-project.io/v1alpha1\",\"kind\":\"Sample\",\"metadata\":{\"annotations\":{},\"labels\":{\"owner-name\":\"owner-resource-name\",\"runtime-watcher-watchable\":\"true\"},\"name\":\"sample-sample\",\"namespace\":\"default\"},\"spec\":{\"releaseName\":\"redis-release\"}}\n"
+        },
+        "creationTimestamp": "2022-09-01T14:03:16Z",
+        "deletionGracePeriodSeconds": 0,
+        "deletionTimestamp": "2022-09-01T15:17:04Z",
+        "finalizers": [
+          "custom-deletion-finalizer"
+        ],
+        "generation": 2,
+        "labels": {
+          "owner-name": "owner-resource-name",
+          "runtime-watcher-watchable": "true",
+          "sampleKey": "sampleValue"
+        },
+        "managedFields": [
+          {
+            "apiVersion": "operator.kyma-project.io/v1alpha1",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:metadata": {
+                "f:annotations": {
+                  ".": {},
+                  "f:kubectl.kubernetes.io/last-applied-configuration": {}
+                },
+                "f:labels": {
+                  ".": {},
+                  "f:owner-name": {},
+                  "f:runtime-watcher-watchable": {}
+                }
+              },
+              "f:spec": {
+                ".": {},
+                "f:releaseName": {}
+              }
+            },
+            "manager": "kubectl-client-side-apply",
+            "operation": "Update",
+            "time": "2022-09-01T14:03:16Z"
+          },
+          {
+            "apiVersion": "operator.kyma-project.io/v1alpha1",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:metadata": {
+                "f:finalizers": {
+                  ".": {},
+                  "v:\"custom-deletion-finalizer\"": {}
+                },
+                "f:labels": {
+                  "f:sampleKey": {}
+                }
+              }
+            },
+            "manager": "main",
+            "operation": "Update",
+            "time": "2022-09-01T14:03:16Z"
+          },
+          {
+            "apiVersion": "operator.kyma-project.io/v1alpha1",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:status": {
+                ".": {},
+                "f:state": {}
+              }
+            },
+            "manager": "main",
+            "operation": "Update",
+            "subresource": "status",
+            "time": "2022-09-01T14:03:16Z"
+          }
+        ],
+        "name": "sample-sample",
+        "namespace": "default",
+        "resourceVersion": "3312",
+        "uid": "58909a3e-80ba-4ba0-9710-9885feafff63"
+      },
+      "spec": {
+        "releaseName": "redis-release"
+      },
+      "status": {
+        "state": "Deleting"
+      }
+    },
+    "oldObject": {
+      "apiVersion": "operator.kyma-project.io/v1alpha1",
+      "kind": "Sample",
+      "metadata": {
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"operator.kyma-project.io/v1alpha1\",\"kind\":\"Sample\",\"metadata\":{\"annotations\":{},\"labels\":{\"owner-name\":\"owner-resource-name\",\"runtime-watcher-watchable\":\"true\"},\"name\":\"sample-sample\",\"namespace\":\"default\"},\"spec\":{\"releaseName\":\"redis-release\"}}\n"
+        },
+        "creationTimestamp": "2022-09-01T14:03:16Z",
+        "deletionGracePeriodSeconds": 0,
+        "deletionTimestamp": "2022-09-01T15:17:04Z",
+        "finalizers": [
+          "custom-deletion-finalizer"
+        ],
+        "generation": 2,
+        "labels": {
+          "owner-name": "owner-resource-name",
+          "runtime-watcher-watchable": "true",
+          "sampleKey": "sampleValue"
+        },
+        "managedFields": [
+          {
+            "apiVersion": "operator.kyma-project.io/v1alpha1",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:metadata": {
+                "f:annotations": {
+                  ".": {},
+                  "f:kubectl.kubernetes.io/last-applied-configuration": {}
+                },
+                "f:labels": {
+                  ".": {},
+                  "f:owner-name": {},
+                  "f:runtime-watcher-watchable": {}
+                }
+              },
+              "f:spec": {
+                ".": {},
+                "f:releaseName": {}
+              }
+            },
+            "manager": "kubectl-client-side-apply",
+            "operation": "Update",
+            "time": "2022-09-01T14:03:16Z"
+          },
+          {
+            "apiVersion": "operator.kyma-project.io/v1alpha1",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:metadata": {
+                "f:finalizers": {
+                  ".": {},
+                  "v:\"custom-deletion-finalizer\"": {}
+                },
+                "f:labels": {
+                  "f:sampleKey": {}
+                }
+              }
+            },
+            "manager": "main",
+            "operation": "Update",
+            "time": "2022-09-01T14:03:16Z"
+          },
+          {
+            "apiVersion": "operator.kyma-project.io/v1alpha1",
+            "fieldsType": "FieldsV1",
+            "fieldsV1": {
+              "f:status": {
+                ".": {},
+                "f:state": {}
+              }
+            },
+            "manager": "main",
+            "operation": "Update",
+            "subresource": "status",
+            "time": "2022-09-01T14:03:16Z"
+          }
+        ],
+        "name": "sample-sample",
+        "namespace": "default",
+        "resourceVersion": "3312",
+        "uid": "58909a3e-80ba-4ba0-9710-9885feafff63"
+      },
+      "spec": {
+        "releaseName": "redis-release"
+      },
+      "status": {
+        "state": "Ready"
+      }
+    },
+    "dryRun": false,
+    "options": {
+      "kind": "UpdateOptions",
+      "apiVersion": "meta.k8s.io/v1"
+    }
+  }
+}
