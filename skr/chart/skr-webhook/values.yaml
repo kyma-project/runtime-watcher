@@ -48,10 +48,12 @@ service:
 kcp:
   loadbalancerIP: host.k3d.internal
   loadbalancerPort: 9080
-modules:
-  - name: kyma
+# The list of modules will be passed by the KCP watcher control loop
+# When deploying the chart on SKR
+modules: |-
+  lifecycle-manager:
     statusOnly: false
-    label:
+    labels:
       app: kyma 
-  - name: manifest
+  module-manager:
     statusOnly: true
