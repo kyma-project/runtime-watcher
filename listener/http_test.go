@@ -3,22 +3,22 @@ package listener_test
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"io"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"net/http/httptest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"testing"
 
-	"github.com/kyma-project/runtime-watcher/listener"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/kyma-project/runtime-watcher/listener"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
@@ -36,7 +36,7 @@ func setupLogger() logr.Logger {
 	return zapr.NewLogger(zapLog)
 }
 
-func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.WatcherEvent) *http.Request {
+func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.WatchEvent) *http.Request {
 	t.Helper()
 
 	var body io.Reader
@@ -68,15 +68,15 @@ func TestHandler(t *testing.T) {
 	skrEventsListener := newTestListener(":8082", "kyma", log)
 
 	handlerUnderTest := skrEventsListener.HandleSKREvent()
-	respRec := httptest.NewRecorder()
+	responseRecorder := httptest.NewRecorder()
 
 	// GIVEN
-	testWatcherEvt := &types.WatcherEvent{
-		KymaCr:    "kyma",
-		Name:      "kyma-sample",
-		Namespace: "lifecycle-manager",
+	testWatcherEvt := &types.WatchEvent{
+		Owner:      client.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
+		Watched:    client.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
+		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 	}
-	req := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt)
+	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt)
 	testEvt := GenericTestEvt{}
 	go func() {
 		testEvt.mu.Lock()
@@ -85,10 +85,10 @@ func TestHandler(t *testing.T) {
 	}()
 
 	// WHEN
-	handlerUnderTest(respRec, req)
+	handlerUnderTest(responseRecorder, httpRequest)
 
 	// THEN
-	resp := respRec.Result()
+	resp := responseRecorder.Result()
 	assert.Equal(t, http.StatusOK, resp.StatusCode,
 		"mismatching status code: expected %d, got %d", http.StatusOK, resp.StatusCode)
 	testEvt.mu.Lock()
