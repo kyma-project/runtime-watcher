@@ -8,7 +8,6 @@ require (
 	github.com/kyma-project/module-manager/operator v0.0.0-20220826100203-30ba39d62b0b
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
-	github.com/slok/go-helm-template v0.2.0
 	helm.sh/helm/v3 v3.9.4
 	istio.io/api v0.0.0-20220825141607-b5f730f29ce4
 	istio.io/client-go v1.14.3

@@ -3,9 +3,6 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/module-manager/operator/pkg/custom"
@@ -14,12 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	lifecycleLib "github.com/kyma-project/module-manager/operator/pkg/manifest"
-	"github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"helm.sh/helm/v3/pkg/cli"
-	admissionv1 "k8s.io/api/admissionregistration/v1"
 
-	"github.com/slok/go-helm-template/helm"
-	k8sapiyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	k8syaml "sigs.k8s.io/yaml"
@@ -37,25 +30,18 @@ const (
 	webhookConfigKind            = "ValidatingWebhookConfiguration"
 )
 
-type WatchableResourcesByModule struct {
-	ModuleName  string
-	GvrsToWatch []*v1alpha1.WatchableGvr
+type WatchableConfig struct {
+	Labels     map[string]string `json:"labels"`
+	StatusOnly bool              `json:"statusOnly"`
 }
 
-// watchableResources are result of the config merge operation
-// config merge will be implemented by https://github.com/kyma-project/runtime-watcher/issues/16
-func RedeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableResources []*WatchableResourcesByModule,
-	helmRepoFile, releaseName, namespace, webhookChartPath, webhookConfigFileName string,
+func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
+	watchableConfigs map[string]WatchableConfig, restConfig *rest.Config,
 ) error {
-	// 1.step: update webhook helm chart
-	err := updateWebhookChart(ctx, watchableResources,
-		releaseName, namespace, webhookChartPath, webhookConfigFileName)
+	argsVals, err := generateHelmChartArgs(watchableConfigs)
 	if err != nil {
 		return err
 	}
-	// 2.step: deploy helm chart
-	argsVal := make(map[string]interface{}, 1)
-	argsVal["isWebhookConfigRendered"] = true
 	restClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return err
@@ -74,170 +60,31 @@ func RedeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableR
 			return true, nil
 		},
 	}
-	err = deployWatcherHelmChart(ctx, restConfig, helmRepoFile, releaseName, skrWatcherDeployInfo, argsVal)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func updateWebhookChart(ctx context.Context, watchableResources []*WatchableResourcesByModule,
-	releaseName, namespace, webhookChartPath, webhookConfigFileName string,
-) error {
-	chartFS := os.DirFS(webhookChartPath)
-	chart, err := helm.LoadChart(ctx, chartFS)
-	if err != nil {
-		return err
-	}
-	// render helm template only for the file that contains the webhook config.
-	result, err := helm.Template(ctx, helm.TemplateConfig{
-		Chart:       chart,
-		ReleaseName: releaseName,
-		Namespace:   namespace,
-		ShowFiles:   []string{webhookConfigFileName},
-	})
-	if err != nil {
-		return err
-	}
-
-	webhookConfig, err := lookupWebhookConfigInYaml(result)
-	if err != nil {
-		return err
-	}
-	baseWebhookConfig := getBaseWebhookConfig(webhookConfig)
-	webhookConfig.Webhooks = webhooksConfigsFromBaseWebhookAndWatchableResources(baseWebhookConfig, watchableResources)
-	webhookConfigYaml, err := k8syaml.Marshal(webhookConfig)
-	if err != nil {
-		return err
-	}
-	renderedWebhookConfigFilePath := RenderedConfigFilePath(webhookChartPath, webhookConfigFileName)
-	err = os.WriteFile(renderedWebhookConfigFilePath, webhookConfigYaml, FileWritePermissions)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func lookupWebhookConfigInYaml(yaml string) (*admissionv1.ValidatingWebhookConfiguration, error) {
-	webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-	reader := strings.NewReader(yaml)
-	k8sYamlDec := k8sapiyaml.NewYAMLOrJSONDecoder(reader, DecodeBufferSize)
-	err := k8sYamlDec.Decode(webhookConfig)
-	if err != nil {
-		return nil, err
-	}
-	if !isWebhookConfig(webhookConfig.APIVersion, webhookConfig.Kind) {
-		return nil, fmt.Errorf("webhook config not found")
-	}
-	return webhookConfig, nil
-}
-
-func isWebhookConfig(apiVersion, kind string) bool {
-	return apiVersion == webhookAPIVersion && kind == webhookConfigKind
-}
-
-func RenderedConfigFilePath(webhookChartPath, webhookConfigFileName string) string {
-	fileNameArray := strings.Split(webhookConfigFileName, ".")
-	renderedWebhookConfigFileName := fmt.Sprintf("%s-%s.%s", fileNameArray[0],
-		renderedWebhookConfigSuffix, fileNameArray[1])
-	return path.Join(webhookChartPath, HelmTemplatesDirName, renderedWebhookConfigFileName)
-}
-
-func getBaseWebhookConfig(webhookConfig *admissionv1.ValidatingWebhookConfiguration) *admissionv1.ValidatingWebhook {
-	return &webhookConfig.Webhooks[firstElementIdx]
-}
-
-func webhooksConfigsFromBaseWebhookAndWatchableResources(baseWebhook *admissionv1.ValidatingWebhook,
-	watchableResources []*WatchableResourcesByModule,
-) []admissionv1.ValidatingWebhook {
-	webhooks := make([]admissionv1.ValidatingWebhook, 0, len(watchableResources))
-	for _, watchableResource := range watchableResources {
-		webhook := *baseWebhook.DeepCopy()
-		moduleName := watchableResource.ModuleName
-		configName := fmt.Sprintf("%s.%s", moduleName, KymaProjectWebhookFQDN)
-		rules, labels := RulesAndLabelsFromGvrsToWatch(watchableResource.GvrsToWatch)
-		servicePath := fmt.Sprintf(WebhookHandlerURLPathPattern, watchableResource.ModuleName)
-		webhook.Name = configName
-		webhook.ObjectSelector.MatchLabels = labels
-		webhook.Rules = rules
-		webhook.ClientConfig.Service.Path = &servicePath
-		webhooks = append(webhooks, webhook)
-	}
-	return webhooks
-}
-
-func RulesAndLabelsFromGvrsToWatch(gvrsToWatch []*v1alpha1.WatchableGvr) (
-	[]admissionv1.RuleWithOperations, map[string]string,
-) {
-	l := len(gvrsToWatch)
-	labelsArray := make([]map[string]string, 0, l)
-	labelsMapCapacity := 0
-	rules := make([]admissionv1.RuleWithOperations, 0, l)
-	for _, gvr := range gvrsToWatch {
-		rule := admissionv1.RuleWithOperations{
-			Operations: []admissionv1.OperationType{admissionv1.OperationAll},
-			Rule: admissionv1.Rule{
-				APIGroups:   []string{gvr.Gvr.Group},
-				APIVersions: []string{gvr.Gvr.Version},
-				Resources:   []string{gvr.Gvr.Resource},
-			},
-		}
-		rules = append(rules, rule)
-		labelsArray = append(labelsArray, gvr.LabelsToWatch)
-		labelsMapCapacity += len(gvr.LabelsToWatch)
-	}
-
-	return rules, aggregateLabels(labelsArray, labelsMapCapacity)
-}
-
-func aggregateLabels(maps []map[string]string, capacity int) map[string]string {
-	if capacity <= 0 {
-		return nil
-	}
-	result := make(map[string]string, capacity)
-	for _, mx := range maps {
-		for k, v := range mx {
-			result[k] = v
-		}
-	}
-	return result
-}
-
-func deployWatcherHelmChart(ctx context.Context, restConfig *rest.Config, helmRepoFile, releaseName string,
-	deployInfo lifecycleLib.InstallInfo, argsVals map[string]interface{},
-) error {
 	logger := logf.FromContext(ctx)
 	args := make(map[string]map[string]interface{}, 1)
 	args["set"] = argsVals
 	ops, err := lifecycleLib.NewOperations(&logger, restConfig, releaseName,
-		&cli.EnvSettings{
-			RepositoryConfig: helmRepoFile,
-		}, args, nil)
+		&cli.EnvSettings{}, args, nil)
 	if err != nil {
 		return err
 	}
-	uninstalled, err := ops.Uninstall(deployInfo)
-	if err != nil {
-		return err
-	}
-	if !uninstalled {
-		return fmt.Errorf("failed to uninstall webhook config")
-	}
-	installed, err := ops.Install(deployInfo)
+	installed, err := ops.Install(skrWatcherDeployInfo)
 	if err != nil {
 		return err
 	}
 	if !installed {
 		return fmt.Errorf("failed to install webhook config")
 	}
-
-	ready, err := ops.VerifyResources(deployInfo)
-	if err != nil {
-		return err
-	}
-	if !ready {
-		return fmt.Errorf("skr webhook resources are not ready")
-	}
 	return nil
+}
+
+func generateHelmChartArgs(watchableConfigs map[string]WatchableConfig) (map[string]interface{}, error) {
+	helmChartArgs := make(map[string]interface{}, 1)
+	bytes, err := k8syaml.Marshal(watchableConfigs)
+	if err != nil {
+		return nil, err
+	}
+
+	helmChartArgs["modules"] = string(bytes)
+	return helmChartArgs, nil
 }
