@@ -10,6 +10,7 @@ import (
 
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/google/uuid"
@@ -69,7 +70,7 @@ func BootStrapKcpMockHandlers(moduleName string) *CustomRouter {
 		if err != nil {
 			response.WriteHeader(http.StatusBadRequest)
 		}
-		watcherEvt := &internal.WatchEvent{}
+		watcherEvt := &listenerTypes.WatchEvent{}
 		err = json.Unmarshal(reqBytes, watcherEvt)
 		if err != nil {
 			response.WriteHeader(http.StatusBadRequest)
