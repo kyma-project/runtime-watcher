@@ -35,6 +35,13 @@ type WatchableConfig struct {
 	StatusOnly bool              `json:"statusOnly"`
 }
 
+type DeployMode string
+
+const (
+	DeployModeInstall   = DeployMode("install")
+	DeployModeUninstall = DeployMode("uninstall")
+)
+
 func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
 	watchableConfigs map[string]WatchableConfig, restConfig *rest.Config,
 ) error {
@@ -60,6 +67,41 @@ func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string
 			return true, nil
 		},
 	}
+	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, DeployModeInstall)
+}
+
+func RemoveSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
+	watchableConfigs map[string]WatchableConfig, restConfig *rest.Config,
+) error {
+	argsVals, err := generateHelmChartArgs(watchableConfigs)
+	if err != nil {
+		return err
+	}
+	restClient, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return err
+	}
+	skrWatcherDeployInfo := lifecycleLib.InstallInfo{
+		ChartInfo: &lifecycleLib.ChartInfo{
+			ChartPath:   webhookChartPath,
+			ReleaseName: releaseName,
+		},
+		RemoteInfo: custom.RemoteInfo{
+			RemoteClient: &restClient,
+			RemoteConfig: restConfig,
+		},
+		CheckFn: func(ctx context.Context, u *unstructured.Unstructured, logger *logr.Logger, info custom.RemoteInfo,
+		) (bool, error) {
+			return true, nil
+		},
+	}
+	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, DeployModeUninstall)
+
+}
+
+func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, releaseName string,
+	argsVals map[string]interface{}, deployInfo lifecycleLib.InstallInfo, mode DeployMode,
+) error {
 	logger := logf.FromContext(ctx)
 	args := make(map[string]map[string]interface{}, 1)
 	args["set"] = argsVals
@@ -68,7 +110,17 @@ func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string
 	if err != nil {
 		return err
 	}
-	installed, err := ops.Install(skrWatcherDeployInfo)
+	if mode == DeployModeUninstall {
+		uninstalled, err := ops.Uninstall(deployInfo)
+		if err != nil {
+			return err
+		}
+		if !uninstalled {
+			return fmt.Errorf("failed to install webhook config")
+		}
+		return nil
+	}
+	installed, err := ops.Install(deployInfo)
 	if err != nil {
 		return err
 	}
