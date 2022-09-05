@@ -296,8 +296,7 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
 	watchableCfg := generateWatchableConfigForCR(obj)
-	deploy.InstallSKRWebhook(ctx, webhookChartPath, releaseName, watchableCfg, r.RestConfig)
-	return nil
+	return deploy.InstallSKRWebhook(ctx, webhookChartPath, releaseName, watchableCfg, r.RestConfig)
 }
 
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {

@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	webhookNameTpl     = "%s.operator.kyma-project.io"
 	servicePathTpl     = "/validate/%s"
 	specSubresources   = "*"
 	statusSubresources = "*/status"
@@ -45,7 +44,8 @@ var _ = Describe("deploy watcher", func() {
 		err := deploy.InstallSKRWebhook(ctx, webhookChartPath, releaseName, watchableRes, testEnv.Config)
 		Expect(err).ShouldNot(HaveOccurred())
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-		k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
+		err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
+		Expect(err).ShouldNot(HaveOccurred())
 		correct := verifyWebhookConfig(webhookConfig, watchableRes)
 		Expect(correct).To(BeTrue())
 	})
