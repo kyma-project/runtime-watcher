@@ -55,7 +55,7 @@ spec:
               value: {{.Values.service.contactVersion}}
             - name: WEBHOOK_SIDE_CAR
               value: {{ if eq .Values.sidecar true }} "true" {{ else }} "false" {{ end }}
-          image: kcp-registry.localhost:3131/webhook:latest
+          image: {{.Values.image.name}}:{{.Values.image.tag}}
           imagePullPolicy: {{.Values.image.pullPolicy}}
           volumeMounts:
           - name: ssl

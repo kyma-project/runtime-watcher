@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/kyma-project/runtime-watcher/skr/internal"
 	"io"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/google/uuid"
 
@@ -28,9 +30,11 @@ const (
 )
 
 var (
-	OperationsToTest = []admissionv1.Operation{admissionv1.Connect, admissionv1.Update,
-		admissionv1.Create, admissionv1.Delete}
-	ChangeObjTypes = []ChangeObj{NoChange, SpecChange, StatusChange}
+	OperationsToTest = []admissionv1.Operation{ //nolint:gochecknoglobals
+		admissionv1.Connect, admissionv1.Update,
+		admissionv1.Create, admissionv1.Delete,
+	}
+	ChangeObjTypes = []ChangeObj{NoChange, SpecChange, StatusChange} //nolint:gochecknoglobals
 )
 
 type CustomRouter struct {
@@ -94,7 +98,8 @@ func GetAdmissionHTTPRequest(operation admissionv1.Operation, watchedName, modul
 }
 
 func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
-	labels map[string]string, changeObj ChangeObj) (*admissionv1.AdmissionReview, error) {
+	labels map[string]string, changeObj ChangeObj,
+) (*admissionv1.AdmissionReview, error) {
 	admissionReview := &admissionv1.AdmissionReview{
 		Request: &admissionv1.AdmissionRequest{
 			Name:      watchedName,
@@ -130,7 +135,8 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 }
 
 func generateAdmissionRequestRawObject(objectName string, labels map[string]string, specOrStatusValue string,
-	changeObj ChangeObj) ([]byte, error) {
+	changeObj ChangeObj,
+) ([]byte, error) {
 	objectWatched := &internal.ObjectWatched{
 		Metadata: internal.Metadata{
 			Name:      objectName,
@@ -148,6 +154,7 @@ func generateAdmissionRequestRawObject(objectName string, labels map[string]stri
 		objectWatched.Spec["someKey"] = specOrStatusValue
 	case StatusChange:
 		objectWatched.Status["someKey"] = specOrStatusValue
+	case NoChange:
 	}
 
 	rawObject, err := json.Marshal(objectWatched)

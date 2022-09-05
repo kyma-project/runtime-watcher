@@ -5,9 +5,9 @@ replicas: 1
 image: 
   # -- Image repository
   # repository: adityabhatia
-  name: adityabhatia/webhook:0.1.1
+  name: "<your-image-name>"
   # -- Image tag
-  # tag: "0.1.1"
+  tag: "0.1.1"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets
@@ -44,7 +44,7 @@ service:
   # -- Target port
   targetPort: 8443
   # -- Target port
-  contactVersion: "v1"
+  contactVersion: v1
 kcp:
   loadbalancerIP: host.k3d.internal
   loadbalancerPort: 9080

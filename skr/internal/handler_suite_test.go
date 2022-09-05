@@ -3,13 +3,14 @@ package internal_test
 import (
 	"context"
 	"fmt"
-	"github.com/kyma-project/runtime-watcher/skr/internal"
-	util "github.com/kyma-project/runtime-watcher/skr/internal/test_util"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal"
+	util "github.com/kyma-project/runtime-watcher/skr/internal/test_util"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,10 +31,10 @@ var (
 	cancel        context.CancelFunc         //nolint:gochecknoglobals
 	kcpRecorder   *httptest.ResponseRecorder //nolint:gochecknoglobals
 	kcpMockServer *httptest.Server           //nolint:gochecknoglobals
-	//nolint:gochecknoglobals
+
 	ownerLabels = map[string]string{ //nolint:gochecknoglobals
 		internal.ManagedByLabel: "lifecycle-manager",
-		internal.OwnedByLabel:   fmt.Sprintf("%s.%s", metav1.NamespaceDefault, ownerName),
+		internal.OwnedByLabel:   fmt.Sprintf("%s__%s", metav1.NamespaceDefault, ownerName),
 	}
 	testEnv   *envtest.Environment //nolint:gochecknoglobals
 	k8sClient client.Client        //nolint:gochecknoglobals
@@ -80,7 +81,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).ShouldNot(HaveOccurred())
 	err = os.Setenv("KCP_CONTRACT", "v1")
 	Expect(err).ShouldNot(HaveOccurred())
-
 })
 
 var _ = AfterSuite(func() {

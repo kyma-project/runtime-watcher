@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net"
 	"net/http"
 	"os"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/go-logr/logr"
 
@@ -65,17 +66,18 @@ type ObjectWatched struct {
 }
 
 const (
-	admissionError      = "admission error"
-	errorSeparator      = ":"
-	invalidationMessage = "invalidated from webhook"
-	validationMessage   = "validated from webhook"
-	requestStorePath    = "/tmp/request"
-	urlPathPattern      = "/validate/%s"
-	KcpReqFailedMsg     = "kcp request failed"
-	KcpReqSucceededMsg  = "kcp request succeeded"
-	ManagedByLabel      = "operator.kyma-project.io/managed-by"
-	OwnedByLabel        = "operator.kyma-project.io/owned-by"
-	StatusSubResource   = "status"
+	admissionError           = "admission error"
+	errorSeparator           = ":"
+	invalidationMessage      = "invalidated from webhook"
+	validationMessage        = "validated from webhook"
+	requestStorePath         = "/tmp/request"
+	urlPathPattern           = "/validate/%s"
+	KcpReqFailedMsg          = "kcp request failed"
+	KcpReqSucceededMsg       = "kcp request succeeded"
+	ManagedByLabel           = "operator.kyma-project.io/managed-by"
+	OwnedByLabel             = "operator.kyma-project.io/owned-by"
+	StatusSubResource        = "status"
+	namespaceNameEntityCount = 2
 )
 
 //nolint:gochecknoglobals
@@ -127,8 +129,24 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	h.Logger.Info(admissionResponseInfo.message)
 
 	// store incoming request
+	h.storeIncomingRequest(body)
+
+	// prepare response
+	responseBytes := h.prepareResponse(admissionReview, admissionResponseInfo)
+	if responseBytes == nil {
+		return
+	}
+	if _, err = writer.Write(responseBytes); err != nil {
+		h.Logger.Error(err, "")
+		return
+	}
+}
+
+func (h *Handler) storeIncomingRequest(body []byte) {
+	// store incoming request
 	enableSideCarStr := os.Getenv("WEBHOOK_SIDE_CAR")
 	sideCarEnabled := false
+	var err error
 	if enableSideCarStr != "" {
 		sideCarEnabled, err = strconv.ParseBool(enableSideCarStr)
 		if err != nil {
@@ -144,16 +162,6 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 			mu:     sync.Mutex{},
 		}
 		go storeRequest.save(body)
-	}
-
-	// prepare response
-	responseBytes := h.prepareResponse(admissionReview, admissionResponseInfo)
-	if responseBytes == nil {
-		return
-	}
-	if _, err = writer.Write(responseBytes); err != nil {
-		h.Logger.Error(err, "")
-		return
 	}
 }
 
@@ -194,7 +202,8 @@ func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 	return admissionReviewBytes
 }
 
-func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview, moduleName string) admissionResponseInfo {
+func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview, moduleName string,
+) admissionResponseInfo {
 	var msg string
 	switch admissionReview.Request.Operation {
 	case admissionv1.Update:
@@ -285,8 +294,8 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 		return ""
 	}
 
-	ownerParts := strings.Split(ownerKey, ".")
-	if len(ownerParts) != 2 {
+	ownerParts := strings.Split(ownerKey, "__")
+	if len(ownerParts) != namespaceNameEntityCount {
 		return fmt.Sprintf("label %s not set correctly on resource %s/%s: %s", OwnedByLabel,
 			watched.Namespace, watched.Name, err.Error())
 	}
