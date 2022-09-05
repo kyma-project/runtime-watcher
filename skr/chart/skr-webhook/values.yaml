@@ -1,13 +1,14 @@
 # -- Side car to mount admission review
-sidecar: false
+sidecar: true
 # -- Replicas
 replicas: 1
 image: 
   # -- Image repository
-  # repository: adityabhatia
-  name: adityabhatia/webhook:0.1.1
+  repository: "kcp-registry.localhost:3131"
+  # -- Image name
+  name: "webhook"
   # -- Image tag
-  # tag: "0.1.1"
+  tag: "latest"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets
@@ -44,7 +45,14 @@ service:
   # -- Target port
   targetPort: 8443
   # -- Target port
-  contactVersion: "v1"
+  contactVersion: v1
 kcp:
-  loadbalancerIP: host.k3d.internal
-  loadbalancerPort: 9080
+  IP: host.k3d.internal
+  port: 9080
+modules: |-
+  lifecycle-manager:
+    statusOnly: false
+    labels:
+      app: kyma 
+  module-manager:
+    statusOnly: true

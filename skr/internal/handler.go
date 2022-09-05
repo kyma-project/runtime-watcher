@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,19 +11,17 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/go-logr/logr"
 
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
 	admissionv1 "k8s.io/api/admission/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -35,7 +32,7 @@ type Handler struct {
 	Logger logr.Logger
 }
 
-type validateResource struct {
+type admissionResponseInfo struct {
 	allowed bool
 	message string
 	status  string
@@ -46,9 +43,8 @@ type responseInterface interface {
 }
 
 type Resource struct {
-	metav1.GroupVersionKind
-	Status bool `json:"status"`
-	Spec   bool `json:"spec"`
+	metav1.GroupVersionKind `json:"groupVersionKind"`
+	SubResource             string `json:"subResource"`
 }
 
 type Metadata struct {
@@ -62,22 +58,26 @@ func (m Metadata) isEmpty() bool {
 }
 
 type ObjectWatched struct {
-	Metadata `json:"metadata"`
-	Spec     map[string]interface{} `json:"spec"`
-	Kind     string                 `json:"kind"`
-	Status   map[string]interface{} `json:"status"`
+	Metadata   `json:"metadata"`
+	Spec       map[string]interface{} `json:"spec"`
+	APIVersion string                 `json:"apiVersion"`
+	Kind       string                 `json:"kind"`
+	Status     map[string]interface{} `json:"status"`
 }
 
 const (
-	admissionError      = "admission error"
-	errorSeparator      = ":"
-	invalidationMessage = "invalidated from webhook"
-	validationMessage   = "validated from webhook"
-	requestStorePath    = "/tmp/request"
-	kymaModuleName      = "kyma"
-	urlPathPattern      = "/validate/%s"
-	KcpReqFailedMsg     = "kcp request failed"
-	KcpReqSucceededMsg  = "kcp request succeeded"
+	admissionError           = "admission error"
+	errorSeparator           = ":"
+	invalidationMessage      = "invalidated from webhook"
+	validationMessage        = "validated from webhook"
+	requestStorePath         = "/tmp/request"
+	urlPathPattern           = "/validate/%s"
+	KcpReqFailedMsg          = "kcp request failed"
+	KcpReqSucceededMsg       = "kcp request succeeded"
+	ManagedByLabel           = "operator.kyma-project.io/managed-by"
+	OwnedByLabel             = "operator.kyma-project.io/owned-by"
+	StatusSubResource        = "status"
+	namespaceNameEntityCount = 2
 )
 
 //nolint:gochecknoglobals
@@ -119,17 +119,40 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	resourceValidation := h.validateResources(admissionReview, moduleName)
-
 	h.Logger.Info(
-		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.Kind),
+		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()),
 	)
 
+	admissionResponseInfo := h.validateResources(admissionReview, moduleName)
+
+	// log admission response message
+	h.Logger.Info(admissionResponseInfo.message)
+
 	// store incoming request
-	sideCarEnabled, err := strconv.ParseBool(os.Getenv("WEBHOOK_SIDE_CAR"))
-	if err != nil {
-		h.Logger.Error(fmt.Errorf("cannot parse sidecar enable env variable %w", err), "")
+	h.storeIncomingRequest(body)
+
+	// prepare response
+	responseBytes := h.prepareResponse(admissionReview, admissionResponseInfo)
+	if responseBytes == nil {
 		return
+	}
+	if _, err = writer.Write(responseBytes); err != nil {
+		h.Logger.Error(err, "")
+		return
+	}
+}
+
+func (h *Handler) storeIncomingRequest(body []byte) {
+	// store incoming request
+	enableSideCarStr := os.Getenv("WEBHOOK_SIDE_CAR")
+	sideCarEnabled := false
+	var err error
+	if enableSideCarStr != "" {
+		sideCarEnabled, err = strconv.ParseBool(enableSideCarStr)
+		if err != nil {
+			h.Logger.Error(fmt.Errorf("cannot parse sidecar enable env variable %w", err), "")
+			return
+		}
 	}
 
 	if sideCarEnabled {
@@ -140,20 +163,10 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		}
 		go storeRequest.save(body)
 	}
-
-	// prepare response
-	responseBytes := h.prepareResponse(admissionReview, resourceValidation)
-	if responseBytes == nil {
-		return
-	}
-	if _, err = writer.Write(responseBytes); err != nil {
-		h.Logger.Error(err, "")
-		return
-	}
 }
 
 func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
-	validation validateResource,
+	validation admissionResponseInfo,
 ) []byte {
 	// prepare response object
 	finalizedAdmissionReview := admissionv1.AdmissionReview{}
@@ -189,160 +202,111 @@ func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 	return admissionReviewBytes
 }
 
-func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview, moduleName string) validateResource {
-	if admissionReview.Request.Operation == admissionv1.Update {
+func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview, moduleName string,
+) admissionResponseInfo {
+	var msg string
+	switch admissionReview.Request.Operation {
+	case admissionv1.Update:
 		oldObjectWatched := ObjectWatched{}
 		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
 			&oldObjectWatched)
 		if !validatedResource.allowed {
 			return validatedResource
 		}
+
 		objectWatched := ObjectWatched{}
-		validatedResource = h.unmarshalRawObj(admissionReview.Request.Object.Raw,
+		validatedResource = h.unmarshalRawObj(admissionReview.Request.Object.Raw, &objectWatched)
+		if !validatedResource.allowed {
+			return validatedResource
+		}
+
+		// send notification to kcp
+		msg = h.sendRequestToKcpOnUpdate(&Resource{
+			GroupVersionKind: admissionReview.Request.Kind,
+			SubResource:      admissionReview.Request.SubResource,
+		}, oldObjectWatched, objectWatched, moduleName)
+
+		// send valid admission response - under all circumstances!
+		return h.validAdmissionReviewObj(msg)
+	case admissionv1.Delete:
+		oldObjectWatched := ObjectWatched{}
+		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
+			&oldObjectWatched)
+		if !validatedResource.allowed {
+			return validatedResource
+		}
+
+		// send notification to kcp
+		msg = h.sendRequestToKcp(moduleName, oldObjectWatched)
+
+		// return valid admission response - under all circumstances!
+		return h.validAdmissionReviewObj(msg)
+	case admissionv1.Create:
+		objectWatched := ObjectWatched{}
+		validatedResource := h.unmarshalRawObj(admissionReview.Request.Object.Raw,
 			&objectWatched)
 		if !validatedResource.allowed {
 			return validatedResource
 		}
-		resource, err := getResource(h.Client, admissionReview.Request.Kind)
-		if err != nil {
-			// send valid admission response - under all circumstances!
-			return h.validAdmissionReviewObj(err.Error())
-		}
-		msg := h.evaluateRequestForKcp(resource, oldObjectWatched, objectWatched, moduleName)
-		// send valid admission response - under all circumstances!
-		return h.validAdmissionReviewObj(msg)
-	}
-	if admissionReview.Request.Operation == admissionv1.Delete {
-		oldObjectWatched := ObjectWatched{}
-		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
-			&oldObjectWatched)
-		if !validatedResource.allowed {
-			return validatedResource
-		}
-		msg := h.sendRequestToKcp(moduleName, oldObjectWatched)
-		// send valid admission response - under all circumstances!
-		return h.validAdmissionReviewObj(msg)
+
+		// send notification to kcp
+		msg = h.sendRequestToKcp(moduleName, objectWatched)
+
+		// return valid admission response - under all circumstances!
+	case admissionv1.Connect:
+		msg = fmt.Sprintf("operation %s not supported for resource %s",
+			admissionv1.Connect, admissionReview.Request.Kind.String())
 	}
 
-	objectWatched := ObjectWatched{}
-	validatedResource := h.unmarshalRawObj(admissionReview.Request.Object.Raw,
-		&objectWatched)
-	if !validatedResource.allowed {
-		return validatedResource
-	}
-
-	msg := h.sendRequestToKcp(moduleName, objectWatched)
-	// send valid admission response - under all circumstances!
 	return h.validAdmissionReviewObj(msg)
 }
 
-func getKymaFromConfigMap(reader client.Reader) (*unstructured.UnstructuredList, error) {
-	// fetch resource mapping ConfigMap
-	configMap, err := getConfigMap(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	// parse ConfigMap for kyma GVK
-	kymaGvkStringified, kymaExists := configMap.Data["kyma"]
-	if !kymaExists {
-		return nil, fmt.Errorf("failed to fetch kyma GVK from resource mapping")
-	}
-	kymaGvr := schema.GroupVersionKind{}
-	err = yaml.Unmarshal([]byte(kymaGvkStringified), &kymaGvr)
-	if err != nil {
-		return nil, fmt.Errorf("kyma GVK could not me unmarshalled: %w", err)
-	}
-
-	// get SKR kyma
-	ctx := context.TODO()
-	kymasList := unstructured.UnstructuredList{}
-	kymasList.SetGroupVersionKind(kymaGvr)
-	err = reader.List(ctx, &kymasList)
-	if err != nil {
-		return nil, fmt.Errorf("could not list kyma resources: %w", err)
-	}
-	return &kymasList, nil
-}
-
-func getConfigMap(reader client.Reader) (*v1.ConfigMap, error) {
-	ctx := context.TODO()
-	configMap := &v1.ConfigMap{}
-	err := reader.Get(ctx, client.ObjectKey{
-		Name:      "skr-webhook-resource-mapping",
-		Namespace: "default",
-	}, configMap)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch resource mapping ConfigMap: %w", err)
-	}
-	return configMap, nil
-}
-
-func getResource(reader client.Reader, objectGVK metav1.GroupVersionKind) (*Resource, error) {
-	configMap, err := getConfigMap(reader)
-	if err != nil {
-		return nil, err
-	}
-	resourceListStringified, ok := configMap.Data["resources"]
-	if !ok {
-		return nil, fmt.Errorf("failed to fetch resources list resource mapping")
-	}
-	var resources []Resource
-	err = yaml.Unmarshal([]byte(resourceListStringified), &resources)
-	if err != nil {
-		// h.Logger.Error(err, "resources list could not me unmarshalled")
-		return nil, fmt.Errorf("resources list could not me unmarshalled: %w", err)
-	}
-
-	var resource Resource
-	found := false
-	for _, resourceItem := range resources {
-		if objectGVK.String() == resourceItem.GroupVersionKind.String() {
-			found = true
-			resource = resourceItem
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("resource not found")
-	}
-	return &resource, nil
-}
-
-func (h *Handler) evaluateRequestForKcp(resource *Resource, oldObjectWatched, objectWatched ObjectWatched,
+func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched, objectWatched ObjectWatched,
 	moduleName string,
 ) string {
-	noSpecChangeFilter := resource.Spec && !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec)
-	noStatusChangeFilter := resource.Status && !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
+	var registerChange bool
+	// e.g. slice or status subresource. Only status is supported.
+	watchedSubResource := strings.ToLower(resource.SubResource)
 
-	if noSpecChangeFilter && noStatusChangeFilter {
-		return "KCP request not sent"
+	switch watchedSubResource {
+	// means watched on spec
+	case "":
+		registerChange = !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec)
+	case StatusSubResource:
+		registerChange = !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
+	default:
+		return fmt.Sprintf("invalid subresource for watched resource %s/%s",
+			objectWatched.Namespace, objectWatched.Name)
 	}
+
+	if !registerChange {
+		return fmt.Sprintf("no change detected on watched resource %s/%s",
+			objectWatched.Namespace, objectWatched.Name)
+	}
+
 	return h.sendRequestToKcp(moduleName, objectWatched)
 }
 
 func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) string {
-	var kymaName string
-	if moduleName == kymaModuleName {
-		kymaName = watched.Metadata.Name
-	} else {
-		// get kyma name
-		kymaList, err := getKymaFromConfigMap(h.Client)
-		if err != nil {
-			h.Logger.Error(err, "failed to get kyma list")
-			return KcpReqFailedMsg
-		}
-		if len(kymaList.Items) != 1 {
-			h.Logger.Error(nil, fmt.Sprintf("found %d kyma resources, expected 1", len(kymaList.Items)))
-			return KcpReqFailedMsg
-		}
-		kymaName = kymaList.Items[0].GetName()
+	ownerKey, err := getKcpResourceName(watched)
+	if err != nil {
+		h.Logger.Error(err, "resource owner name could not be determined")
+		return ""
 	}
 
+	ownerParts := strings.Split(ownerKey, "__")
+	if len(ownerParts) != namespaceNameEntityCount {
+		return fmt.Sprintf("label %s not set correctly on resource %s/%s: %s", OwnedByLabel,
+			watched.Namespace, watched.Name, err.Error())
+	}
+	ownerNs := ownerParts[0]
+	ownerName := ownerParts[1]
+
 	// send request to kcp
-	watcherEvent := &types.WatcherEvent{
-		KymaCr:    kymaName,
-		Namespace: watched.Namespace,
-		Name:      watched.Name,
+	watcherEvent := &WatchEvent{
+		Owner:      client.ObjectKey{Namespace: ownerNs, Name: ownerName},
+		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
+		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
@@ -375,12 +339,20 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 		return KcpReqFailedMsg
 	}
 
-	h.Logger.Info("sent request to KCP successfully")
+	h.Logger.Info(fmt.Sprintf("sent request to KCP successfully for resource %s/%s",
+		watched.Namespace, watched.Name))
 	return KcpReqSucceededMsg
 }
 
+func getKcpResourceName(watched ObjectWatched) (string, error) {
+	if watched.Labels == nil || watched.Labels[OwnedByLabel] == "" {
+		return "", fmt.Errorf("no labels found for watched resource %s/%s", watched.Namespace, watched.Name)
+	}
+	return watched.Labels[OwnedByLabel], nil
+}
+
 func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
-) validateResource {
+) admissionResponseInfo {
 	if err := json.Unmarshal(rawBytes, response); err != nil || response.isEmpty() {
 		h.Logger.Error(fmt.Errorf("admission review resource object could not be unmarshaled %s%s %w",
 			admissionError, errorSeparator, err), "")
@@ -402,8 +374,8 @@ func (h *Handler) getAdmissionRequestFromBytes(body []byte) *admissionv1.Admissi
 	return &admissionReview
 }
 
-func (h *Handler) validAdmissionReviewObj(message string) validateResource {
-	return validateResource{
+func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo {
+	return admissionResponseInfo{
 		allowed: true,
 		message: message,
 		status:  metav1.StatusSuccess,
