@@ -1,19 +1,36 @@
-package internal_test
+package util
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/kyma-project/runtime-watcher/skr/internal"
 	"io"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net/http"
 	"net/http/httptest"
 
 	"github.com/google/uuid"
-	"github.com/kyma-project/runtime-watcher/skr/internal"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+)
+
+type ChangeObj string
+
+const (
+	WatchedResourceKind                 = "testResourceKind"
+	WatchedResourceAPIVersion           = "testGroup/testResourceVersion"
+	SpecChange                ChangeObj = "spec"
+	StatusChange              ChangeObj = "status subresource"
+	NoChange                  ChangeObj = "no"
+)
+
+var (
+	OperationsToTest = []admissionv1.Operation{admissionv1.Connect, admissionv1.Update,
+		admissionv1.Create, admissionv1.Delete}
+	ChangeObjTypes = []ChangeObj{NoChange, SpecChange, StatusChange}
 )
 
 type CustomRouter struct {
@@ -40,7 +57,7 @@ func (cr *CustomRouter) ServeHTTP(_ http.ResponseWriter, request *http.Request) 
 	h.ServeHTTP(cr.Recorder, request)
 }
 
-func bootStrapKcpMockHandlers() *CustomRouter {
+func BootStrapKcpMockHandlers(moduleName string) *CustomRouter {
 	kcpTestHandler := newCustomRouter()
 	handleFnPattern := fmt.Sprintf("/v1/%s/event", moduleName)
 	kcpTestHandler.HandleFunc(handleFnPattern, func(response http.ResponseWriter, r *http.Request) {
@@ -61,8 +78,8 @@ func bootStrapKcpMockHandlers() *CustomRouter {
 	return kcpTestHandler
 }
 
-func getAdmissionHTTPRequest(operation admissionv1.Operation, watchedName, moduleName string,
-	labels map[string]string, subResource bool,
+func GetAdmissionHTTPRequest(operation admissionv1.Operation, watchedName, moduleName string,
+	labels map[string]string, subResource ChangeObj,
 ) (*http.Request, error) {
 	admissionReview, err := createAdmissionRequest(operation, watchedName, labels, subResource)
 	if err != nil {
@@ -77,26 +94,32 @@ func getAdmissionHTTPRequest(operation admissionv1.Operation, watchedName, modul
 }
 
 func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
-	labels map[string]string, subResource bool) (*admissionv1.AdmissionReview, error) {
+	labels map[string]string, changeObj ChangeObj) (*admissionv1.AdmissionReview, error) {
 	admissionReview := &admissionv1.AdmissionReview{
 		Request: &admissionv1.AdmissionRequest{
 			Name:      watchedName,
 			Operation: operation,
 			UID:       types.UID(uuid.NewString()),
+			Kind: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(WatchedResourceAPIVersion,
+				WatchedResourceKind)),
 		},
 	}
-	if subResource {
-		admissionReview.Request.SubResource = "status"
+
+	if changeObj == StatusChange {
+		admissionReview.Request.SubResource = internal.StatusSubResource
 	}
+
 	if operation == admissionv1.Delete || operation == admissionv1.Update {
-		oldRawObject, err := generateAdmissionRequestRawObject(watchedName, labels, "oldValue", subResource)
+		oldRawObject, err := generateAdmissionRequestRawObject(watchedName, labels,
+			"oldValue", changeObj)
 		if err != nil {
 			return nil, err
 		}
 		admissionReview.Request.OldObject.Raw = oldRawObject
 	}
 	if operation != admissionv1.Delete {
-		rawObject, err := generateAdmissionRequestRawObject(watchedName, labels, "newValue", subResource)
+		rawObject, err := generateAdmissionRequestRawObject(watchedName, labels,
+			"newValue", changeObj)
 		if err != nil {
 			return nil, err
 		}
@@ -106,8 +129,8 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 	return admissionReview, nil
 }
 
-func generateAdmissionRequestRawObject(objectName string, labels map[string]string, value string, subResource bool,
-) ([]byte, error) {
+func generateAdmissionRequestRawObject(objectName string, labels map[string]string, specOrStatusValue string,
+	changeObj ChangeObj) ([]byte, error) {
 	objectWatched := &internal.ObjectWatched{
 		Metadata: internal.Metadata{
 			Name:      objectName,
@@ -116,14 +139,17 @@ func generateAdmissionRequestRawObject(objectName string, labels map[string]stri
 		},
 		Spec:       map[string]interface{}{},
 		Status:     map[string]interface{}{},
-		Kind:       watchedResourceKind,
-		APIVersion: watchedResourceAPIVersion,
+		Kind:       WatchedResourceKind,
+		APIVersion: WatchedResourceAPIVersion,
 	}
-	if subResource {
-		objectWatched.Status["someKey"] = value
-	} else {
-		objectWatched.Spec["someKey"] = value
+
+	switch changeObj {
+	case SpecChange:
+		objectWatched.Spec["someKey"] = specOrStatusValue
+	case StatusChange:
+		objectWatched.Status["someKey"] = specOrStatusValue
 	}
+
 	rawObject, err := json.Marshal(objectWatched)
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
+	util "github.com/kyma-project/runtime-watcher/skr/internal/test_util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net"
 	"net/http/httptest"
@@ -29,8 +30,8 @@ var (
 	cancel        context.CancelFunc         //nolint:gochecknoglobals
 	kcpRecorder   *httptest.ResponseRecorder //nolint:gochecknoglobals
 	kcpMockServer *httptest.Server           //nolint:gochecknoglobals
-	moduleName    = "kyma"                   //nolint:gochecknoglobals
-	ownerLabels   = map[string]string{       //nolint:gochecknoglobals
+	//nolint:gochecknoglobals
+	ownerLabels = map[string]string{ //nolint:gochecknoglobals
 		internal.ManagedByLabel: "lifecycle-manager",
 		internal.OwnedByLabel:   fmt.Sprintf("%s.%s", metav1.NamespaceDefault, ownerName),
 	}
@@ -39,11 +40,9 @@ var (
 )
 
 const (
-	watchedResourceKind       = "testResourceKind"
-	watchedResourceAPIVersion = "testGroup/testResourceVersion"
-	defaultBufferSize         = 2048
-	crName1                   = "kyma-1"
-	ownerName                 = "ownerName"
+	moduleName = "kyma"
+	crName1    = "kyma-1"
+	ownerName  = "ownerName"
 )
 
 var _ = BeforeSuite(func() {
@@ -66,7 +65,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	kcpTestHandler := bootStrapKcpMockHandlers()
+	kcpTestHandler := util.BootStrapKcpMockHandlers(moduleName)
 	kcpRecorder = kcpTestHandler.Recorder
 
 	// start listener server

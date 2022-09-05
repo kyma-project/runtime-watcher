@@ -75,7 +75,7 @@ const (
 	KcpReqSucceededMsg  = "kcp request succeeded"
 	ManagedByLabel      = "operator.kyma-project.io/managed-by"
 	OwnedByLabel        = "operator.kyma-project.io/owned-by"
-	statusSubResource   = "status"
+	StatusSubResource   = "status"
 )
 
 //nolint:gochecknoglobals
@@ -263,7 +263,7 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 	// means watched on spec
 	case "":
 		registerChange = !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec)
-	case statusSubResource:
+	case StatusSubResource:
 		registerChange = !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
 	default:
 		return fmt.Sprintf("invalid subresource for watched resource %s/%s",
