@@ -88,7 +88,7 @@ func IstioResourcesErrorCheck(gvr string, err error) (bool, error) {
 }
 
 func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
-	//TODO: refactor, default values are set for now
+	// TODO: refactor, default values are set for now
 	config := &WatcherConfig{}
 	_, isSet := os.LookupEnv(webhookChartPathVarName)
 	if !isSet {

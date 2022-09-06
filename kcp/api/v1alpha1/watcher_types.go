@@ -39,10 +39,10 @@ type SubresourceType string
 
 const (
 	// SubresourceTypeAll represents SubresourceType All, which indicates that all subresources
-	// will be watched
+	// will be watched.
 	SubresourceTypeAll SubresourceType = "All"
 	// SubresourceTypeStatus represents SubresourceType Status, which indicates that only Status subresource
-	// will be watched
+	// will be watched.
 	SubresourceTypeStatus SubresourceType = "Status"
 )
 

@@ -80,7 +80,7 @@ func updateChartConfigFileForCR(obj *componentv1alpha1.Watcher) error {
 	absoluteFilePath := path.Join(currDir, customChartConfigPath)
 	_, err = os.Stat(absoluteFilePath)
 	if os.IsNotExist(err) {
-		//write watcher CR config to the file
+
 		chartCfg := generateWatchableConfigForCR(obj)
 		bytes, err := k8syaml.Marshal(map[string]map[string]WatchableConfig{
 			customConfigKey: chartCfg,
@@ -94,28 +94,19 @@ func updateChartConfigFileForCR(obj *componentv1alpha1.Watcher) error {
 		}
 		return nil
 	}
-	//update watcher CR config to the file
-	customChartConfig := map[string]map[string]WatchableConfig{}
-	bytes, err := os.ReadFile(absoluteFilePath)
+
+	currentConfig, err := getCurrentConfig(absoluteFilePath)
 	if err != nil {
 		return err
-	}
-	err = k8syaml.Unmarshal(bytes, &customChartConfig)
-	if err != nil {
-		return err
-	}
-	currentConfig, ok := customChartConfig[customConfigKey]
-	if !ok {
-		return fmt.Errorf("error getting modules config")
 	}
 	moduleName := obj.Labels[util.ManagedBylabel]
-	_, ok = currentConfig[moduleName]
+	_, ok := currentConfig[moduleName]
 	if ok {
-		//config already exists for module, nothing to do
+
 		return nil
 	}
 	updatedConfig := make(map[string]WatchableConfig, len(currentConfig)+1)
-	//copy current config into updated config
+
 	for k, v := range currentConfig {
 		updatedConfig[k] = v
 	}
@@ -124,7 +115,7 @@ func updateChartConfigFileForCR(obj *componentv1alpha1.Watcher) error {
 		Labels:     obj.Spec.LabelsToWatch,
 		StatusOnly: statusOnly,
 	}
-	bytes, err = k8syaml.Marshal(map[string]map[string]WatchableConfig{
+	bytes, err := k8syaml.Marshal(map[string]map[string]WatchableConfig{
 		customConfigKey: updatedConfig,
 	})
 	if err != nil {
@@ -135,6 +126,23 @@ func updateChartConfigFileForCR(obj *componentv1alpha1.Watcher) error {
 		return err
 	}
 	return nil
+}
+
+func getCurrentConfig(absoluteFilePath string) (map[string]WatchableConfig, error) {
+	customChartConfig := map[string]map[string]WatchableConfig{}
+	bytes, err := os.ReadFile(absoluteFilePath)
+	if err != nil {
+		return nil, err
+	}
+	err = k8syaml.Unmarshal(bytes, &customChartConfig)
+	if err != nil {
+		return nil, err
+	}
+	currentConfig, ok := customChartConfig[customConfigKey]
+	if !ok {
+		return nil, fmt.Errorf("error getting modules config")
+	}
+	return currentConfig, nil
 }
 
 func RemoveSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
@@ -163,7 +171,6 @@ func RemoveSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
 		},
 	}
 	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, ModeUninstall)
-
 }
 
 func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, releaseName string,
@@ -203,20 +210,11 @@ func generateHelmChartArgs() (map[string]interface{}, error) {
 		return nil, err
 	}
 	absoluteFilePath := path.Join(currDir, customChartConfigPath)
-	customChartConfig := map[string]map[string]WatchableConfig{}
-	bytes, err := os.ReadFile(absoluteFilePath)
+	currentConfig, err := getCurrentConfig(absoluteFilePath)
 	if err != nil {
-		return nil, err
-	}
-	err = k8syaml.Unmarshal(bytes, &customChartConfig)
-	if err != nil {
-		return nil, err
-	}
-	currentConfig, ok := customChartConfig[customConfigKey]
-	if !ok {
 		return nil, fmt.Errorf("error getting modules config")
 	}
-	bytes, err = k8syaml.Marshal(currentConfig)
+	bytes, err := k8syaml.Marshal(currentConfig)
 	if err != nil {
 		return nil, err
 	}

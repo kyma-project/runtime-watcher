@@ -51,7 +51,7 @@ var watcherCREntries = []TableEntry{
 var _ = Context("Watcher CR scenarios", Ordered, func() {
 	istioCrdList := &apiextensionsv1.CustomResourceDefinitionList{}
 	BeforeAll(func() {
-		Skip("skip for now")
+		Skip("skipped for now in favor of local testing due to time constraints")
 		istioCrds, err := os.Open("assets/istio.networking.crds.yaml")
 		Expect(err).NotTo(HaveOccurred())
 		defer istioCrds.Close()
@@ -71,7 +71,7 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 	})
 
 	AfterAll(func() {
-		Skip("skip for now")
+		Skip("skipped for now in favor of local testing due to time constraints")
 		// clean up istio CRDs
 		//nolint:gosec
 		for _, crd := range istioCrdList.Items {
@@ -81,7 +81,7 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 
 	DescribeTable("should reconcile istio service mesh resources according to watcher CR config",
 		func(watcherCR *watcherapiv1alpha1.Watcher) {
-			Skip("skip for now")
+			Skip("skipped for now in favor of local testing due to time constraints")
 			// create watcher CR
 			Expect(k8sClient.Create(ctx, watcherCR)).Should(Succeed())
 
@@ -128,6 +128,7 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 		}, watcherCREntries)
 })
 
+//nolint:unused
 func isCRDeletetionSuccessful(watcherObjKey client.ObjectKey) func(g Gomega) bool {
 	return func(g Gomega) bool {
 		err := k8sClient.Get(ctx, watcherObjKey, &watcherapiv1alpha1.Watcher{})
@@ -138,6 +139,7 @@ func isCRDeletetionSuccessful(watcherObjKey client.ObjectKey) func(g Gomega) boo
 	}
 }
 
+//nolint:unused
 func watcherCRState(watcherObjKey client.ObjectKey) func(g Gomega) watcherapiv1alpha1.WatcherState {
 	return func(g Gomega) watcherapiv1alpha1.WatcherState {
 		watcherCR := &watcherapiv1alpha1.Watcher{}

@@ -36,7 +36,6 @@ import (
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	istioclientapiv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -175,27 +174,6 @@ func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Lo
 			componentv1alpha1.WatcherStateProcessing, "resources not yet ready")
 	}
 	logger.Info("watcher cr resources are Ready!")
-	return nil
-}
-
-func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	cmObjectKey := client.ObjectKey{
-		Name:      util.ConfigMapResourceName,
-		Namespace: util.ConfigMapNamespace,
-	}
-	configMap := &v1.ConfigMap{}
-	err := r.Get(ctx, cmObjectKey, configMap)
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get config map: %w", err)
-	}
-	if errors.IsNotFound(err) {
-		configMap.SetName(cmObjectKey.Name)
-		configMap.SetNamespace(cmObjectKey.Namespace)
-		err = r.Create(ctx, configMap)
-		if err != nil {
-			return fmt.Errorf("failed to create config map: %w", err)
-		}
-	}
 	return nil
 }
 
@@ -344,7 +322,6 @@ func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger
 func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 	obj *componentv1alpha1.Watcher,
 ) (bool, error) {
-
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w",

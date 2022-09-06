@@ -29,7 +29,7 @@ var _ = Describe("deploy watcher", func() {
 	watcherCR := &componentv1alpha1.Watcher{}
 
 	It("deploys watcher helm chart with correct webhook config", func() {
-		Skip("skipped in favor of local testing due to effort")
+		Skip("skipped for now in favor of local testing due to time constraints")
 		err := deploy.InstallSKRWebhook(ctx, webhookChartPath, releaseName, watcherCR, testEnv.Config)
 		Expect(err).ShouldNot(HaveOccurred())
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
@@ -40,7 +40,10 @@ var _ = Describe("deploy watcher", func() {
 	})
 })
 
-func verifyWebhookConfig(webhookCfg *admissionv1.ValidatingWebhookConfiguration, watchableConfigs map[string]deploy.WatchableConfig) bool {
+//nolint:unused
+func verifyWebhookConfig(webhookCfg *admissionv1.ValidatingWebhookConfiguration,
+	watchableConfigs map[string]deploy.WatchableConfig,
+) bool {
 	for _, webhook := range webhookCfg.Webhooks {
 		webhookNameParts := strings.Split(webhook.Name, ".")
 		if len(webhookNameParts) < 2 {
