@@ -48,6 +48,8 @@ func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *Unmarsha
 	genericEvtObject := &unstructured.Unstructured{}
 	content := UnstructuredContent(watcherEvent)
 	genericEvtObject.SetUnstructuredContent(content)
+	genericEvtObject.SetName(watcherEvent.Owner.Name)
+	genericEvtObject.SetNamespace(watcherEvent.Owner.Namespace)
 
 	return genericEvtObject, nil
 }
