@@ -4,11 +4,11 @@ sidecar: true
 replicas: 1
 image: 
   # -- Image repository
-  repository: "kcp-registry.localhost:3131"
+  repository: "k3d-registry.localhost:3131"
   # -- Image name
   name: "webhook"
   # -- Image tag
-  tag: "latest"
+  tag: "0.2.6"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets

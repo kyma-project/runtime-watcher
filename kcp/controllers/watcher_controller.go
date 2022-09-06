@@ -45,9 +45,7 @@ const (
 	// TODO: add IstioGatewayNamespace as a parameter in WatcherConfig.
 	IstioGatewayNamespace = metav1.NamespaceDefault
 	watcherFinalizer      = "component.kyma-project.io/watcher"
-	// TODO: add webhookChartPath as a parameter in WatcherConfig.
-	webhookChartPath = "../../skr/chart/skr-webhook"
-	releaseName      = "watcher"
+	releaseName           = "watcher"
 )
 
 // WatcherReconciler reconciles a Watcher object.
@@ -116,11 +114,7 @@ func (r *WatcherReconciler) HandleInitialState(ctx context.Context, obj *compone
 func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 	logger logr.Logger, obj *componentv1alpha1.Watcher,
 ) error {
-	err := r.createConfigMapForCR(ctx, obj)
-	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to create config map")
-	}
-	err = r.createOrUpdateServiceMeshConfigForCR(ctx, obj)
+	err := r.createOrUpdateServiceMeshConfigForCR(ctx, obj)
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to create or update service mesh config")
 	}
@@ -295,8 +289,7 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	watchableCfg := generateWatchableConfigForCR(obj)
-	return deploy.InstallSKRWebhook(ctx, webhookChartPath, releaseName, watchableCfg, r.RestConfig)
+	return deploy.InstallSKRWebhook(ctx, r.Config.WebhookChartPath, releaseName, obj, r.RestConfig)
 }
 
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
@@ -351,25 +344,19 @@ func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger
 func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 	obj *componentv1alpha1.Watcher,
 ) (bool, error) {
-	// 1.step: config map check
-	namespace := obj.GetNamespace()
-	returns, err := util.PerformConfigMapCheck(ctx, r.Client, namespace)
-	if returns {
-		return false, err
-	}
 
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w",
 			r.RestConfig.String(), err)
 	}
-	// 2.step: istio GW check
-	returns, err = util.PerformIstioGWCheck(ctx, istioClientSet, r.Config.ListenerIstioGatewayPort,
-		IstioGatewayResourceName, namespace)
+	// 1.step: istio GW check
+	returns, err := util.PerformIstioGWCheck(ctx, istioClientSet, r.Config.ListenerIstioGatewayPort,
+		IstioGatewayResourceName, IstioGatewayNamespace)
 	if returns {
 		return false, err
 	}
-	// 3.step: istio VirtualService check
+	// 2.step: istio VirtualService check
 	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj, IstioGatewayResourceName,
 		IstioGatewayNamespace)
 	if returns {
@@ -377,17 +364,6 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 	}
 
 	return true, nil
-}
-
-func generateWatchableConfigForCR(obj *componentv1alpha1.Watcher) map[string]deploy.WatchableConfig {
-	statusOnly := obj.Spec.SubresourceToWatch == componentv1alpha1.SubresourceTypeStatus
-	return map[string]deploy.WatchableConfig{
-		obj.Labels[util.ManagedBylabel]: {
-			Labels:     obj.Spec.LabelsToWatch,
-			StatusOnly: statusOnly,
-		},
-	}
-
 }
 
 // SetupWithManager sets up the controller with the Manager.

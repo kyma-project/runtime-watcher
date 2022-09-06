@@ -3,6 +3,8 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/module-manager/operator/pkg/custom"
@@ -13,9 +15,17 @@ import (
 	lifecycleLib "github.com/kyma-project/module-manager/operator/pkg/manifest"
 	"helm.sh/helm/v3/pkg/cli"
 
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	k8syaml "sigs.k8s.io/yaml"
+)
+
+const (
+	customChartConfigPath = "pkg/deploy/assets/custom-modules-config.yaml"
+	customConfigKey       = "modules"
+	FileWritePermissions  = 0o644
 )
 
 type WatchableConfig struct {
@@ -31,9 +41,13 @@ const (
 )
 
 func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
-	watchableConfigs map[string]WatchableConfig, restConfig *rest.Config,
+	obj *componentv1alpha1.Watcher, restConfig *rest.Config,
 ) error {
-	argsVals, err := generateHelmChartArgs(watchableConfigs)
+	err := updateChartConfigFileForCR(obj)
+	if err != nil {
+		return err
+	}
+	argsVals, err := generateHelmChartArgs()
 	if err != nil {
 		return err
 	}
@@ -58,10 +72,75 @@ func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string
 	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, ModeInstall)
 }
 
+func updateChartConfigFileForCR(obj *componentv1alpha1.Watcher) error {
+	currDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	absoluteFilePath := path.Join(currDir, customChartConfigPath)
+	_, err = os.Stat(absoluteFilePath)
+	if os.IsNotExist(err) {
+		//write watcher CR config to the file
+		chartCfg := generateWatchableConfigForCR(obj)
+		bytes, err := k8syaml.Marshal(map[string]map[string]WatchableConfig{
+			customConfigKey: chartCfg,
+		})
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(absoluteFilePath, bytes, FileWritePermissions)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	//update watcher CR config to the file
+	customChartConfig := map[string]map[string]WatchableConfig{}
+	bytes, err := os.ReadFile(absoluteFilePath)
+	if err != nil {
+		return err
+	}
+	err = k8syaml.Unmarshal(bytes, &customChartConfig)
+	if err != nil {
+		return err
+	}
+	currentConfig, ok := customChartConfig[customConfigKey]
+	if !ok {
+		return fmt.Errorf("error getting modules config")
+	}
+	moduleName := obj.Labels[util.ManagedBylabel]
+	_, ok = currentConfig[moduleName]
+	if ok {
+		//config already exists for module, nothing to do
+		return nil
+	}
+	updatedConfig := make(map[string]WatchableConfig, len(currentConfig)+1)
+	//copy current config into updated config
+	for k, v := range currentConfig {
+		updatedConfig[k] = v
+	}
+	statusOnly := obj.Spec.SubresourceToWatch == componentv1alpha1.SubresourceTypeStatus
+	updatedConfig[moduleName] = WatchableConfig{
+		Labels:     obj.Spec.LabelsToWatch,
+		StatusOnly: statusOnly,
+	}
+	bytes, err = k8syaml.Marshal(map[string]map[string]WatchableConfig{
+		customConfigKey: updatedConfig,
+	})
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(customChartConfigPath, bytes, FileWritePermissions)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func RemoveSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
 	watchableConfigs map[string]WatchableConfig, restConfig *rest.Config,
 ) error {
-	argsVals, err := generateHelmChartArgs(watchableConfigs)
+	argsVals, err := generateHelmChartArgs()
 	if err != nil {
 		return err
 	}
@@ -118,13 +197,40 @@ func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, rel
 	return nil
 }
 
-func generateHelmChartArgs(watchableConfigs map[string]WatchableConfig) (map[string]interface{}, error) {
-	helmChartArgs := make(map[string]interface{}, 1)
-	bytes, err := k8syaml.Marshal(watchableConfigs)
+func generateHelmChartArgs() (map[string]interface{}, error) {
+	currDir, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
-
-	helmChartArgs["modules"] = string(bytes)
+	absoluteFilePath := path.Join(currDir, customChartConfigPath)
+	customChartConfig := map[string]map[string]WatchableConfig{}
+	bytes, err := os.ReadFile(absoluteFilePath)
+	if err != nil {
+		return nil, err
+	}
+	err = k8syaml.Unmarshal(bytes, &customChartConfig)
+	if err != nil {
+		return nil, err
+	}
+	currentConfig, ok := customChartConfig[customConfigKey]
+	if !ok {
+		return nil, fmt.Errorf("error getting modules config")
+	}
+	bytes, err = k8syaml.Marshal(currentConfig)
+	if err != nil {
+		return nil, err
+	}
+	helmChartArgs := make(map[string]interface{}, 1)
+	helmChartArgs[customConfigKey] = string(bytes)
 	return helmChartArgs, nil
+}
+
+func generateWatchableConfigForCR(obj *componentv1alpha1.Watcher) map[string]WatchableConfig {
+	statusOnly := obj.Spec.SubresourceToWatch == componentv1alpha1.SubresourceTypeStatus
+	return map[string]WatchableConfig{
+		obj.Labels[util.ManagedBylabel]: {
+			Labels:     obj.Spec.LabelsToWatch,
+			StatusOnly: statusOnly,
+		},
+	}
 }

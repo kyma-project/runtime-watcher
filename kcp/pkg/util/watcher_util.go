@@ -24,8 +24,10 @@ import (
 const (
 	gwPortVarName           = "LISTENER_GW_PORT"
 	requeueIntervalVarName  = "REQUEUE_INTERVAL"
+	webhookChartPathVarName = "WEBHOOK_CHART_PATH"
 	DefaultIstioGatewayPort = 80
 	DefaultRequeueInterval  = 500
+	defaultWebhookChartPath = "/Users/I553979/workspace/kyma-watcher/skr/chart/skr-webhook"
 	httpProtocol            = "HTTP"
 	istioGWSelectorMapKey   = "istio"
 	istioGWSelectorMapValue = "ingressgateway"
@@ -50,7 +52,13 @@ type WatcherConfig struct {
 	ListenerIstioGatewayPort uint32
 	// RequeueInterval represents requeue interval in seconds
 	RequeueInterval int
+	// WebhookChartPath represents the path of the SKR webhook helm chart
+	WebhookChartPath string
 }
+
+// func updateChartConfigFile(yaml string) error {
+
+// }
 
 func IsDefaultComponent(labels map[string]string) bool {
 	if labels == nil {
@@ -80,28 +88,23 @@ func IstioResourcesErrorCheck(gvr string, err error) (bool, error) {
 }
 
 func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
+	//TODO: refactor, default values are set for now
 	config := &WatcherConfig{}
-	gwPortVarValue, isSet := os.LookupEnv(gwPortVarName)
+	_, isSet := os.LookupEnv(webhookChartPathVarName)
+	if !isSet {
+		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", webhookChartPathVarName))
+	}
+	config.WebhookChartPath = defaultWebhookChartPath
+	_, isSet = os.LookupEnv(gwPortVarName)
 	if !isSet {
 		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", gwPortVarName))
-		config.ListenerIstioGatewayPort = DefaultIstioGatewayPort
 	}
-	requeueIntervalVarValue, isSet := os.LookupEnv(requeueIntervalVarName)
+	config.ListenerIstioGatewayPort = DefaultIstioGatewayPort
+	_, isSet = os.LookupEnv(requeueIntervalVarName)
 	if !isSet {
 		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", requeueIntervalVarName))
-		config.RequeueInterval = DefaultRequeueInterval
-		return config
 	}
-	gwPortIntValue, err := strconv.Atoi(gwPortVarValue)
-	if err != nil {
-		logger.V(1).Error(err, "could not get unsigned int value for ", gwPortVarName)
-	}
-	config.ListenerIstioGatewayPort = uint32(gwPortIntValue)
-	requeueIntervalIntValue, err := strconv.Atoi(requeueIntervalVarValue)
-	if err != nil {
-		logger.V(1).Error(err, "could not get int value for ", requeueIntervalVarName)
-	}
-	config.RequeueInterval = requeueIntervalIntValue
+	config.RequeueInterval = DefaultRequeueInterval
 	return config
 }
 
@@ -273,10 +276,10 @@ func PerformConfigMapCheck(ctx context.Context, reader client.Reader,
 }
 
 func PerformIstioGWCheck(ctx context.Context, istioClientSet *istioclient.Clientset,
-	gwPort uint32, gwResourceName, namespace string,
+	gwPort uint32, gwName, gwNamespace string,
 ) (bool, error) {
 	gateway, apiErr := istioClientSet.NetworkingV1beta1().
-		Gateways(namespace).Get(ctx, gwResourceName, metav1.GetOptions{})
+		Gateways(gwNamespace).Get(ctx, gwName, metav1.GetOptions{})
 	ready, err := IstioResourcesErrorCheck(IstioGatewayGVR, apiErr)
 	if !ready {
 		return true, err
