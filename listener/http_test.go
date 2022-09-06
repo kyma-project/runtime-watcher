@@ -15,10 +15,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kyma-project/runtime-watcher/listener"
