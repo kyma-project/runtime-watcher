@@ -3,14 +3,21 @@ package listener_test
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"io"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"net/http/httptest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"testing"
+
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
@@ -96,7 +103,8 @@ func TestHandler(t *testing.T) {
 	assert.NotEqual(t, nil, testEvt.evt,
 		"error reading event from channel: expected non nil event, got %v", testEvt.evt)
 	testWatcherEvtContents := listener.UnstructuredContent(testWatcherEvt)
-	assert.Equal(t, testWatcherEvtContents, testEvt.evt.Object.(*unstructured.Unstructured).Object,
-		"mismatching event object contents: expected %v, got %v",
-		testWatcherEvtContents, testEvt.evt.Object.(*unstructured.Unstructured).Object)
+	for key, value := range testWatcherEvtContents {
+		assert.Contains(t, testEvt.evt.Object.(*unstructured.Unstructured).Object, key)
+		assert.Equal(t, value, testEvt.evt.Object.(*unstructured.Unstructured).Object[key])
+	}
 }
