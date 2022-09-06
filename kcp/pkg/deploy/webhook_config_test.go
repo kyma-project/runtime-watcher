@@ -107,7 +107,7 @@ func createSampleWatchableResourcesForModule() []*deploy.WatchableResourcesByMod
 			GvrsToWatch: []*v1alpha1.WatchableGvr{
 				{
 					Gvr: v1alpha1.Gvr{
-						Group:    "component.kyma-project.io",
+						Group:    "operator.kyma-project.io",
 						Version:  "v1alpha1",
 						Resource: "compasses",
 					},
