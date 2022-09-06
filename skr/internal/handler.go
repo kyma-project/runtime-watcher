@@ -18,6 +18,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -303,7 +304,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	ownerName := ownerParts[1]
 
 	// send request to kcp
-	watcherEvent := &WatchEvent{
+	watcherEvent := &listenerTypes.WatchEvent{
 		Owner:      client.ObjectKey{Namespace: ownerNs, Name: ownerName},
 		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),

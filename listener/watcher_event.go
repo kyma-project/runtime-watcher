@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -39,7 +39,7 @@ func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *Unmarsha
 	}
 	defer req.Body.Close()
 
-	watcherEvent := &types.WatcherEvent{}
+	watcherEvent := &types.WatchEvent{}
 	err = json.Unmarshal(body, watcherEvent)
 	if err != nil {
 		return nil, &UnmarshalError{"could not unmarshal watcher event", http.StatusInternalServerError}
@@ -52,10 +52,10 @@ func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *Unmarsha
 	return genericEvtObject, nil
 }
 
-func UnstructuredContent(watcherEvt *types.WatcherEvent) map[string]interface{} {
+func UnstructuredContent(watcherEvt *types.WatchEvent) map[string]interface{} {
 	content := make(map[string]interface{}, contentMapCapacity)
-	content["name"] = watcherEvt.Name
-	content["namespace"] = watcherEvt.Namespace
-	content["kyma-name"] = watcherEvt.KymaCr
+	content["owner"] = watcherEvt.Owner
+	content["watched"] = watcherEvt.Watched
+	content["watched-gvk"] = watcherEvt.WatchedGvk
 	return content
 }

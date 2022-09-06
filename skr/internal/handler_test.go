@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 	util "github.com/kyma-project/runtime-watcher/skr/internal/test_util"
 	. "github.com/onsi/ginkgo/v2"
@@ -112,10 +113,10 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Expect(len(kcpPayload)).To(Equal(0))
 		} else {
 			Expect(err).ShouldNot(HaveOccurred())
-			watcherEvt := &internal.WatchEvent{}
+			watcherEvt := &listenerTypes.WatchEvent{}
 			Expect(json.Unmarshal(kcpPayload, watcherEvt)).To(Succeed())
 			Expect(watcherEvt).To(Equal(
-				&internal.WatchEvent{
+				&listenerTypes.WatchEvent{
 					Watched: ctrlClient.ObjectKey{Name: testCase.params.watchedName, Namespace: metav1.NamespaceDefault},
 					Owner:   ctrlClient.ObjectKey{Name: ownerName, Namespace: metav1.NamespaceDefault},
 					WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(util.WatchedResourceAPIVersion,

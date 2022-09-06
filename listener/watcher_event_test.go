@@ -2,13 +2,13 @@ package listener_test
 
 import (
 	"fmt"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	"github.com/kyma-project/runtime-watcher/listener"
-
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/types"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,17 +17,17 @@ const hostname = "http://localhost:8082"
 type unmarshalTestCase struct {
 	name       string
 	urlPath    string
-	payload    *types.WatcherEvent
+	payload    *types.WatchEvent
 	errMsg     string
 	httpStatus int
 }
 
 func TestUnmarshalSKREvent(t *testing.T) {
 	t.Parallel()
-	testWatcherEvt := &types.WatcherEvent{
-		KymaCr:    "kyma",
-		Name:      "kyma-sample",
-		Namespace: "kyma-control-plane",
+	testWatcherEvt := &types.WatchEvent{
+		Owner:      client.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
+		Watched:    client.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
+		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 	}
 
 	testCases := []unmarshalTestCase{
