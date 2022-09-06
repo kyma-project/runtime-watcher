@@ -3,29 +3,35 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/module-manager/operator/pkg/custom"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	lifecycleLib "github.com/kyma-project/module-manager/operator/pkg/manifest"
 	"helm.sh/helm/v3/pkg/cli"
 
+	kymav1alpha1 "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
+	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	k8syaml "sigs.k8s.io/yaml"
 )
 
 const (
-	customChartConfigPath = "pkg/deploy/assets/custom-modules-config.yaml"
-	customConfigKey       = "modules"
-	FileWritePermissions  = 0o644
+	customChartConfigName      = "custom-modules-config"
+	customChartConfigNamespace = metav1.NamespaceDefault
+	customChartConfigPath      = "pkg/deploy/assets/custom-modules-config.yaml"
+	customConfigKey            = "modules"
+	FileWritePermissions       = 0o644
+	kubeconfigKey              = "config"
 )
 
 type WatchableConfig struct {
@@ -40,14 +46,53 @@ const (
 	ModeUninstall = Mode("uninstall")
 )
 
-func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
-	obj *componentv1alpha1.Watcher, restConfig *rest.Config,
+func getSKRRestConfigs(ctx context.Context, r client.Reader) ([]*rest.Config, error) {
+	kymas := &kymav1alpha1.KymaList{}
+	err := r.List(ctx, kymas)
+	if err != nil {
+		return nil, err
+	}
+	restCfgs := []*rest.Config{}
+	for _, kyma := range kymas.Items {
+		secret := &v1.Secret{}
+		err = r.Get(ctx, client.ObjectKeyFromObject(&kyma), secret)
+		if err != nil {
+			return nil, err
+		}
+		restCfg, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigKey])
+		if err == nil {
+			restCfgs = append(restCfgs, restCfg)
+		}
+	}
+
+	return restCfgs, nil
+}
+
+func InstallWebhookOnAllSKRs(ctx context.Context, webhookChartPath, releaseName string,
+	obj *componentv1alpha1.Watcher, r client.Client,
 ) error {
-	err := updateChartConfigFileForCR(obj)
+	restCfgs, err := getSKRRestConfigs(ctx, r)
 	if err != nil {
 		return err
 	}
-	argsVals, err := generateHelmChartArgs()
+	for _, restCfg := range restCfgs {
+		err = InstallSKRWebhook(ctx, webhookChartPath, releaseName, obj, restCfg, r)
+		if err != nil {
+			continue
+		}
+	}
+	// return err so that if err!=nil, reconciliation will be retriggered after requeue interval
+	return err
+}
+
+func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
+	obj *componentv1alpha1.Watcher, restConfig *rest.Config, r client.Client,
+) error {
+	err := updateChartConfigMapForCR(ctx, r, obj)
+	if err != nil {
+		return err
+	}
+	argsVals, err := generateHelmChartArgs(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -72,41 +117,47 @@ func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string
 	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, ModeInstall)
 }
 
-func updateChartConfigFileForCR(obj *componentv1alpha1.Watcher) error {
-	currDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	absoluteFilePath := path.Join(currDir, customChartConfigPath)
-	_, err = os.Stat(absoluteFilePath)
-	if os.IsNotExist(err) {
+func updateChartConfigMapForCR(ctx context.Context, r client.Client, obj *componentv1alpha1.Watcher) error {
+	configMap := &v1.ConfigMap{}
+	err := r.Get(ctx, client.ObjectKey{
+		Name:      customChartConfigName,
+		Namespace: customChartConfigNamespace,
+	}, configMap)
+	if k8sapierrors.IsNotFound(err) {
 
 		chartCfg := generateWatchableConfigForCR(obj)
-		bytes, err := k8syaml.Marshal(map[string]map[string]WatchableConfig{
-			customConfigKey: chartCfg,
-		})
+		bytes, err := k8syaml.Marshal(chartCfg)
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(absoluteFilePath, bytes, FileWritePermissions)
+		configMap.SetName(customChartConfigName)
+		configMap.SetNamespace(customChartConfigNamespace)
+		configMapData := map[string]string{
+			customConfigKey: string(bytes),
+		}
+		configMap.Data = configMapData
+		err = r.Create(ctx, configMap)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	currentConfig, err := getCurrentConfig(absoluteFilePath)
+	rawConfig, ok := configMap.Data[customConfigKey]
+	if !ok {
+		return fmt.Errorf("error getting modules config")
+	}
+	currentConfig := map[string]WatchableConfig{}
+	err = k8syaml.Unmarshal([]byte(rawConfig), &currentConfig)
 	if err != nil {
 		return err
 	}
 	moduleName := obj.Labels[util.ManagedBylabel]
-	_, ok := currentConfig[moduleName]
+	_, ok = currentConfig[moduleName]
 	if ok {
-
 		return nil
 	}
 	updatedConfig := make(map[string]WatchableConfig, len(currentConfig)+1)
-
 	for k, v := range currentConfig {
 		updatedConfig[k] = v
 	}
@@ -115,62 +166,16 @@ func updateChartConfigFileForCR(obj *componentv1alpha1.Watcher) error {
 		Labels:     obj.Spec.LabelsToWatch,
 		StatusOnly: statusOnly,
 	}
-	bytes, err := k8syaml.Marshal(map[string]map[string]WatchableConfig{
-		customConfigKey: updatedConfig,
-	})
+	bytes, err := k8syaml.Marshal(updatedConfig)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(customChartConfigPath, bytes, FileWritePermissions)
+	configMap.Data[customConfigKey] = string(bytes)
+	err = r.Update(ctx, configMap)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func getCurrentConfig(absoluteFilePath string) (map[string]WatchableConfig, error) {
-	customChartConfig := map[string]map[string]WatchableConfig{}
-	bytes, err := os.ReadFile(absoluteFilePath)
-	if err != nil {
-		return nil, err
-	}
-	err = k8syaml.Unmarshal(bytes, &customChartConfig)
-	if err != nil {
-		return nil, err
-	}
-	currentConfig, ok := customChartConfig[customConfigKey]
-	if !ok {
-		return nil, fmt.Errorf("error getting modules config")
-	}
-	return currentConfig, nil
-}
-
-func RemoveSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
-	watchableConfigs map[string]WatchableConfig, restConfig *rest.Config,
-) error {
-	argsVals, err := generateHelmChartArgs()
-	if err != nil {
-		return err
-	}
-	restClient, err := client.New(restConfig, client.Options{})
-	if err != nil {
-		return err
-	}
-	skrWatcherDeployInfo := lifecycleLib.InstallInfo{
-		ChartInfo: &lifecycleLib.ChartInfo{
-			ChartPath:   webhookChartPath,
-			ReleaseName: releaseName,
-		},
-		RemoteInfo: custom.RemoteInfo{
-			RemoteClient: &restClient,
-			RemoteConfig: restConfig,
-		},
-		CheckFn: func(ctx context.Context, u *unstructured.Unstructured, logger *logr.Logger, info custom.RemoteInfo,
-		) (bool, error) {
-			return true, nil
-		},
-	}
-	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, ModeUninstall)
 }
 
 func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, releaseName string,
@@ -204,22 +209,22 @@ func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, rel
 	return nil
 }
 
-func generateHelmChartArgs() (map[string]interface{}, error) {
-	currDir, err := os.Getwd()
+func generateHelmChartArgs(ctx context.Context, r client.Reader) (map[string]interface{}, error) {
+	configMap := &v1.ConfigMap{}
+	err := r.Get(ctx, client.ObjectKey{
+		Name:      customChartConfigName,
+		Namespace: customChartConfigNamespace,
+	}, configMap)
 	if err != nil {
 		return nil, err
 	}
-	absoluteFilePath := path.Join(currDir, customChartConfigPath)
-	currentConfig, err := getCurrentConfig(absoluteFilePath)
-	if err != nil {
+	rawConfig, ok := configMap.Data[customConfigKey]
+	if !ok {
 		return nil, fmt.Errorf("error getting modules config")
 	}
-	bytes, err := k8syaml.Marshal(currentConfig)
-	if err != nil {
-		return nil, err
-	}
+
 	helmChartArgs := make(map[string]interface{}, 1)
-	helmChartArgs[customConfigKey] = string(bytes)
+	helmChartArgs[customConfigKey] = rawConfig
 	return helmChartArgs, nil
 }
 

@@ -56,10 +56,6 @@ type WatcherConfig struct {
 	WebhookChartPath string
 }
 
-// func updateChartConfigFile(yaml string) error {
-
-// }
-
 func IsDefaultComponent(labels map[string]string) bool {
 	if labels == nil {
 		return false
@@ -90,11 +86,14 @@ func IstioResourcesErrorCheck(gvr string, err error) (bool, error) {
 func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
 	// TODO: refactor, default values are set for now
 	config := &WatcherConfig{}
-	_, isSet := os.LookupEnv(webhookChartPathVarName)
-	if !isSet {
+	webhookChartPathVarVal, isSet := os.LookupEnv(webhookChartPathVarName)
+	if isSet && webhookChartPathVarVal != "" {
+		config.WebhookChartPath = webhookChartPathVarVal
+	} else {
 		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", webhookChartPathVarName))
+		config.WebhookChartPath = defaultWebhookChartPath
 	}
-	config.WebhookChartPath = defaultWebhookChartPath
+
 	_, isSet = os.LookupEnv(gwPortVarName)
 	if !isSet {
 		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", gwPortVarName))
