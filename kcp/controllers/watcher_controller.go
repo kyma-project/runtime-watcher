@@ -41,7 +41,7 @@ import (
 
 const (
 	istioGatewayResourceName = "kcp-listener-gw"
-	watcherFinalizer         = "component.kyma-project.io/watcher"
+	watcherFinalizer         = "operator.kyma-project.io/watcher"
 	istioGatewayGVR          = "gateways.networking.istio.io/v1beta1"
 	istioVirtualServiceGVR   = "virtualservices.networking.istio.io/v1beta1"
 )
@@ -54,9 +54,9 @@ type WatcherReconciler struct {
 	Config     *util.WatcherConfig
 }
 
-// +kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=component.kyma-project.io,resources=watchers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=watchers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=watchers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=watchers/finalizers,verbs=update
 //
 //nolint:lll
 func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

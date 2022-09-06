@@ -1,4 +1,4 @@
-apiVersion: component.kyma-project.io/v1alpha1
+apiVersion: operator.kyma-project.io/v1alpha1
 kind: Watcher
 metadata:
   name: watcher-compass-sample
@@ -10,6 +10,6 @@ spec:
     serviceName: "compass-event-service"
   gvrsToWatch:
   - gvr:
-      group: "component.kyma-project.io"
+      group: "operator.kyma-project.io"
       version: "v1alpha1"
       resource: "compasses"
