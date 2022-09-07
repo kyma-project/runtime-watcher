@@ -3,15 +3,13 @@ kind: Watcher
 metadata:
   name: watcher-kyma-sample
   labels:
-    operator.kyma-project.io/default: "true"
+    "operator.kyma-project.io/managed-by": "lifecycle-manager"
 spec:
-  contractVersion: "1"
-  componentName: "kyma"
   serviceInfo:
     servicePort: 8082
     serviceName: "kyma-event-service"
-  gvrsToWatch:
-  - gvr:
-      group: "operator.kyma-project.io"
-      version: "v1alpha1"
-      resource: "kymas"
+    serviceNamespace: "default"
+  labelsToWatch:
+    "kyma-watchable": "true"
+  field: "spec"
+---

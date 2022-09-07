@@ -24,41 +24,25 @@ import (
 
 // WatcherSpec defines the desired state of Watcher.
 type WatcherSpec struct {
-	// Watcher URL consists of <IngressEndpoint>:<IngressPort>/ContractVersion/ComponentName
-
-	// ContractVersion signifies the contract version appended to the Watcher endpoint.
-	ContractVersion string `json:"contractVersion"`
-
-	// ComponentName signifies the component name appended to the Watcher endpoint.
-	ComponentName string `json:"componentName"`
-
 	// ServiceInfo describes the service information of the operator
 	ServiceInfo ServiceInfo `json:"serviceInfo"`
 
-	// GvrsToWatch describes the gvr and their labels that should be watched
-	GvrsToWatch []WatchableGvr `json:"gvrsToWatch"`
-}
-
-type Gvr struct {
-	// Group describes the group of the watchable resource
-	Group string `json:"group"`
-
-	// Version describes the version of the watchable resource
-	Version string `json:"version"`
-
-	// Resource describes the resource should be watched
-	Resource string `json:"resource"`
-}
-
-type WatchableGvr struct {
-	// Gvr describes the gvr that should be watched
-	// +kubebuilder:validation:Optional
-	Gvr Gvr `json:"gvr"`
-
-	// LabelsToWatch describes the labels that should be watched from the gvr
-	// +kubebuilder:validation:Optional
+	// LabelsToWatch describes the labels that should be watched
 	LabelsToWatch map[string]string `json:"labelsToWatch"`
+
+	// Field describes the subresource that should be watched
+	// Value can be one of ("spec", "status")
+	Field FieldName `json:"field"`
 }
+
+type FieldName string
+
+const (
+	// SpecField represents FieldName spec, which indicates that resource spec will be watched.
+	SpecField FieldName = "spec"
+	// StatusField represents FieldName status, which indicates that only resource status will be watched
+	StatusField FieldName = "status"
+)
 
 type ServiceInfo struct {
 	// ServicePort describes the port on which operator service can be reached.
@@ -66,6 +50,9 @@ type ServiceInfo struct {
 
 	// ServiceName describes the service name for the operator.
 	ServiceName string `json:"serviceName"`
+
+	// ServiceNamespace describes the service namespace for the operator.
+	ServiceNamespace string `json:"serviceNamespace"`
 }
 
 // +kubebuilder:validation:Enum=Processing;Deleting;Ready;Error
@@ -125,6 +112,7 @@ type WatcherCondition struct {
 	LastTransitionTime *metav1.Time `json:"lastTransitionTime"`
 }
 
+// +kubebuilder:validation:Enum=Ready
 type WatcherConditionType string
 
 const (

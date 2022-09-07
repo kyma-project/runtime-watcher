@@ -3,66 +3,106 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/module-manager/operator/pkg/custom"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	lifecycleLib "github.com/kyma-project/module-manager/operator/pkg/manifest"
-	"github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"helm.sh/helm/v3/pkg/cli"
-	admissionv1 "k8s.io/api/admissionregistration/v1"
 
-	"github.com/slok/go-helm-template/helm"
-	k8sapiyaml "k8s.io/apimachinery/pkg/util/yaml"
+	kymav1alpha1 "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
+	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
+	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	k8syaml "sigs.k8s.io/yaml"
 )
 
 const (
-	WebhookHandlerURLPathPattern = "/%s/validate"
-	firstElementIdx              = 0
-	FileWritePermissions         = 0o644
-	DecodeBufferSize             = 2048
-	renderedWebhookConfigSuffix  = "rendered"
-	KymaProjectWebhookFQDN       = "webhook.kyma-project.io"
-	HelmTemplatesDirName         = "templates"
-	webhookAPIVersion            = "admissionregistration.k8s.io/v1"
-	webhookConfigKind            = "ValidatingWebhookConfiguration"
+	customChartConfigName      = "custom-modules-config"
+	customChartConfigNamespace = metav1.NamespaceDefault
+	customConfigKey            = "modules"
+	FileWritePermissions       = 0o644
+	kubeconfigKey              = "config"
 )
 
-type WatchableResourcesByModule struct {
-	ModuleName  string
-	GvrsToWatch []*v1alpha1.WatchableGvr
+type WatchableConfig struct {
+	Labels     map[string]string `json:"labels"`
+	StatusOnly bool              `json:"statusOnly"`
 }
 
-// watchableResources are result of the config merge operation
-// config merge will be implemented by https://github.com/kyma-project/runtime-watcher/issues/16
-func RedeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableResources []*WatchableResourcesByModule,
-	helmRepoFile, releaseName, namespace, webhookChartPath, webhookConfigFileName string,
+type Mode string
+
+const (
+	ModeInstall   = Mode("install")
+	ModeUninstall = Mode("uninstall")
+)
+
+func getSKRRestConfigs(ctx context.Context, reader client.Reader) ([]*rest.Config, error) {
+	kymas := &kymav1alpha1.KymaList{}
+	err := reader.List(ctx, kymas)
+	if err != nil {
+		return nil, err
+	}
+	restCfgs := []*rest.Config{}
+	for _, kyma := range kymas.Items {
+		secret := &v1.Secret{}
+		//nolint:gosec
+		err = reader.Get(ctx, client.ObjectKeyFromObject(&kyma), secret)
+		if err != nil {
+			return nil, err
+		}
+		restCfg, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigKey])
+		if err == nil {
+			restCfgs = append(restCfgs, restCfg)
+		}
+	}
+
+	return restCfgs, nil
+}
+
+func InstallWebhookOnAllSKRs(ctx context.Context, releaseName string,
+	obj *componentv1alpha1.Watcher, k8sClient client.Client,
 ) error {
-	// 1.step: update webhook helm chart
-	err := updateWebhookChart(ctx, watchableResources,
-		releaseName, namespace, webhookChartPath, webhookConfigFileName)
+	restCfgs, err := getSKRRestConfigs(ctx, k8sClient)
 	if err != nil {
 		return err
 	}
-	// 2.step: deploy helm chart
-	argsVal := make(map[string]interface{}, 1)
-	argsVal["isWebhookConfigRendered"] = true
+	for _, restCfg := range restCfgs {
+		err = InstallSKRWebhook(ctx, releaseName, obj, restCfg, k8sClient)
+		if err != nil {
+			continue
+		}
+	}
+	// return err so that if err!=nil, reconciliation will be retriggered after requeue interval
+	return err
+}
+
+func InstallSKRWebhook(ctx context.Context, releaseName string,
+	obj *componentv1alpha1.Watcher, restConfig *rest.Config, k8sClient client.Client,
+) error {
+	err := updateChartConfigMapForCR(ctx, k8sClient, obj)
+	if err != nil {
+		return err
+	}
+	argsVals, err := generateHelmChartArgs(ctx, k8sClient)
+	if err != nil {
+		return err
+	}
 	restClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return err
 	}
 	skrWatcherDeployInfo := lifecycleLib.InstallInfo{
 		ChartInfo: &lifecycleLib.ChartInfo{
-			ChartPath:   webhookChartPath,
+			ChartPath:   util.DefaultWebhookChartPath,
 			ReleaseName: releaseName,
 		},
 		RemoteInfo: custom.RemoteInfo{
@@ -74,155 +114,83 @@ func RedeploySKRWebhook(ctx context.Context, restConfig *rest.Config, watchableR
 			return true, nil
 		},
 	}
-	err = deployWatcherHelmChart(ctx, restConfig, helmRepoFile, releaseName, skrWatcherDeployInfo, argsVal)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, ModeInstall)
 }
 
-func updateWebhookChart(ctx context.Context, watchableResources []*WatchableResourcesByModule,
-	releaseName, namespace, webhookChartPath, webhookConfigFileName string,
-) error {
-	chartFS := os.DirFS(webhookChartPath)
-	chart, err := helm.LoadChart(ctx, chartFS)
-	if err != nil {
-		return err
-	}
-	// render helm template only for the file that contains the webhook config.
-	result, err := helm.Template(ctx, helm.TemplateConfig{
-		Chart:       chart,
-		ReleaseName: releaseName,
-		Namespace:   namespace,
-		ShowFiles:   []string{webhookConfigFileName},
-	})
-	if err != nil {
-		return err
-	}
+func updateChartConfigMapForCR(ctx context.Context, k8sClient client.Client, obj *componentv1alpha1.Watcher) error {
+	configMap := &v1.ConfigMap{}
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Name:      customChartConfigName,
+		Namespace: customChartConfigNamespace,
+	}, configMap)
+	if k8sapierrors.IsNotFound(err) {
 
-	webhookConfig, err := lookupWebhookConfigInYaml(result)
-	if err != nil {
-		return err
-	}
-	baseWebhookConfig := getBaseWebhookConfig(webhookConfig)
-	webhookConfig.Webhooks = webhooksConfigsFromBaseWebhookAndWatchableResources(baseWebhookConfig, watchableResources)
-	webhookConfigYaml, err := k8syaml.Marshal(webhookConfig)
-	if err != nil {
-		return err
-	}
-	renderedWebhookConfigFilePath := RenderedConfigFilePath(webhookChartPath, webhookConfigFileName)
-	err = os.WriteFile(renderedWebhookConfigFilePath, webhookConfigYaml, FileWritePermissions)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func lookupWebhookConfigInYaml(yaml string) (*admissionv1.ValidatingWebhookConfiguration, error) {
-	webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-	reader := strings.NewReader(yaml)
-	k8sYamlDec := k8sapiyaml.NewYAMLOrJSONDecoder(reader, DecodeBufferSize)
-	err := k8sYamlDec.Decode(webhookConfig)
-	if err != nil {
-		return nil, err
-	}
-	if !isWebhookConfig(webhookConfig.APIVersion, webhookConfig.Kind) {
-		return nil, fmt.Errorf("webhook config not found")
-	}
-	return webhookConfig, nil
-}
-
-func isWebhookConfig(apiVersion, kind string) bool {
-	return apiVersion == webhookAPIVersion && kind == webhookConfigKind
-}
-
-func RenderedConfigFilePath(webhookChartPath, webhookConfigFileName string) string {
-	fileNameArray := strings.Split(webhookConfigFileName, ".")
-	renderedWebhookConfigFileName := fmt.Sprintf("%s-%s.%s", fileNameArray[0],
-		renderedWebhookConfigSuffix, fileNameArray[1])
-	return path.Join(webhookChartPath, HelmTemplatesDirName, renderedWebhookConfigFileName)
-}
-
-func getBaseWebhookConfig(webhookConfig *admissionv1.ValidatingWebhookConfiguration) *admissionv1.ValidatingWebhook {
-	return &webhookConfig.Webhooks[firstElementIdx]
-}
-
-func webhooksConfigsFromBaseWebhookAndWatchableResources(baseWebhook *admissionv1.ValidatingWebhook,
-	watchableResources []*WatchableResourcesByModule,
-) []admissionv1.ValidatingWebhook {
-	webhooks := make([]admissionv1.ValidatingWebhook, 0, len(watchableResources))
-	for _, watchableResource := range watchableResources {
-		webhook := *baseWebhook.DeepCopy()
-		moduleName := watchableResource.ModuleName
-		configName := fmt.Sprintf("%s.%s", moduleName, KymaProjectWebhookFQDN)
-		rules, labels := RulesAndLabelsFromGvrsToWatch(watchableResource.GvrsToWatch)
-		servicePath := fmt.Sprintf(WebhookHandlerURLPathPattern, watchableResource.ModuleName)
-		webhook.Name = configName
-		webhook.ObjectSelector.MatchLabels = labels
-		webhook.Rules = rules
-		webhook.ClientConfig.Service.Path = &servicePath
-		webhooks = append(webhooks, webhook)
-	}
-	return webhooks
-}
-
-func RulesAndLabelsFromGvrsToWatch(gvrsToWatch []*v1alpha1.WatchableGvr) (
-	[]admissionv1.RuleWithOperations, map[string]string,
-) {
-	l := len(gvrsToWatch)
-	labelsArray := make([]map[string]string, 0, l)
-	labelsMapCapacity := 0
-	rules := make([]admissionv1.RuleWithOperations, 0, l)
-	for _, gvr := range gvrsToWatch {
-		rule := admissionv1.RuleWithOperations{
-			Operations: []admissionv1.OperationType{admissionv1.OperationAll},
-			Rule: admissionv1.Rule{
-				APIGroups:   []string{gvr.Gvr.Group},
-				APIVersions: []string{gvr.Gvr.Version},
-				Resources:   []string{gvr.Gvr.Resource},
-			},
+		chartCfg := generateWatchableConfigForCR(obj)
+		bytes, err := k8syaml.Marshal(chartCfg)
+		if err != nil {
+			return err
 		}
-		rules = append(rules, rule)
-		labelsArray = append(labelsArray, gvr.LabelsToWatch)
-		labelsMapCapacity += len(gvr.LabelsToWatch)
+		configMap.SetName(customChartConfigName)
+		configMap.SetNamespace(customChartConfigNamespace)
+		configMapData := map[string]string{
+			customConfigKey: string(bytes),
+		}
+		configMap.Data = configMapData
+		err = k8sClient.Create(ctx, configMap)
+		return err
 	}
 
-	return rules, aggregateLabels(labelsArray, labelsMapCapacity)
-}
-
-func aggregateLabels(maps []map[string]string, capacity int) map[string]string {
-	if capacity <= 0 {
+	rawConfig, exists := configMap.Data[customConfigKey]
+	if !exists {
+		return fmt.Errorf("error getting modules config")
+	}
+	currentConfig := map[string]WatchableConfig{}
+	err = k8syaml.Unmarshal([]byte(rawConfig), &currentConfig)
+	if err != nil {
+		return err
+	}
+	moduleName := obj.Labels[util.ManagedBylabel]
+	_, exists = currentConfig[moduleName]
+	if exists {
 		return nil
 	}
-	result := make(map[string]string, capacity)
-	for _, mx := range maps {
-		for k, v := range mx {
-			result[k] = v
-		}
+	updatedConfig := make(map[string]WatchableConfig, len(currentConfig)+1)
+	for k, v := range currentConfig {
+		updatedConfig[k] = v
 	}
-	return result
+	statusOnly := obj.Spec.Field == componentv1alpha1.StatusField
+	updatedConfig[moduleName] = WatchableConfig{
+		Labels:     obj.Spec.LabelsToWatch,
+		StatusOnly: statusOnly,
+	}
+	bytes, err := k8syaml.Marshal(updatedConfig)
+	if err != nil {
+		return err
+	}
+	configMap.Data[customConfigKey] = string(bytes)
+	return k8sClient.Update(ctx, configMap)
 }
 
-func deployWatcherHelmChart(ctx context.Context, restConfig *rest.Config, helmRepoFile, releaseName string,
-	deployInfo lifecycleLib.InstallInfo, argsVals map[string]interface{},
+func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, releaseName string,
+	argsVals map[string]interface{}, deployInfo lifecycleLib.InstallInfo, mode Mode,
 ) error {
 	logger := logf.FromContext(ctx)
 	args := make(map[string]map[string]interface{}, 1)
 	args["set"] = argsVals
 	ops, err := lifecycleLib.NewOperations(&logger, restConfig, releaseName,
-		&cli.EnvSettings{
-			RepositoryConfig: helmRepoFile,
-		}, args, nil)
+		&cli.EnvSettings{}, args, nil)
 	if err != nil {
 		return err
 	}
-	uninstalled, err := ops.Uninstall(deployInfo)
-	if err != nil {
-		return err
-	}
-	if !uninstalled {
-		return fmt.Errorf("failed to uninstall webhook config")
+	if mode == ModeUninstall {
+		uninstalled, err := ops.Uninstall(deployInfo)
+		if err != nil {
+			return err
+		}
+		if !uninstalled {
+			return fmt.Errorf("failed to install webhook config")
+		}
+		return nil
 	}
 	installed, err := ops.Install(deployInfo)
 	if err != nil {
@@ -231,13 +199,34 @@ func deployWatcherHelmChart(ctx context.Context, restConfig *rest.Config, helmRe
 	if !installed {
 		return fmt.Errorf("failed to install webhook config")
 	}
-
-	ready, err := ops.VerifyResources(deployInfo)
-	if err != nil {
-		return err
-	}
-	if !ready {
-		return fmt.Errorf("skr webhook resources are not ready")
-	}
 	return nil
+}
+
+func generateHelmChartArgs(ctx context.Context, reader client.Reader) (map[string]interface{}, error) {
+	configMap := &v1.ConfigMap{}
+	err := reader.Get(ctx, client.ObjectKey{
+		Name:      customChartConfigName,
+		Namespace: customChartConfigNamespace,
+	}, configMap)
+	if err != nil {
+		return nil, err
+	}
+	rawConfig, exists := configMap.Data[customConfigKey]
+	if !exists {
+		return nil, fmt.Errorf("error getting modules config")
+	}
+
+	helmChartArgs := make(map[string]interface{}, 1)
+	helmChartArgs[customConfigKey] = rawConfig
+	return helmChartArgs, nil
+}
+
+func generateWatchableConfigForCR(obj *componentv1alpha1.Watcher) map[string]WatchableConfig {
+	statusOnly := obj.Spec.Field == componentv1alpha1.StatusField
+	return map[string]WatchableConfig{
+		obj.Labels[util.ManagedBylabel]: {
+			Labels:     obj.Spec.LabelsToWatch,
+			StatusOnly: statusOnly,
+		},
+	}
 }

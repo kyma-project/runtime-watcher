@@ -32,18 +32,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	istioclientapiv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	istioGatewayResourceName = "kcp-listener-gw"
-	watcherFinalizer         = "operator.kyma-project.io/watcher"
-	istioGatewayGVR          = "gateways.networking.istio.io/v1beta1"
-	istioVirtualServiceGVR   = "virtualservices.networking.istio.io/v1beta1"
+	IstioGatewayResourceName = "kcp-listener-gw"
+	// TODO: add IstioGatewayNamespace as a parameter in WatcherConfig.
+	IstioGatewayNamespace = metav1.NamespaceDefault
+	watcherFinalizer      = "operator.kyma-project.io/watcher"
+	releaseName           = "watcher"
 )
 
 // WatcherReconciler reconciles a Watcher object.
@@ -54,9 +55,19 @@ type WatcherReconciler struct {
 	Config     *util.WatcherConfig
 }
 
+//nolint:lll
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=watchers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=watchers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=watchers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=kymas,verbs=get;list;watch
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=kymas/status,verbs=get;list;watch
+// +kubebuilder:rbac:groups=networking.istio.io,resources=virtualservices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=networking.istio.io,resources=gateways,verbs=get;list;watch;create;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
 //
 //nolint:lll
 func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -112,11 +123,7 @@ func (r *WatcherReconciler) HandleInitialState(ctx context.Context, obj *compone
 func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 	logger logr.Logger, obj *componentv1alpha1.Watcher,
 ) error {
-	err := r.createConfigMapForCR(ctx, obj)
-	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to create config map")
-	}
-	err = r.createOrUpdateServiceMeshConfigForCR(ctx, obj)
+	err := r.createOrUpdateServiceMeshConfigForCR(ctx, obj)
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to create or update service mesh config")
 	}
@@ -138,10 +145,6 @@ func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr
 	err := r.deleteServiceMeshConfigForCR(ctx, obj)
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete service mesh config")
-	}
-	err = r.deleteSKRWatcherConfigForCR(ctx, obj)
-	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete SKR config")
 	}
 	updated := controllerutil.RemoveFinalizer(obj, watcherFinalizer)
 	if !updated {
@@ -184,38 +187,16 @@ func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Lo
 	return nil
 }
 
-func (r *WatcherReconciler) createConfigMapForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	cmObjectKey := client.ObjectKey{
-		Name:      util.ConfigMapResourceName,
-		Namespace: obj.GetNamespace(),
-	}
-	configMap := &v1.ConfigMap{}
-	err := r.Get(ctx, cmObjectKey, configMap)
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get config map: %w", err)
-	}
-	if errors.IsNotFound(err) {
-		configMap.SetName(cmObjectKey.Name)
-		configMap.SetNamespace(cmObjectKey.Namespace)
-		err = r.Create(ctx, configMap)
-		if err != nil {
-			return fmt.Errorf("failed to create config map: %w", err)
-		}
-	}
-	return nil
-}
-
 func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Context,
 	obj *componentv1alpha1.Watcher,
 ) error {
-	namespace := obj.GetNamespace()
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
-	err = r.createOrUpdateIstioGwForCR(ctx, istioClientSet, namespace)
+	err = r.createIstioGateway(ctx, istioClientSet)
 	if err != nil {
-		return fmt.Errorf("failed to create and configure Istio Gateway resource: %w", err)
+		return fmt.Errorf("failed to create Istio Gateway resource: %w", err)
 	}
 	err = r.createOrUpdateIstioVirtualServiceForCR(ctx, istioClientSet, obj)
 	if err != nil {
@@ -224,36 +205,25 @@ func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Con
 	return nil
 }
 
-func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context, istioClientSet *istioclient.Clientset,
-	namespace string,
+func (r *WatcherReconciler) createIstioGateway(ctx context.Context,
+	istioClientSet *istioclient.Clientset,
 ) error {
-	listenerGateway, apiErr := istioClientSet.NetworkingV1beta1().
-		Gateways(namespace).Get(ctx, istioGatewayResourceName, metav1.GetOptions{})
-	ready, err := util.IstioResourcesErrorCheck(istioGatewayGVR, apiErr)
-	if !ready {
+	_, apiErr := istioClientSet.NetworkingV1beta1().
+		Gateways(IstioGatewayNamespace).Get(ctx, IstioGatewayResourceName, metav1.GetOptions{})
+	err := util.IstioResourcesErrorCheck(util.IstioGatewayGVR, apiErr)
+	if err != nil {
 		return err
 	}
 
 	if errors.IsNotFound(apiErr) {
 		// create gateway with config from CR
 		gateway := &istioclientapiv1beta1.Gateway{}
-		gateway.SetName(istioGatewayResourceName)
-		gateway.SetNamespace(namespace)
+		gateway.SetName(IstioGatewayResourceName)
+		gateway.SetNamespace(IstioGatewayNamespace)
 		util.UpdateIstioGWConfig(gateway, r.Config.ListenerIstioGatewayPort)
-		_, apiErr = istioClientSet.NetworkingV1beta1().Gateways(namespace).Create(ctx, gateway, metav1.CreateOptions{})
-		if apiErr != nil {
-			return apiErr
-		}
-		return nil
-	}
-
-	if util.IsGWConfigChanged(listenerGateway, r.Config.ListenerIstioGatewayPort) {
-		util.UpdateIstioGWConfig(listenerGateway, r.Config.ListenerIstioGatewayPort)
-		_, apiErr = istioClientSet.NetworkingV1beta1().
-			Gateways(namespace).Update(ctx, listenerGateway, metav1.UpdateOptions{})
-		if apiErr != nil {
-			return apiErr
-		}
+		_, apiErr = istioClientSet.NetworkingV1beta1().Gateways(IstioGatewayNamespace).
+			Create(ctx, gateway, metav1.CreateOptions{})
+		return apiErr
 	}
 
 	return nil
@@ -266,37 +236,31 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 	vsName := obj.GetName()
 	listenerVirtualService, apiErr := istioClientSet.NetworkingV1beta1().
 		VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
-	ready, err := util.IstioResourcesErrorCheck(istioGatewayGVR, apiErr)
-	if !ready {
+	err := util.IstioResourcesErrorCheck(util.IstioVirtualServiceGVR, apiErr)
+	if err != nil {
 		return err
 	}
 	if errors.IsNotFound(apiErr) {
 		vs := &istioclientapiv1beta1.VirtualService{}
 		vs.SetName(vsName)
 		vs.SetNamespace(namespace)
-		util.UpdateVirtualServiceConfig(vs, obj, istioGatewayResourceName)
+		util.UpdateVirtualServiceConfig(vs, obj, IstioGatewayResourceName, IstioGatewayNamespace)
 		_, err := istioClientSet.NetworkingV1beta1().
 			VirtualServices(namespace).Create(ctx, vs, metav1.CreateOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	}
 	// check if config already exists
-	if util.IsVirtualServiceConfigChanged(listenerVirtualService, obj, istioGatewayResourceName) {
-		util.UpdateVirtualServiceConfig(listenerVirtualService, obj, istioGatewayResourceName)
+	if util.IsVirtualServiceConfigChanged(listenerVirtualService, obj, IstioGatewayResourceName, IstioGatewayNamespace) {
+		util.UpdateVirtualServiceConfig(listenerVirtualService, obj, IstioGatewayResourceName, IstioGatewayNamespace)
 		_, err = istioClientSet.NetworkingV1beta1().
 			VirtualServices(namespace).Update(ctx, listenerVirtualService, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
+		return err
 	}
 	return nil
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	// this will be implemented as part of another step: see https://github.com/kyma-project/runtime-watcher/issues/33
-	return nil
+	return deploy.InstallWebhookOnAllSKRs(ctx, releaseName, obj, r.Client)
 }
 
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
@@ -318,10 +282,6 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, ob
 	if err != nil {
 		return fmt.Errorf("failed to delete istio virtual service: %w", err)
 	}
-	return nil
-}
-
-func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
 	return nil
 }
 
@@ -355,32 +315,17 @@ func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger
 func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 	obj *componentv1alpha1.Watcher,
 ) (bool, error) {
-	// 1.step: config map check
-	namespace := obj.GetNamespace()
-	returns, err := util.PerformConfigMapCheck(ctx, r.Client, namespace)
-	if returns {
-		return false, err
-	}
-
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w",
 			r.RestConfig.String(), err)
 	}
-	// 2.step: istio GW check
-	returns, err = util.PerformIstioGWCheck(ctx, istioClientSet, r.Config.ListenerIstioGatewayPort,
-		istioGatewayResourceName, istioGatewayGVR, namespace)
-	if returns {
-		return false, err
-	}
-	// 3.step: istio VirtualService check
-	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj,
-		istioVirtualServiceGVR, istioGatewayResourceName)
+	returns, err := util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj, IstioGatewayResourceName,
+		IstioGatewayNamespace)
 	if returns {
 		return false, err
 	}
 
-	// this will be implemented as part of another step: see https://github.com/kyma-project/runtime-watcher/issues/33
 	return true, nil
 }
 

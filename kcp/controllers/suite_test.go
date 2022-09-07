@@ -23,10 +23,10 @@ import (
 	"net/http"
 	"path/filepath"
 	"testing"
-	"time"
 
 	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -48,7 +48,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	_          *rest.Config
+	cfg        *rest.Config         //nolint:gochecknoglobals
 	k8sClient  client.Client        //nolint:gochecknoglobals
 	k8sManager manager.Manager      //nolint:gochecknoglobals
 	testEnv    *envtest.Environment //nolint:gochecknoglobals
@@ -90,7 +90,7 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 	}
 
-	cfg, err := testEnv.Start()
+	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
@@ -112,7 +112,12 @@ var _ = BeforeSuite(func() {
 	err = (&controllers.WatcherReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: scheme.Scheme,
+		Config: &util.WatcherConfig{
+			RequeueInterval:          util.DefaultRequeueInterval,
+			ListenerIstioGatewayPort: util.DefaultIstioGatewayPort,
+		},
 	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
 		defer GinkgoRecover()
@@ -122,12 +127,9 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
+	By("cancelling the context for the manager to shutdown")
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
-	// Set 4 with random, to avoid `timeout waiting for process kube-apiserver to stop`
-	if err != nil {
-		time.Sleep(4 * time.Second)
-	}
-	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })

@@ -90,3 +90,6 @@ kcp/pkg/deploy/assets/sample-chart/templates/webhook-config-rendered.yaml
 */bin
 # ignore go.work
 go.work*
+kcp/pkg/deploy/assets/custom-modules-config.yaml
+*/.lock
+kcp/webhook-chart/
