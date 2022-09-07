@@ -24,10 +24,8 @@ import (
 const (
 	gwPortVarName           = "LISTENER_GW_PORT"
 	requeueIntervalVarName  = "REQUEUE_INTERVAL"
-	webhookChartPathVarName = "WEBHOOK_CHART_PATH"
 	DefaultIstioGatewayPort = 80
 	DefaultRequeueInterval  = 500
-	defaultWebhookChartPath = "/Users/I553979/workspace/kyma-watcher/skr/chart/skr-webhook"
 	httpProtocol            = "HTTP"
 	istioGWSelectorMapKey   = "istio"
 	istioGWSelectorMapValue = "ingressgateway"
@@ -37,11 +35,12 @@ const (
 	defaultOperatorWatcherCRLabel = "operator.kyma-project.io/default"
 	ConfigMapResourceName         = "kcp-watcher-modules"
 	// TODO: add ConfigMapNamespace as a parameter in WatcherConfig.
-	ConfigMapNamespace     = metav1.NamespaceDefault
-	IstioGatewayGVR        = "gateways.networking.istio.io/v1beta1"
-	IstioVirtualServiceGVR = "virtualservices.networking.istio.io/v1beta1"
-	ManagedBylabel         = "operator.kyma-project.io/managed-by"
-	contractVersion        = "v1"
+	ConfigMapNamespace      = metav1.NamespaceDefault
+	IstioGatewayGVR         = "gateways.networking.istio.io/v1beta1"
+	IstioVirtualServiceGVR  = "virtualservices.networking.istio.io/v1beta1"
+	ManagedBylabel          = "operator.kyma-project.io/managed-by"
+	contractVersion         = "v1"
+	DefaultWebhookChartPath = "webhook-chart"
 )
 
 type WatcherConfig struct {
@@ -52,8 +51,6 @@ type WatcherConfig struct {
 	ListenerIstioGatewayPort uint32
 	// RequeueInterval represents requeue interval in seconds
 	RequeueInterval int
-	// WebhookChartPath represents the path of the SKR webhook helm chart
-	WebhookChartPath string
 }
 
 func IsDefaultComponent(labels map[string]string) bool {
@@ -84,17 +81,14 @@ func IstioResourcesErrorCheck(gvr string, err error) (bool, error) {
 }
 
 func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
+	// TODO: remove before pushing the changes
+	fileInfo, err := os.Stat(DefaultWebhookChartPath)
+	if err != nil || !fileInfo.IsDir() {
+		logger.V(1).Error(err, "failed to read local skr chart")
+	}
 	// TODO: refactor, default values are set for now
 	config := &WatcherConfig{}
-	webhookChartPathVarVal, isSet := os.LookupEnv(webhookChartPathVarName)
-	if isSet && webhookChartPathVarVal != "" {
-		config.WebhookChartPath = webhookChartPathVarVal
-	} else {
-		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", webhookChartPathVarName))
-		config.WebhookChartPath = defaultWebhookChartPath
-	}
-
-	_, isSet = os.LookupEnv(gwPortVarName)
+	_, isSet := os.LookupEnv(gwPortVarName)
 	if !isSet {
 		logger.V(1).Error(nil, fmt.Sprintf("%s env var is not set", gwPortVarName))
 	}

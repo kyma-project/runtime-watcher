@@ -68,7 +68,7 @@ func getSKRRestConfigs(ctx context.Context, r client.Reader) ([]*rest.Config, er
 	return restCfgs, nil
 }
 
-func InstallWebhookOnAllSKRs(ctx context.Context, webhookChartPath, releaseName string,
+func InstallWebhookOnAllSKRs(ctx context.Context, releaseName string,
 	obj *componentv1alpha1.Watcher, r client.Client,
 ) error {
 	restCfgs, err := getSKRRestConfigs(ctx, r)
@@ -76,7 +76,7 @@ func InstallWebhookOnAllSKRs(ctx context.Context, webhookChartPath, releaseName 
 		return err
 	}
 	for _, restCfg := range restCfgs {
-		err = InstallSKRWebhook(ctx, webhookChartPath, releaseName, obj, restCfg, r)
+		err = InstallSKRWebhook(ctx, releaseName, obj, restCfg, r)
 		if err != nil {
 			continue
 		}
@@ -85,7 +85,7 @@ func InstallWebhookOnAllSKRs(ctx context.Context, webhookChartPath, releaseName 
 	return err
 }
 
-func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string,
+func InstallSKRWebhook(ctx context.Context, releaseName string,
 	obj *componentv1alpha1.Watcher, restConfig *rest.Config, r client.Client,
 ) error {
 	err := updateChartConfigMapForCR(ctx, r, obj)
@@ -102,7 +102,7 @@ func InstallSKRWebhook(ctx context.Context, webhookChartPath, releaseName string
 	}
 	skrWatcherDeployInfo := lifecycleLib.InstallInfo{
 		ChartInfo: &lifecycleLib.ChartInfo{
-			ChartPath:   webhookChartPath,
+			ChartPath:   util.DefaultWebhookChartPath,
 			ReleaseName: releaseName,
 		},
 		RemoteInfo: custom.RemoteInfo{

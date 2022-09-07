@@ -18,9 +18,8 @@ import (
 
 const (
 	servicePathTpl     = "/validate/%s"
-	specSubresources   = "*/*"
+	specSubresources   = "*"
 	statusSubresources = "*/status"
-	webhookChartPath   = "assets/sample-chart"
 	releaseName        = "watcher"
 )
 
@@ -30,7 +29,7 @@ var _ = Describe("deploy watcher", func() {
 
 	It("deploys watcher helm chart with correct webhook config", func() {
 		Skip("skipped for now in favor of local testing due to time constraints")
-		err := deploy.InstallSKRWebhook(ctx, webhookChartPath, releaseName, watcherCR, testEnv.Config, k8sClient)
+		err := deploy.InstallSKRWebhook(ctx, releaseName, watcherCR, testEnv.Config, k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
 		err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)

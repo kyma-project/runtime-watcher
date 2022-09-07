@@ -267,7 +267,7 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	return deploy.InstallWebhookOnAllSKRs(ctx, r.Config.WebhookChartPath, releaseName, obj, r.Client)
+	return deploy.InstallWebhookOnAllSKRs(ctx, releaseName, obj, r.Client)
 }
 
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {

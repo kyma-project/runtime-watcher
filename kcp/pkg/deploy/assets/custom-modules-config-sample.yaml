@@ -1,9 +1,0 @@
-modules:
-  comapss-operator:
-    labels:
-      compass-watching: "true"
-    statusOnly: true
-  lifecycle-manager:
-    labels:
-      kyma-watchable: "true"
-    statusOnly: false

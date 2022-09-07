@@ -46,27 +46,6 @@ const (
 	SubresourceTypeStatus SubresourceType = "Status"
 )
 
-type Gvr struct {
-	// Group describes the group of the watchable resource
-	Group string `json:"group"`
-
-	// Version describes the version of the watchable resource
-	Version string `json:"version"`
-
-	// Resource describes the resource should be watched
-	Resource string `json:"resource"`
-}
-
-type WatchableGvr struct {
-	// Gvr describes the gvr that should be watched
-	// +kubebuilder:validation:Optional
-	Gvr Gvr `json:"gvr"`
-
-	// LabelsToWatch describes the labels that should be watched from the gvr
-	// +kubebuilder:validation:Optional
-	LabelsToWatch map[string]string `json:"labelsToWatch"`
-}
-
 type ServiceInfo struct {
 	// ServicePort describes the port on which operator service can be reached.
 	ServicePort int64 `json:"servicePort"`
