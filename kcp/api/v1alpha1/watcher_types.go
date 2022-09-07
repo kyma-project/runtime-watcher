@@ -112,6 +112,7 @@ type WatcherCondition struct {
 	LastTransitionTime *metav1.Time `json:"lastTransitionTime"`
 }
 
+// +kubebuilder:validation:Enum=Ready
 type WatcherConditionType string
 
 const (
