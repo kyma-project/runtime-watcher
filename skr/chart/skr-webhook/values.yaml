@@ -8,8 +8,7 @@ image:
   # -- Image name
   name: "runtime-watcher-skr"
   # -- Image tag
-  # TODO: change it to latest
-  tag: "PR-53"
+  tag: "latest"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets
