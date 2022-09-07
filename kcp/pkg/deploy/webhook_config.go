@@ -161,7 +161,7 @@ func updateChartConfigMapForCR(ctx context.Context, r client.Client, obj *compon
 	for k, v := range currentConfig {
 		updatedConfig[k] = v
 	}
-	statusOnly := obj.Spec.SubresourceToWatch == componentv1alpha1.SubresourceTypeStatus
+	statusOnly := obj.Spec.Field == componentv1alpha1.StatusField
 	updatedConfig[moduleName] = WatchableConfig{
 		Labels:     obj.Spec.LabelsToWatch,
 		StatusOnly: statusOnly,
@@ -229,7 +229,7 @@ func generateHelmChartArgs(ctx context.Context, r client.Reader) (map[string]int
 }
 
 func generateWatchableConfigForCR(obj *componentv1alpha1.Watcher) map[string]WatchableConfig {
-	statusOnly := obj.Spec.SubresourceToWatch == componentv1alpha1.SubresourceTypeStatus
+	statusOnly := obj.Spec.Field == componentv1alpha1.StatusField
 	return map[string]WatchableConfig{
 		obj.Labels[util.ManagedBylabel]: {
 			Labels:     obj.Spec.LabelsToWatch,

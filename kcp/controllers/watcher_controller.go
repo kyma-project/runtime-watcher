@@ -184,9 +184,9 @@ func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Con
 	if err != nil {
 		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
-	err = r.createOrUpdateIstioGwForCR(ctx, istioClientSet)
+	err = r.createIstioGateway(ctx, istioClientSet)
 	if err != nil {
-		return fmt.Errorf("failed to create and configure Istio Gateway resource: %w", err)
+		return fmt.Errorf("failed to create Istio Gateway resource: %w", err)
 	}
 	err = r.createOrUpdateIstioVirtualServiceForCR(ctx, istioClientSet, obj)
 	if err != nil {
@@ -195,13 +195,13 @@ func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Con
 	return nil
 }
 
-func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context,
+func (r *WatcherReconciler) createIstioGateway(ctx context.Context,
 	istioClientSet *istioclient.Clientset,
 ) error {
-	listenerGateway, apiErr := istioClientSet.NetworkingV1beta1().
+	_, apiErr := istioClientSet.NetworkingV1beta1().
 		Gateways(IstioGatewayNamespace).Get(ctx, IstioGatewayResourceName, metav1.GetOptions{})
-	ready, err := util.IstioResourcesErrorCheck(util.IstioGatewayGVR, apiErr)
-	if !ready {
+	err := util.IstioResourcesErrorCheck(util.IstioGatewayGVR, apiErr)
+	if err != nil {
 		return err
 	}
 
@@ -213,19 +213,7 @@ func (r *WatcherReconciler) createOrUpdateIstioGwForCR(ctx context.Context,
 		util.UpdateIstioGWConfig(gateway, r.Config.ListenerIstioGatewayPort)
 		_, apiErr = istioClientSet.NetworkingV1beta1().Gateways(IstioGatewayNamespace).
 			Create(ctx, gateway, metav1.CreateOptions{})
-		if apiErr != nil {
-			return apiErr
-		}
-		return nil
-	}
-
-	if util.IsGWConfigChanged(listenerGateway, r.Config.ListenerIstioGatewayPort) {
-		util.UpdateIstioGWConfig(listenerGateway, r.Config.ListenerIstioGatewayPort)
-		_, apiErr = istioClientSet.NetworkingV1beta1().
-			Gateways(IstioGatewayNamespace).Update(ctx, listenerGateway, metav1.UpdateOptions{})
-		if apiErr != nil {
-			return apiErr
-		}
+		return apiErr
 	}
 
 	return nil
@@ -238,8 +226,8 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 	vsName := obj.GetName()
 	listenerVirtualService, apiErr := istioClientSet.NetworkingV1beta1().
 		VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
-	ready, err := util.IstioResourcesErrorCheck(util.IstioVirtualServiceGVR, apiErr)
-	if !ready {
+	err := util.IstioResourcesErrorCheck(util.IstioVirtualServiceGVR, apiErr)
+	if err != nil {
 		return err
 	}
 	if errors.IsNotFound(apiErr) {
@@ -249,19 +237,14 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 		util.UpdateVirtualServiceConfig(vs, obj, IstioGatewayResourceName, IstioGatewayNamespace)
 		_, err := istioClientSet.NetworkingV1beta1().
 			VirtualServices(namespace).Create(ctx, vs, metav1.CreateOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	}
 	// check if config already exists
 	if util.IsVirtualServiceConfigChanged(listenerVirtualService, obj, IstioGatewayResourceName, IstioGatewayNamespace) {
 		util.UpdateVirtualServiceConfig(listenerVirtualService, obj, IstioGatewayResourceName, IstioGatewayNamespace)
 		_, err = istioClientSet.NetworkingV1beta1().
 			VirtualServices(namespace).Update(ctx, listenerVirtualService, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
+		return err
 	}
 	return nil
 }
@@ -327,14 +310,7 @@ func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
 		return false, fmt.Errorf("failed to create istio client set from rest config(%s): %w",
 			r.RestConfig.String(), err)
 	}
-	// 1.step: istio GW check
-	returns, err := util.PerformIstioGWCheck(ctx, istioClientSet, r.Config.ListenerIstioGatewayPort,
-		IstioGatewayResourceName, IstioGatewayNamespace)
-	if returns {
-		return false, err
-	}
-	// 2.step: istio VirtualService check
-	returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj, IstioGatewayResourceName,
+	returns, err := util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj, IstioGatewayResourceName,
 		IstioGatewayNamespace)
 	if returns {
 		return false, err

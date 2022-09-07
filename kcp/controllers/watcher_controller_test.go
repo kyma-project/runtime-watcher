@@ -43,7 +43,7 @@ var watcherCREntries = []TableEntry{
 			LabelsToWatch: map[string]string{
 				"lifecycle-watchable": "true",
 			},
-			SubresourceToWatch: watcherapiv1alpha1.SubresourceTypeAll,
+			Field: watcherapiv1alpha1.SpecField,
 		},
 	}),
 }
@@ -93,11 +93,7 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 			// verify istio config
 			istioClientSet, err := istioclient.NewForConfig(cfg)
 			Expect(err).ToNot(HaveOccurred())
-			returns, err := util.PerformIstioGWCheck(ctx, istioClientSet, gatewayPortNumber,
-				controllers.IstioGatewayResourceName, controllers.IstioGatewayNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returns).To(BeFalse())
-			returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, watcherCR,
+			returns, err := util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, watcherCR,
 				controllers.IstioGatewayResourceName, controllers.IstioGatewayNamespace)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returns).To(BeFalse())
@@ -111,11 +107,6 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 			Eventually(watcherCRState(watcherObjKey)).WithTimeout(2 * time.Second).
 				WithPolling(20 * time.Microsecond).
 				Should(Equal(watcherapiv1alpha1.WatcherStateReady))
-
-			returns, err = util.PerformIstioGWCheck(ctx, istioClientSet, gatewayPortNumber,
-				controllers.IstioGatewayResourceName, controllers.IstioGatewayNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returns).To(BeFalse())
 			returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, watcherCR,
 				controllers.IstioGatewayResourceName, controllers.IstioGatewayNamespace)
 			Expect(err).ToNot(HaveOccurred())

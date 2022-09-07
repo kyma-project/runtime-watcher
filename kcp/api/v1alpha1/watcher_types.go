@@ -30,20 +30,18 @@ type WatcherSpec struct {
 	// LabelsToWatch describes the labels that should be watched
 	LabelsToWatch map[string]string `json:"labelsToWatch"`
 
-	// SubresourceToWatch describes the subresource that should be watched
-	// Value can be one of ("Spec", "Status")
-	SubresourceToWatch SubresourceType `json:"subresourceToWatch"`
+	// Field describes the subresource that should be watched
+	// Value can be one of ("spec", "status")
+	Field FieldName `json:"field"`
 }
 
-type SubresourceType string
+type FieldName string
 
 const (
-	// SubresourceTypeAll represents SubresourceType All, which indicates that all subresources
-	// will be watched.
-	SubresourceTypeAll SubresourceType = "All"
-	// SubresourceTypeStatus represents SubresourceType Status, which indicates that only Status subresource
-	// will be watched.
-	SubresourceTypeStatus SubresourceType = "Status"
+	// SpecField represents FieldName spec, which indicates that resource spec will be watched.
+	SpecField FieldName = "spec"
+	// StatusField represents FieldName status, which indicates that only resource status will be watched
+	StatusField FieldName = "status"
 )
 
 type ServiceInfo struct {
