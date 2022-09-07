@@ -28,7 +28,6 @@ import (
 const (
 	customChartConfigName      = "custom-modules-config"
 	customChartConfigNamespace = metav1.NamespaceDefault
-	customChartConfigPath      = "pkg/deploy/assets/custom-modules-config.yaml"
 	customConfigKey            = "modules"
 	FileWritePermissions       = 0o644
 	kubeconfigKey              = "config"
@@ -46,16 +45,17 @@ const (
 	ModeUninstall = Mode("uninstall")
 )
 
-func getSKRRestConfigs(ctx context.Context, r client.Reader) ([]*rest.Config, error) {
+func getSKRRestConfigs(ctx context.Context, reader client.Reader) ([]*rest.Config, error) {
 	kymas := &kymav1alpha1.KymaList{}
-	err := r.List(ctx, kymas)
+	err := reader.List(ctx, kymas)
 	if err != nil {
 		return nil, err
 	}
 	restCfgs := []*rest.Config{}
 	for _, kyma := range kymas.Items {
 		secret := &v1.Secret{}
-		err = r.Get(ctx, client.ObjectKeyFromObject(&kyma), secret)
+		//nolint:gosec
+		err = reader.Get(ctx, client.ObjectKeyFromObject(&kyma), secret)
 		if err != nil {
 			return nil, err
 		}
@@ -69,14 +69,14 @@ func getSKRRestConfigs(ctx context.Context, r client.Reader) ([]*rest.Config, er
 }
 
 func InstallWebhookOnAllSKRs(ctx context.Context, releaseName string,
-	obj *componentv1alpha1.Watcher, r client.Client,
+	obj *componentv1alpha1.Watcher, k8sClient client.Client,
 ) error {
-	restCfgs, err := getSKRRestConfigs(ctx, r)
+	restCfgs, err := getSKRRestConfigs(ctx, k8sClient)
 	if err != nil {
 		return err
 	}
 	for _, restCfg := range restCfgs {
-		err = InstallSKRWebhook(ctx, releaseName, obj, restCfg, r)
+		err = InstallSKRWebhook(ctx, releaseName, obj, restCfg, k8sClient)
 		if err != nil {
 			continue
 		}
@@ -86,13 +86,13 @@ func InstallWebhookOnAllSKRs(ctx context.Context, releaseName string,
 }
 
 func InstallSKRWebhook(ctx context.Context, releaseName string,
-	obj *componentv1alpha1.Watcher, restConfig *rest.Config, r client.Client,
+	obj *componentv1alpha1.Watcher, restConfig *rest.Config, k8sClient client.Client,
 ) error {
-	err := updateChartConfigMapForCR(ctx, r, obj)
+	err := updateChartConfigMapForCR(ctx, k8sClient, obj)
 	if err != nil {
 		return err
 	}
-	argsVals, err := generateHelmChartArgs(ctx, r)
+	argsVals, err := generateHelmChartArgs(ctx, k8sClient)
 	if err != nil {
 		return err
 	}
@@ -117,9 +117,9 @@ func InstallSKRWebhook(ctx context.Context, releaseName string,
 	return installOrRemoveChartOnSKR(ctx, restConfig, releaseName, argsVals, skrWatcherDeployInfo, ModeInstall)
 }
 
-func updateChartConfigMapForCR(ctx context.Context, r client.Client, obj *componentv1alpha1.Watcher) error {
+func updateChartConfigMapForCR(ctx context.Context, k8sClient client.Client, obj *componentv1alpha1.Watcher) error {
 	configMap := &v1.ConfigMap{}
-	err := r.Get(ctx, client.ObjectKey{
+	err := k8sClient.Get(ctx, client.ObjectKey{
 		Name:      customChartConfigName,
 		Namespace: customChartConfigNamespace,
 	}, configMap)
@@ -136,15 +136,15 @@ func updateChartConfigMapForCR(ctx context.Context, r client.Client, obj *compon
 			customConfigKey: string(bytes),
 		}
 		configMap.Data = configMapData
-		err = r.Create(ctx, configMap)
+		err = k8sClient.Create(ctx, configMap)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	rawConfig, ok := configMap.Data[customConfigKey]
-	if !ok {
+	rawConfig, exists := configMap.Data[customConfigKey]
+	if !exists {
 		return fmt.Errorf("error getting modules config")
 	}
 	currentConfig := map[string]WatchableConfig{}
@@ -153,8 +153,8 @@ func updateChartConfigMapForCR(ctx context.Context, r client.Client, obj *compon
 		return err
 	}
 	moduleName := obj.Labels[util.ManagedBylabel]
-	_, ok = currentConfig[moduleName]
-	if ok {
+	_, exists = currentConfig[moduleName]
+	if exists {
 		return nil
 	}
 	updatedConfig := make(map[string]WatchableConfig, len(currentConfig)+1)
@@ -171,7 +171,7 @@ func updateChartConfigMapForCR(ctx context.Context, r client.Client, obj *compon
 		return err
 	}
 	configMap.Data[customConfigKey] = string(bytes)
-	err = r.Update(ctx, configMap)
+	err = k8sClient.Update(ctx, configMap)
 	if err != nil {
 		return err
 	}
@@ -209,17 +209,17 @@ func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, rel
 	return nil
 }
 
-func generateHelmChartArgs(ctx context.Context, r client.Reader) (map[string]interface{}, error) {
+func generateHelmChartArgs(ctx context.Context, reader client.Reader) (map[string]interface{}, error) {
 	configMap := &v1.ConfigMap{}
-	err := r.Get(ctx, client.ObjectKey{
+	err := reader.Get(ctx, client.ObjectKey{
 		Name:      customChartConfigName,
 		Namespace: customChartConfigNamespace,
 	}, configMap)
 	if err != nil {
 		return nil, err
 	}
-	rawConfig, ok := configMap.Data[customConfigKey]
-	if !ok {
+	rawConfig, exists := configMap.Data[customConfigKey]
+	if !exists {
 		return nil, fmt.Errorf("error getting modules config")
 	}
 

@@ -52,8 +52,8 @@ func verifyWebhookConfig(webhookCfg *admissionv1.ValidatingWebhookConfiguration,
 		if *webhook.ClientConfig.Service.Path != fmt.Sprintf(servicePathTpl, moduleName) {
 			return false
 		}
-		watchableConfig, ok := watchableConfigs[moduleName]
-		if !ok {
+		watchableConfig, exists := watchableConfigs[moduleName]
+		if !exists {
 			return false
 		}
 		if !reflect.DeepEqual(webhook.ObjectSelector.MatchLabels, watchableConfig.Labels) {

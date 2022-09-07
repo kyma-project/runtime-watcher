@@ -21,7 +21,6 @@ import (
 
 const (
 	DefaultBufferSize = 2048
-	gatewayPortNumber = uint32(80)
 )
 
 //nolint:gochecknoglobals
