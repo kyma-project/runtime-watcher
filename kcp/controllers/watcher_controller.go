@@ -43,7 +43,7 @@ const (
 	IstioGatewayResourceName = "kcp-listener-gw"
 	// TODO: add IstioGatewayNamespace as a parameter in WatcherConfig.
 	IstioGatewayNamespace = metav1.NamespaceDefault
-	watcherFinalizer      = "component.kyma-project.io/watcher"
+	watcherFinalizer      = "operator.kyma-project.io/watcher"
 	releaseName           = "watcher"
 )
 
