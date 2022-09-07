@@ -29,7 +29,6 @@ const (
 	customChartConfigName      = "custom-modules-config"
 	customChartConfigNamespace = metav1.NamespaceDefault
 	customConfigKey            = "modules"
-	FileWritePermissions       = 0o644
 	kubeconfigKey              = "config"
 )
 
