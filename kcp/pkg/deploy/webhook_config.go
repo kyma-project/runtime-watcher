@@ -137,10 +137,7 @@ func updateChartConfigMapForCR(ctx context.Context, k8sClient client.Client, obj
 		}
 		configMap.Data = configMapData
 		err = k8sClient.Create(ctx, configMap)
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	}
 
 	rawConfig, exists := configMap.Data[customConfigKey]
@@ -171,11 +168,7 @@ func updateChartConfigMapForCR(ctx context.Context, k8sClient client.Client, obj
 		return err
 	}
 	configMap.Data[customConfigKey] = string(bytes)
-	err = k8sClient.Update(ctx, configMap)
-	if err != nil {
-		return err
-	}
-	return nil
+	return k8sClient.Update(ctx, configMap)
 }
 
 func installOrRemoveChartOnSKR(ctx context.Context, restConfig *rest.Config, releaseName string,
