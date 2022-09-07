@@ -72,7 +72,7 @@ var _ = BeforeSuite(func() {
 
 	watcherCrd := &v1.CustomResourceDefinition{}
 	res, err := http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/runtime-watcher/main/kcp/config/crd/bases/component.kyma-project.io_watchers.yaml") //nolint:lll
+		"https://raw.githubusercontent.com/kyma-project/runtime-watcher/main/kcp/config/crd/bases/operator.kyma-project.io_watchers.yaml") //nolint:lll
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
 	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(watcherCrd)).To(Succeed())

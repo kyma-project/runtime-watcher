@@ -2,11 +2,13 @@ package listener_test
 
 import (
 	"fmt"
+	"net/http"
+	"testing"
+
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/http"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 
 	"github.com/kyma-project/runtime-watcher/listener"
 	"github.com/stretchr/testify/require"
