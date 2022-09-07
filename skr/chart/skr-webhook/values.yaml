@@ -8,7 +8,7 @@ image:
   # -- Image name
   name: "webhook"
   # -- Image tag
-  tag: "0.2.6"
+  tag: "latest"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets
