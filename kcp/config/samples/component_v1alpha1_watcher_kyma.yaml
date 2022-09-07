@@ -11,5 +11,5 @@ spec:
     serviceNamespace: "default"
   labelsToWatch:
     "kyma-watchable": "true"
-  subresourceToWatch: "All"
+  field: "spec"
 ---

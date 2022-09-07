@@ -11,5 +11,5 @@ spec:
     serviceNamespace: "default"
   labelsToWatch:
     "compass-watching": "true"
-  subresourceToWatch: "Status"
+  field: "status"
 ---

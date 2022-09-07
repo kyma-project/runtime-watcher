@@ -35,6 +35,10 @@ spec:
           spec:
             description: WatcherSpec defines the desired state of Watcher.
             properties:
+              field:
+                description: Field describes the subresource that should be watched
+                  Value can be one of ("spec", "status")
+                type: string
               labelsToWatch:
                 additionalProperties:
                   type: string
@@ -61,14 +65,10 @@ spec:
                 - serviceNamespace
                 - servicePort
                 type: object
-              subresourceToWatch:
-                description: SubresourceToWatch describes the subresource that should
-                  be watched Value can be one of ("Spec", "Status")
-                type: string
             required:
+            - field
             - labelsToWatch
             - serviceInfo
-            - subresourceToWatch
             type: object
           status:
             description: WatcherStatus defines the observed state of Watcher.
@@ -101,6 +101,8 @@ spec:
                       description: Type is used to reflect what type of condition
                         we are dealing with. Most commonly ConditionTypeReady it is
                         used as extension marker in the future
+                      enum:
+                      - Ready
                       type: string
                   required:
                   - status
