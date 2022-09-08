@@ -73,9 +73,10 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-.PHONY: docker-build
-docker-build: ## Build docker image with the manager.
+.PHONY:
+docker-build: copy-skr-chart ## Build docker image with the manager.
 	docker build -t ${IMG} .
+	$(MAKE) remove-skr-chart
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -143,3 +144,13 @@ fmt: ## Run go fmt against code.
 lint: ## Run golangci-lint against code.
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run
+
+#### SKR webhook chart
+SKR_CHART ?= $(shell pwd)/skr-chart
+$(SKR_CHART):
+	mkdir -p $(SKR_CHART)
+copy-skr-chart: $(SKR_CHART) ## copy skr-chart for docker build context
+	cp -r ../skr/chart/skr-webhook/ $(SKR_CHART)
+
+remove-skr-chart: $(SKR_CHART)
+	if [ -d $(SKR_CHART) ]; then rm -r $(SKR_CHART); fi
