@@ -25,7 +25,7 @@ import (
 // WatcherSpec defines the desired state of Watcher.
 type WatcherSpec struct {
 	// ServiceInfo describes the service information of the operator
-	ServiceInfo ServiceInfo `json:"serviceInfo"`
+	ServiceInfo Service `json:"serviceInfo"`
 
 	// LabelsToWatch describes the labels that should be watched
 	LabelsToWatch map[string]string `json:"labelsToWatch"`
@@ -44,15 +44,16 @@ const (
 	StatusField FieldName = "status"
 )
 
-type ServiceInfo struct {
-	// ServicePort describes the port on which operator service can be reached.
-	ServicePort int64 `json:"servicePort"`
+// Service describes the service specification for the corresponding operator container.
+type Service struct {
+	// Port describes the service port.
+	Port int64 `json:"port"`
 
-	// ServiceName describes the service name for the operator.
-	ServiceName string `json:"serviceName"`
+	// Name describes the service name.
+	Name string `json:"name"`
 
-	// ServiceNamespace describes the service namespace for the operator.
-	ServiceNamespace string `json:"serviceNamespace"`
+	// Namespace describes the service namespace.
+	Namespace string `json:"namespace"`
 }
 
 // +kubebuilder:validation:Enum=Processing;Deleting;Ready;Error

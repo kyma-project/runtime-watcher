@@ -48,22 +48,20 @@ spec:
                 description: ServiceInfo describes the service information of the
                   operator
                 properties:
-                  serviceName:
-                    description: ServiceName describes the service name for the operator.
+                  name:
+                    description: Name describes the service name.
                     type: string
-                  serviceNamespace:
-                    description: ServiceNamespace describes the service namespace
-                      for the operator.
+                  namespace:
+                    description: Namespace describes the service namespace.
                     type: string
-                  servicePort:
-                    description: ServicePort describes the port on which operator
-                      service can be reached.
+                  port:
+                    description: Port describes the service port.
                     format: int64
                     type: integer
                 required:
-                - serviceName
-                - serviceNamespace
-                - servicePort
+                - name
+                - namespace
+                - port
                 type: object
             required:
             - field

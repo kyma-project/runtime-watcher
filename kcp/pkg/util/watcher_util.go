@@ -164,9 +164,9 @@ func prepareIstioHTTPRouteForCR(obj *componentv1alpha1.Watcher) *istioapiv1beta1
 		Route: []*istioapiv1beta1.HTTPRouteDestination{
 			{
 				Destination: &istioapiv1beta1.Destination{
-					Host: destinationHost(obj.Spec.ServiceInfo.ServiceName, obj.Spec.ServiceInfo.ServiceNamespace),
+					Host: destinationHost(obj.Spec.ServiceInfo.Name, obj.Spec.ServiceInfo.Namespace),
 					Port: &istioapiv1beta1.PortSelector{
-						Number: uint32(obj.Spec.ServiceInfo.ServicePort),
+						Number: uint32(obj.Spec.ServiceInfo.Port),
 					},
 				},
 			},
