@@ -146,6 +146,10 @@ func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr
 	if err != nil {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete service mesh config")
 	}
+	err = r.deleteSKRWatcherConfigForCR(ctx, obj)
+	if err != nil {
+		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to update SKR config")
+	}
 	updated := controllerutil.RemoveFinalizer(obj, watcherFinalizer)
 	if !updated {
 		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to remove finalizer")
@@ -260,7 +264,11 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	return deploy.InstallWebhookOnAllSKRs(ctx, releaseName, obj, r.Client)
+	return deploy.InstallWebhookOnAllSKRs(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.Client)
+}
+
+func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
+	return deploy.RemoveWebhookConfigOnAllSKRs(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.Client)
 }
 
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {

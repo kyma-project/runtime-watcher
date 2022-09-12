@@ -1,0 +1,9 @@
+# The list of modules will be passed by the KCP watcher control loop
+# When deploying the chart on SKR
+modules: |-
+  lifecycle-manager:
+    statusOnly: false
+    labels:
+      app: kyma 
+  module-manager:
+    statusOnly: true

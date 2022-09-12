@@ -1,0 +1,216 @@
+package controllers_test
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"reflect"
+	"strings"
+
+	kymaapi "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
+	watcherapiv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
+	v1 "k8s.io/api/core/v1"
+	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	yaml "k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+)
+
+func prepareRequiredCRDs(testCrdURLs []string) ([]*apiextv1.CustomResourceDefinition, error) {
+	var crds []*apiextv1.CustomResourceDefinition
+	for _, testCrdURL := range testCrdURLs {
+		_, err := url.Parse(testCrdURL)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := http.Get(testCrdURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed pulling content for URL (%s) :%w", testCrdURL, err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed pulling content for URL (%s) with status code: %d", testCrdURL, resp.StatusCode)
+		}
+		defer resp.Body.Close()
+		decoder := yaml.NewYAMLOrJSONDecoder(resp.Body, DefaultBufferSize)
+		for {
+			crd := &apiextv1.CustomResourceDefinition{}
+			err = decoder.Decode(crd)
+			if err == nil {
+				crds = append(crds, crd)
+			}
+			if errors.Is(err, io.EOF) {
+				break
+			}
+		}
+	}
+	return crds, nil
+}
+
+func createInClusterConfigSecret(secretName string) (*v1.Secret, error) {
+	authUsr, err := testEnv.AddUser(envtest.User{Name: "testAdmin", Groups: []string{"system:masters"}}, testEnv.Config)
+	if err != nil {
+		return nil, err
+	}
+	kubeconfig, err := authUsr.KubeConfig()
+	if err != nil {
+		return nil, err
+	}
+	return &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: metav1.NamespaceDefault,
+		},
+		Data: map[string][]byte{
+			"config": kubeconfig,
+		},
+	}, nil
+}
+
+func createKymaCR(kymaName string) *kymaapi.Kyma {
+	return &kymaapi.Kyma{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       string(kymaapi.KymaKind),
+			APIVersion: kymaapi.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kymaName,
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: kymaapi.KymaSpec{
+			Channel: kymaapi.ChannelStable,
+			Modules: []kymaapi.Module{
+				{
+					Name: "sample-skr-module",
+				},
+				{
+					Name: "sample-kcp-module",
+				},
+			},
+		},
+	}
+}
+
+//nolint:gochecknoglobals
+var watcherCRNames = []string{"lifecycle-manager", "module-manager", "compass"}
+
+//nolint:gochecknoglobals
+var watcherCREntries = createTableEntries(watcherCRNames)
+
+func createTableEntries(watcherCRNames []string) []TableEntry {
+	tableEntries := []TableEntry{}
+	for idx, watcherCRName := range watcherCRNames {
+		entry := Entry(fmt.Sprintf("%s-CR-scenario", watcherCRName),
+			createWatcherCR(watcherCRName, isEven(idx)),
+		)
+		tableEntries = append(tableEntries, entry)
+	}
+	return tableEntries
+}
+
+func isEven(idx int) bool {
+	return idx%2 == 0
+}
+
+func isCRDeletetionFinished(watcherObjKeys ...client.ObjectKey) func(g Gomega) bool {
+	if len(watcherObjKeys) > 1 {
+		return nil
+	}
+	if len(watcherObjKeys) == 0 {
+		return func(g Gomega) bool {
+			err := k8sClient.List(ctx, &watcherapiv1alpha1.WatcherList{})
+			if err == nil || !k8sapierrors.IsNotFound(err) {
+				return false
+			}
+			return true
+		}
+	}
+	return func(g Gomega) bool {
+		err := k8sClient.Get(ctx, watcherObjKeys[0], &watcherapiv1alpha1.Watcher{})
+		if err == nil || !k8sapierrors.IsNotFound(err) {
+			return false
+		}
+		return true
+	}
+}
+
+func watcherCRState(watcherObjKey client.ObjectKey) func(g Gomega) watcherapiv1alpha1.WatcherState {
+	return func(g Gomega) watcherapiv1alpha1.WatcherState {
+		watcherCR := &watcherapiv1alpha1.Watcher{}
+		err := k8sClient.Get(ctx, watcherObjKey, watcherCR)
+		g.Expect(err).NotTo(HaveOccurred())
+		return watcherCR.Status.State
+	}
+}
+
+func createWatcherCR(moduleName string, statusOnly bool) *watcherapiv1alpha1.Watcher {
+	field := watcherapiv1alpha1.SpecField
+	if statusOnly {
+		field = watcherapiv1alpha1.StatusField
+	}
+	return &watcherapiv1alpha1.Watcher{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       watcherapiv1alpha1.WatcherKind,
+			APIVersion: watcherapiv1alpha1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-sample", moduleName),
+			Namespace: metav1.NamespaceDefault,
+			Labels: map[string]string{
+				util.ManagedBylabel: moduleName,
+			}},
+		Spec: watcherapiv1alpha1.WatcherSpec{
+			ServiceInfo: watcherapiv1alpha1.ServiceInfo{
+				ServicePort:      8082,
+				ServiceName:      fmt.Sprintf("%s-svc", moduleName),
+				ServiceNamespace: metav1.NamespaceDefault,
+			},
+			LabelsToWatch: map[string]string{
+				fmt.Sprintf("%s-watchable", moduleName): "true",
+			},
+			Field: field,
+		}}
+}
+
+func verifyWebhookConfig(
+	webhookCfg *admissionv1.ValidatingWebhookConfiguration,
+	watcherCR *watcherapiv1alpha1.Watcher,
+) bool {
+	for _, webhook := range webhookCfg.Webhooks {
+		webhookNameParts := strings.Split(webhook.Name, ".")
+		if len(webhookNameParts) < 2 {
+			return false
+		}
+		moduleName := webhookNameParts[0]
+		expectedModuleName, exists := watcherCR.Labels[util.ManagedBylabel]
+		if !exists {
+			return false
+		}
+		if moduleName != expectedModuleName {
+			return false
+		}
+		if *webhook.ClientConfig.Service.Path != fmt.Sprintf(servicePathTpl, moduleName) {
+			return false
+		}
+
+		if !reflect.DeepEqual(webhook.ObjectSelector.MatchLabels, watcherCR.Spec.LabelsToWatch) {
+			return false
+		}
+		if watcherCR.Spec.Field == watcherapiv1alpha1.StatusField && webhook.Rules[0].Resources[0] != statusSubresources {
+			return false
+		}
+		if watcherCR.Spec.Field == watcherapiv1alpha1.SpecField && webhook.Rules[0].Resources[0] != specSubresources {
+			return false
+		}
+	}
+
+	return true
+}

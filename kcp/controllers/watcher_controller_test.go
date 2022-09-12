@@ -1,92 +1,58 @@
 package controllers_test
 
 import (
-	"errors"
-	"io"
-	"os"
+	"math/rand"
 	"time"
 
+	kymaapi "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	watcherapiv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	yaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	DefaultBufferSize = 2048
+	DefaultBufferSize  = 2048
+	servicePathTpl     = "/validate/%s"
+	specSubresources   = "*"
+	statusSubresources = "*/status"
 )
 
-//nolint:gochecknoglobals
-var watcherCREntries = []TableEntry{
-	Entry("lifecycle manager Watcher CR", &watcherapiv1alpha1.Watcher{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       watcherapiv1alpha1.WatcherKind,
-			APIVersion: watcherapiv1alpha1.GroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: "watcher-sample", Namespace: metav1.NamespaceDefault, Labels: map[string]string{
-			util.ManagedBylabel: "lifecycle-manager",
-		}},
-		Spec: watcherapiv1alpha1.WatcherSpec{
-			ServiceInfo: watcherapiv1alpha1.ServiceInfo{
-				ServicePort:      8082,
-				ServiceName:      "lifecycle-manager-svc",
-				ServiceNamespace: metav1.NamespaceDefault,
-			},
-			LabelsToWatch: map[string]string{
-				"lifecycle-watchable": "true",
-			},
-			Field: watcherapiv1alpha1.SpecField,
-		},
-	}),
-}
+var _ = Describe("Watcher CR scenarios", Ordered, func() {
 
-var _ = Context("Watcher CR scenarios", Ordered, func() {
-	istioCrdList := &apiextensionsv1.CustomResourceDefinitionList{}
+	kymaSample := &kymaapi.Kyma{}
+	kymaSecret := &v1.Secret{}
 	BeforeAll(func() {
-		Skip("skipped for now in favor of local testing due to time constraints")
-		istioCrds, err := os.Open("assets/istio.networking.crds.yaml")
+		kymaName := "kyma-sample"
+		kymaSample = createKymaCR(kymaName)
+		Expect(k8sClient.Create(ctx, kymaSample)).To(Succeed())
+		kymaSecret, err := createInClusterConfigSecret(kymaName)
 		Expect(err).NotTo(HaveOccurred())
-		defer istioCrds.Close()
-		decoder := yaml.NewYAMLOrJSONDecoder(istioCrds, 2048)
-		for {
-			crd := apiextensionsv1.CustomResourceDefinition{}
-			err = decoder.Decode(&crd)
-			if err == nil {
-				istioCrdList.Items = append(istioCrdList.Items, crd)
-				// create istio CRD
-				Expect(k8sClient.Create(ctx, &crd)).To(Succeed())
-			}
-			if errors.Is(err, io.EOF) {
-				break
-			}
-		}
+		Expect(k8sClient.Create(ctx, kymaSecret)).To(Succeed())
 	})
 
 	AfterAll(func() {
-		Skip("skipped for now in favor of local testing due to time constraints")
-		// clean up istio CRDs
-		//nolint:gosec
-		for _, crd := range istioCrdList.Items {
-			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
-		}
+		// clean up kyma CR and secret
+		Expect(k8sClient.Delete(ctx, kymaSample)).To(Succeed())
+		Expect(k8sClient.Delete(ctx, kymaSecret)).To(Succeed())
+
 	})
 
 	DescribeTable("should reconcile istio service mesh resources according to watcher CR config",
 		func(watcherCR *watcherapiv1alpha1.Watcher) {
-			Skip("skipped for now in favor of local testing due to time constraints")
 			// create watcher CR
 			Expect(k8sClient.Create(ctx, watcherCR)).Should(Succeed())
 
-			watcherObjKey := client.ObjectKeyFromObject(watcherCR)
-			Eventually(watcherCRState(watcherObjKey)).WithTimeout(3 * time.Second).
-				WithPolling(30 * time.Microsecond).
+			crObjectKey := client.ObjectKeyFromObject(watcherCR)
+			Eventually(watcherCRState(crObjectKey)).
+				WithTimeout(20 * time.Second).
+				WithPolling(250 * time.Millisecond).
 				Should(Equal(watcherapiv1alpha1.WatcherStateReady))
 
 			// verify istio config
@@ -97,44 +63,59 @@ var _ = Context("Watcher CR scenarios", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returns).To(BeFalse())
 
-			// update watcher CR
+			//verify webhook config
+			webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
+			// webhookCfgList := &admissionv1.ValidatingWebhookConfigurationList{}
+			// Expect(k8sClient.List(ctx, webhookCfgList)).To(Succeed())
+			// Expect(webhookCfgList.Items).NotTo(BeNil())
+			// Expect(len(webhookCfgList.Items)).To(Equal(1))
+			err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
+			Expect(err).ShouldNot(HaveOccurred())
+			correct := verifyWebhookConfig(webhookConfig, watcherCR)
+			Expect(correct).To(BeTrue())
+
+			// update watcher CR spec
 			currentWatcherCR := &watcherapiv1alpha1.Watcher{}
-			Expect(k8sClient.Get(ctx, watcherObjKey, currentWatcherCR)).To(Succeed())
-			currentWatcherCR.SetLabels(map[string]string{"label-name": "label-value"})
+			Expect(k8sClient.Get(ctx, crObjectKey, currentWatcherCR)).To(Succeed())
+			currentWatcherCR.Spec.ServiceInfo.ServicePort = 9090
+			currentWatcherCR.Spec.Field = watcherapiv1alpha1.StatusField
 			Expect(k8sClient.Update(ctx, currentWatcherCR)).Should(Succeed())
 
-			Eventually(watcherCRState(watcherObjKey)).WithTimeout(2 * time.Second).
-				WithPolling(20 * time.Microsecond).
+			Eventually(watcherCRState(crObjectKey)).
+				WithTimeout(20 * time.Second).
+				WithPolling(250 * time.Millisecond).
 				Should(Equal(watcherapiv1alpha1.WatcherStateReady))
-			returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, watcherCR,
+
+			returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, currentWatcherCR,
 				controllers.IstioGatewayResourceName, controllers.IstioGatewayNamespace)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returns).To(BeFalse())
 
-			Expect(k8sClient.Get(ctx, watcherObjKey, currentWatcherCR)).To(Succeed())
-			Expect(k8sClient.Delete(ctx, currentWatcherCR)).To(Succeed())
-			Eventually(isCRDeletetionSuccessful(watcherObjKey)).WithTimeout(2 * time.Second).
-				WithPolling(20 * time.Microsecond).Should(BeTrue())
+			//verify webhook config
+			err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
+			Expect(err).ShouldNot(HaveOccurred())
+			correct = verifyWebhookConfig(webhookConfig, watcherCR)
+			Expect(correct).To(BeTrue())
+
 		}, watcherCREntries)
+
+	It("should delete all resources on SKR when all CRs are deleted", func() {
+		idx := rand.Intn(len(watcherCRNames))
+		firstToBeRemovedObjKey := client.ObjectKey{Name: watcherCRNames[idx], Namespace: metav1.NamespaceDefault}
+		firstToBeRemoved := &watcherapiv1alpha1.Watcher{}
+		err := k8sClient.Get(ctx, firstToBeRemovedObjKey, firstToBeRemoved)
+		Expect(err).ToNot(HaveOccurred())
+		err = k8sClient.Delete(ctx, firstToBeRemoved)
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(isCRDeletetionFinished(firstToBeRemovedObjKey)).WithTimeout(2 * time.Second).
+			WithPolling(20 * time.Microsecond).Should(BeTrue())
+		//TODO: verify that istio resources and skr webhooks are deleted
+	})
+
+	It("should delete all resources on SKR when all CRs are deleted", func() {
+		k8sClient.DeleteAllOf(ctx, &watcherapiv1alpha1.Watcher{})
+		Eventually(isCRDeletetionFinished()).WithTimeout(2 * time.Second).
+			WithPolling(20 * time.Microsecond).Should(BeTrue())
+		//TODO: verify that istio resources and skr webhooks are deleted
+	})
 })
-
-//nolint:unused
-func isCRDeletetionSuccessful(watcherObjKey client.ObjectKey) func(g Gomega) bool {
-	return func(g Gomega) bool {
-		err := k8sClient.Get(ctx, watcherObjKey, &watcherapiv1alpha1.Watcher{})
-		if err == nil || !k8sapierrors.IsNotFound(err) {
-			return false
-		}
-		return true
-	}
-}
-
-//nolint:unused
-func watcherCRState(watcherObjKey client.ObjectKey) func(g Gomega) watcherapiv1alpha1.WatcherState {
-	return func(g Gomega) watcherapiv1alpha1.WatcherState {
-		watcherCR := &watcherapiv1alpha1.Watcher{}
-		err := k8sClient.Get(ctx, watcherObjKey, watcherCR)
-		g.Expect(err).NotTo(HaveOccurred())
-		return watcherCR.Status.State
-	}
-}

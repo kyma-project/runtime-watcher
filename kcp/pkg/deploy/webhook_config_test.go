@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +30,7 @@ var _ = Describe("deploy watcher", func() {
 
 	It("deploys watcher helm chart with correct webhook config", func() {
 		Skip("skipped for now in favor of local testing due to time constraints")
-		err := deploy.InstallSKRWebhook(ctx, releaseName, watcherCR, testEnv.Config, k8sClient)
+		err := deploy.InstallSKRWebhook(ctx, util.DefaultWebhookChartPath, releaseName, watcherCR, testEnv.Config, k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
 		err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)

@@ -48,6 +48,12 @@ type WatcherConfig struct {
 	ListenerIstioGatewayPort uint32
 	// RequeueInterval represents requeue interval in seconds
 	RequeueInterval int
+	// WebhookChartPath represents the path of the webhook chart
+	// to be installed on SKR clusters upon reconciling watcher CRs
+	WebhookChartPath string
+	// WebhookChartReleaseName represents the helm release name of the webhook chart
+	// to be installed on SKR clusters upon reconciling watcher CRs
+	WebhookChartReleaseName string
 }
 
 func IstioResourcesErrorCheck(gvr string, err error) error {
@@ -189,12 +195,13 @@ func isCrdInstalled(err error) (bool, error) {
 		return false, fmt.Errorf("expected non nil error of StatusError type")
 	}
 	errCauses := k8sStatusErr.ErrStatus.Details.Causes
-	expectedErrCause := metav1.StatusCause{
-		Type:    metav1.CauseTypeUnexpectedServerResponse,
-		Message: "404 page not found",
-	}
 
-	if len(errCauses) > 0 && reflect.DeepEqual(expectedErrCause, errCauses[0]) {
+	if len(errCauses) > 0 && reflect.DeepEqual(
+		errCauses[0], metav1.StatusCause{
+			Type:    metav1.CauseTypeUnexpectedServerResponse,
+			Message: "404 page not found",
+		},
+	) {
 		return false, nil
 	}
 	return true, nil

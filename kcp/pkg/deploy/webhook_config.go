@@ -29,7 +29,6 @@ const (
 	customChartConfigName      = "custom-modules-config"
 	customChartConfigNamespace = metav1.NamespaceDefault
 	customConfigKey            = "modules"
-	FileWritePermissions       = 0o644
 	kubeconfigKey              = "config"
 )
 
@@ -68,7 +67,7 @@ func getSKRRestConfigs(ctx context.Context, reader client.Reader) ([]*rest.Confi
 	return restCfgs, nil
 }
 
-func InstallWebhookOnAllSKRs(ctx context.Context, releaseName string,
+func InstallWebhookOnAllSKRs(ctx context.Context, chartPath, releaseName string,
 	obj *componentv1alpha1.Watcher, k8sClient client.Client,
 ) error {
 	restCfgs, err := getSKRRestConfigs(ctx, k8sClient)
@@ -76,16 +75,33 @@ func InstallWebhookOnAllSKRs(ctx context.Context, releaseName string,
 		return err
 	}
 	for _, restCfg := range restCfgs {
-		err = InstallSKRWebhook(ctx, releaseName, obj, restCfg, k8sClient)
+		err = InstallSKRWebhook(ctx, chartPath, releaseName, obj, restCfg, k8sClient)
 		if err != nil {
 			continue
 		}
 	}
-	// return err so that if err!=nil, reconciliation will be retriggered after requeue interval
+	// return err so that if err!=nil for at least one SKR, reconciliation will be retriggered after requeue interval
 	return err
 }
 
-func InstallSKRWebhook(ctx context.Context, releaseName string,
+func RemoveWebhookConfigOnAllSKRs(ctx context.Context, chartPath, releaseName string,
+	obj *componentv1alpha1.Watcher, k8sClient client.Client,
+) error {
+	restCfgs, err := getSKRRestConfigs(ctx, k8sClient)
+	if err != nil {
+		return err
+	}
+	for _, restCfg := range restCfgs {
+		err = InstallSKRWebhook(ctx, chartPath, releaseName, obj, restCfg, k8sClient)
+		if err != nil {
+			continue
+		}
+	}
+	// return err so that if err!=nil for at least one SKR, reconciliation will be retriggered after requeue interval
+	return err
+}
+
+func InstallSKRWebhook(ctx context.Context, chartPath, releaseName string,
 	obj *componentv1alpha1.Watcher, restConfig *rest.Config, k8sClient client.Client,
 ) error {
 	err := updateChartConfigMapForCR(ctx, k8sClient, obj)
@@ -102,7 +118,7 @@ func InstallSKRWebhook(ctx context.Context, releaseName string,
 	}
 	skrWatcherDeployInfo := lifecycleLib.InstallInfo{
 		ChartInfo: &lifecycleLib.ChartInfo{
-			ChartPath:   util.DefaultWebhookChartPath,
+			ChartPath:   chartPath,
 			ReleaseName: releaseName,
 		},
 		RemoteInfo: custom.RemoteInfo{
