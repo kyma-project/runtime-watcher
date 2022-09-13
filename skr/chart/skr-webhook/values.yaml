@@ -47,7 +47,7 @@ service:
   # -- Target port
   contactVersion: v1
 kcp:
-  IP: 104.155.61.104
+  IP: <your-IP-here>
   port: 80
 modules: |-
   lifecycle-manager:

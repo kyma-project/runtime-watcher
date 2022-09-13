@@ -38,6 +38,16 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			testWatcherEvt, "",
 			http.StatusOK,
 		},
+		{
+			"missing contract version", "/r1/kyma/event",
+			testWatcherEvt, "could not read contract version",
+			http.StatusBadRequest,
+		},
+		{
+			"empty contract version", "/v/kyma/event",
+			testWatcherEvt, "contract version cannot be empty",
+			http.StatusBadRequest,
+		},
 	}
 	for _, testCase := range testCases { //nolint:paralleltest
 		t.Run(testCase.name, func(t *testing.T) {

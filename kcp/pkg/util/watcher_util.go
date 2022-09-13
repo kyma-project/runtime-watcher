@@ -32,11 +32,10 @@ const (
 	firstElementIdx         = 0
 	ConfigMapResourceName   = "kcp-watcher-modules"
 	// TODO: add ConfigMapNamespace as a parameter in WatcherConfig.
-	IstioGatewayGVR         = "gateways.networking.istio.io/v1beta1"
-	IstioVirtualServiceGVR  = "virtualservices.networking.istio.io/v1beta1"
-	ManagedBylabel          = "operator.kyma-project.io/managed-by"
-	contractVersion         = "1"
-	DefaultWebhookChartPath = "../skr/chart/skr-webhook"
+	IstioGatewayGVR        = "gateways.networking.istio.io/v1beta1"
+	IstioVirtualServiceGVR = "virtualservices.networking.istio.io/v1beta1"
+	ManagedBylabel         = "operator.kyma-project.io/managed-by"
+	contractVersion        = "1"
 )
 
 type WatcherConfig struct {
@@ -65,9 +64,9 @@ func IstioResourcesErrorCheck(gvr string, err error) error {
 	return nil
 }
 
-func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
+func GetConfigValuesFromEnv(logger logr.Logger, skrWatcherPath string) *WatcherConfig {
 	// TODO: remove before pushing the changes
-	fileInfo, err := os.Stat(DefaultWebhookChartPath)
+	fileInfo, err := os.Stat(skrWatcherPath)
 	if err != nil || !fileInfo.IsDir() {
 		logger.V(1).Error(err, "failed to read local skr chart")
 	}
