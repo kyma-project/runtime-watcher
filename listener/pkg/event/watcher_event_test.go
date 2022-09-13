@@ -2,9 +2,10 @@ package event_test
 
 import (
 	"fmt"
-	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
 	"net/http"
 	"testing"
+
+	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
 
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

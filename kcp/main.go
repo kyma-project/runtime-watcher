@@ -90,9 +90,10 @@ func main() {
 	}
 
 	if err = (&controllers.WatcherReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Config: watcherConfig,
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Config:         watcherConfig,
+		SkrWatcherPath: skrWatcherPath,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
 		os.Exit(1)

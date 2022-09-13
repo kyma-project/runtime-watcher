@@ -40,7 +40,7 @@ type FieldName string
 const (
 	// SpecField represents FieldName spec, which indicates that resource spec will be watched.
 	SpecField FieldName = "spec"
-	// StatusField represents FieldName status, which indicates that only resource status will be watched
+	// StatusField represents FieldName status, which indicates that only resource status will be watched.
 	StatusField FieldName = "status"
 )
 

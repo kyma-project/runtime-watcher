@@ -3,12 +3,13 @@ package event_test
 import (
 	"bytes"
 	"encoding/json"
-	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
 
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 
