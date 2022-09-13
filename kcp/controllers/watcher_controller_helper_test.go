@@ -168,10 +168,10 @@ func createWatcherCR(moduleName string, statusOnly bool) *watcherapiv1alpha1.Wat
 				util.ManagedBylabel: moduleName,
 			}},
 		Spec: watcherapiv1alpha1.WatcherSpec{
-			ServiceInfo: watcherapiv1alpha1.ServiceInfo{
-				ServicePort:      8082,
-				ServiceName:      fmt.Sprintf("%s-svc", moduleName),
-				ServiceNamespace: metav1.NamespaceDefault,
+			ServiceInfo: watcherapiv1alpha1.Service{
+				Port:      8082,
+				Name:      fmt.Sprintf("%s-svc", moduleName),
+				Namespace: metav1.NamespaceDefault,
 			},
 			LabelsToWatch: map[string]string{
 				fmt.Sprintf("%s-watchable", moduleName): "true",

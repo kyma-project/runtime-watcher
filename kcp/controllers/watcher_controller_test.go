@@ -65,10 +65,6 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 
 			//verify webhook config
 			webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-			// webhookCfgList := &admissionv1.ValidatingWebhookConfigurationList{}
-			// Expect(k8sClient.List(ctx, webhookCfgList)).To(Succeed())
-			// Expect(webhookCfgList.Items).NotTo(BeNil())
-			// Expect(len(webhookCfgList.Items)).To(Equal(1))
 			err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
 			Expect(err).ShouldNot(HaveOccurred())
 			correct := verifyWebhookConfig(webhookConfig, watcherCR)
@@ -77,7 +73,7 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			// update watcher CR spec
 			currentWatcherCR := &watcherapiv1alpha1.Watcher{}
 			Expect(k8sClient.Get(ctx, crObjectKey, currentWatcherCR)).To(Succeed())
-			currentWatcherCR.Spec.ServiceInfo.ServicePort = 9090
+			currentWatcherCR.Spec.ServiceInfo.Port = 9090
 			currentWatcherCR.Spec.Field = watcherapiv1alpha1.StatusField
 			Expect(k8sClient.Update(ctx, currentWatcherCR)).Should(Succeed())
 

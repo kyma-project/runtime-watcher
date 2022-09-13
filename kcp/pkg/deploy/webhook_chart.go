@@ -50,11 +50,11 @@ func prepareInstallInfo(chartPath, releaseName string, restConfig *rest.Config, 
 			ChartPath:   chartPath,
 			ReleaseName: releaseName,
 		},
-		RemoteInfo: custom.RemoteInfo{
-			RemoteClient: &restClient,
-			RemoteConfig: restConfig,
+		ClusterInfo: custom.ClusterInfo{
+			Client: restClient,
+			Config: restConfig,
 		},
-		CheckFn: func(ctx context.Context, u *unstructured.Unstructured, logger *logr.Logger, info custom.RemoteInfo,
+		CheckFn: func(ctx context.Context, u *unstructured.Unstructured, logger *logr.Logger, info custom.ClusterInfo,
 		) (bool, error) {
 			return true, nil
 		},
