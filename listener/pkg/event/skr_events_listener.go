@@ -1,4 +1,4 @@
-package listener
+package event
 
 import (
 	"context"

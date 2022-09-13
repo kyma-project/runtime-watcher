@@ -64,11 +64,11 @@ spec:
             mountPath: /tmp
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "500m"
+              memory: {{.Values.resources.requests.memory}}
+              cpu: {{.Values.resources.requests.cpu}}
             limits:
-              memory: "256Mi"
-              cpu: "800m"
+              memory: {{.Values.resources.limits.memory}}
+              cpu: {{.Values.resources.requests.cpu}}
           ports:
             - containerPort: {{.Values.service.targetPort}}
               name: watcher-port

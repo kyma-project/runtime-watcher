@@ -1,0 +1,16 @@
+apiVersion: operator.kyma-project.io/v1alpha1
+kind: Watcher
+metadata:
+  name: controller-manager-watcher
+  namespace: example-listener
+  labels:
+    operator.kyma-project.io/managed-by: "example-listener"
+    app: "watched-by-example-listener"
+spec:
+  labelsToWatch:
+    "app": "watched-by-example-listener"
+  field: "spec"
+  serviceInfo:
+    name: example-listener
+    port: 8089
+    namespace: example-listener

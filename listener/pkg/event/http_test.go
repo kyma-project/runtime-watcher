@@ -1,8 +1,9 @@
-package listener_test
+package event_test
 
 import (
 	"bytes"
 	"encoding/json"
+	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/kyma-project/runtime-watcher/listener"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-func newTestListener(addr, component string, log logr.Logger) *listener.SKREventListener {
-	return &listener.SKREventListener{
+func newTestListener(addr, component string, log logr.Logger) *listenerEvent.SKREventListener {
+	return &listenerEvent.SKREventListener{
 		Addr:          addr,
 		Logger:        log,
 		ComponentName: component,
@@ -98,7 +98,7 @@ func TestHandler(t *testing.T) {
 	defer testEvt.mu.Unlock()
 	assert.NotEqual(t, nil, testEvt.evt,
 		"error reading event from channel: expected non nil event, got %v", testEvt.evt)
-	testWatcherEvtContents := listener.UnstructuredContent(testWatcherEvt)
+	testWatcherEvtContents := listenerEvent.UnstructuredContent(testWatcherEvt)
 	for key, value := range testWatcherEvtContents {
 		assert.Contains(t, testEvt.evt.Object.(*unstructured.Unstructured).Object, key)
 		assert.Equal(t, value, testEvt.evt.Object.(*unstructured.Unstructured).Object[key])

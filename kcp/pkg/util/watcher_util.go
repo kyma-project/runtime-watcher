@@ -35,8 +35,8 @@ const (
 	IstioGatewayGVR         = "gateways.networking.istio.io/v1beta1"
 	IstioVirtualServiceGVR  = "virtualservices.networking.istio.io/v1beta1"
 	ManagedBylabel          = "operator.kyma-project.io/managed-by"
-	contractVersion         = "v1"
-	DefaultWebhookChartPath = "./skr-webhook"
+	contractVersion         = "1"
+	DefaultWebhookChartPath = "../skr/chart/skr-webhook"
 )
 
 type WatcherConfig struct {
