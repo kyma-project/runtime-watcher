@@ -6,9 +6,9 @@ metadata:
     "operator.kyma-project.io/managed-by": "comapss-operator"
 spec:
   serviceInfo:
-    servicePort: 8082
-    serviceName: "compass-event-service"
-    serviceNamespace: "default"
+    port: 8082
+    name: "compass-event-service"
+    namespace: "default"
   labelsToWatch:
     "compass-watching": "true"
   field: "status"

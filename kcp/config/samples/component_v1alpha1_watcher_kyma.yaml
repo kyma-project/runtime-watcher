@@ -6,9 +6,9 @@ metadata:
     "operator.kyma-project.io/managed-by": "lifecycle-manager"
 spec:
   serviceInfo:
-    servicePort: 8082
-    serviceName: "kyma-event-service"
-    serviceNamespace: "default"
+    port: 8082
+    name: "kyma-event-service"
+    namespace: "default"
   labelsToWatch:
     "kyma-watchable": "true"
   field: "spec"
