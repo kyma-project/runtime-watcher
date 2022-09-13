@@ -264,11 +264,11 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	return deploy.InstallWebhookOnAllSKRs(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.Client)
+	return deploy.UpdateWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.Client)
 }
 
 func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	return deploy.RemoveWebhookConfigOnAllSKRs(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.Client)
+	return deploy.RemoveWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.Client)
 }
 
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
