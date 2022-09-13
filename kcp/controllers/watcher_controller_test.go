@@ -34,10 +34,10 @@ var watcherCREntries = []TableEntry{
 			util.ManagedBylabel: "lifecycle-manager",
 		}},
 		Spec: watcherapiv1alpha1.WatcherSpec{
-			ServiceInfo: watcherapiv1alpha1.ServiceInfo{
-				ServicePort:      8082,
-				ServiceName:      "lifecycle-manager-svc",
-				ServiceNamespace: metav1.NamespaceDefault,
+			ServiceInfo: watcherapiv1alpha1.Service{
+				Port:      8082,
+				Name:      "lifecycle-manager-svc",
+				Namespace: metav1.NamespaceDefault,
 			},
 			LabelsToWatch: map[string]string{
 				"lifecycle-watchable": "true",
