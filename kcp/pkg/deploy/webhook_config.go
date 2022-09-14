@@ -68,14 +68,14 @@ func getSKRRestConfigs(ctx context.Context, reader client.Reader) ([]*rest.Confi
 }
 
 func InstallWebhookOnAllSKRs(ctx context.Context, releaseName string,
-	obj *componentv1alpha1.Watcher, k8sClient client.Client,
+	obj *componentv1alpha1.Watcher, k8sClient client.Client, skrWatcherPath string,
 ) error {
 	restCfgs, err := getSKRRestConfigs(ctx, k8sClient)
 	if err != nil {
 		return err
 	}
 	for _, restCfg := range restCfgs {
-		err = InstallSKRWebhook(ctx, releaseName, obj, restCfg, k8sClient)
+		err = InstallSKRWebhook(ctx, releaseName, obj, restCfg, k8sClient, skrWatcherPath)
 		if err != nil {
 			continue
 		}
@@ -85,7 +85,7 @@ func InstallWebhookOnAllSKRs(ctx context.Context, releaseName string,
 }
 
 func InstallSKRWebhook(ctx context.Context, releaseName string,
-	obj *componentv1alpha1.Watcher, restConfig *rest.Config, k8sClient client.Client,
+	obj *componentv1alpha1.Watcher, restConfig *rest.Config, k8sClient client.Client, skrWatcherPath string,
 ) error {
 	err := updateChartConfigMapForCR(ctx, k8sClient, obj)
 	if err != nil {
@@ -101,7 +101,7 @@ func InstallSKRWebhook(ctx context.Context, releaseName string,
 	}
 	skrWatcherDeployInfo := lifecycleLib.InstallInfo{
 		ChartInfo: &lifecycleLib.ChartInfo{
-			ChartPath:   util.DefaultWebhookChartPath,
+			ChartPath:   skrWatcherPath,
 			ReleaseName: releaseName,
 		},
 		ClusterInfo: custom.ClusterInfo{
@@ -123,7 +123,6 @@ func updateChartConfigMapForCR(ctx context.Context, k8sClient client.Client, obj
 		Namespace: customChartConfigNamespace,
 	}, configMap)
 	if k8sapierrors.IsNotFound(err) {
-
 		chartCfg := generateWatchableConfigForCR(obj)
 		bytes, err := k8syaml.Marshal(chartCfg)
 		if err != nil {

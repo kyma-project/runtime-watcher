@@ -1,16 +1,17 @@
-package listener_test
+package event_test
 
 import (
 	"fmt"
 	"net/http"
 	"testing"
 
+	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
+
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kyma-project/runtime-watcher/listener"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,7 +50,6 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			http.StatusBadRequest,
 		},
 	}
-
 	for _, testCase := range testCases { //nolint:paralleltest
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
@@ -57,7 +57,7 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
 			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt)
 			// WHEN
-			evtObject, err := listener.UnmarshalSKREvent(req)
+			evtObject, err := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
 			if err != nil {
 				require.Equal(t, testCase.errMsg, err.Message)
@@ -66,7 +66,7 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			}
 			require.Equal(t, testCase.errMsg, "")
 			require.Equal(t, testCase.httpStatus, http.StatusOK)
-			testcasePayloadContent := listener.UnstructuredContent(testCase.payload)
+			testcasePayloadContent := listenerEvent.UnstructuredContent(testCase.payload)
 			require.Equal(t, testcasePayloadContent, evtObject.Object)
 		})
 	}

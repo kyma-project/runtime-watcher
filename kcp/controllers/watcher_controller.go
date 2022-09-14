@@ -50,9 +50,10 @@ const (
 // WatcherReconciler reconciles a Watcher object.
 type WatcherReconciler struct {
 	client.Client
-	RestConfig *rest.Config
-	Scheme     *runtime.Scheme
-	Config     *util.WatcherConfig
+	RestConfig     *rest.Config
+	Scheme         *runtime.Scheme
+	Config         *util.WatcherConfig
+	SkrWatcherPath string
 }
 
 //nolint:lll
@@ -260,7 +261,7 @@ func (r *WatcherReconciler) createOrUpdateIstioVirtualServiceForCR(ctx context.C
 }
 
 func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {
-	return deploy.InstallWebhookOnAllSKRs(ctx, releaseName, obj, r.Client)
+	return deploy.InstallWebhookOnAllSKRs(ctx, releaseName, obj, r.Client, r.SkrWatcherPath)
 }
 
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *componentv1alpha1.Watcher) error {

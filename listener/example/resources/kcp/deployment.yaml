@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: example-listener
+  namespace: example-listener
+spec:
+  selector:
+    #selector for deployment labels (key, values)
+    app: example-listener
+  ports:
+    - port: 8089
+      targetPort: listener-port
+      name: listener
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-listener
+  namespace: example-listener
+  labels:
+    app: example-listener
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: example-listener
+  template:
+    metadata:
+      labels:
+        app: example-listener
+    spec:
+      containers:
+        - name: listener
+          image: "adityabhatia/example-listener"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8089
+              name: listener-port
