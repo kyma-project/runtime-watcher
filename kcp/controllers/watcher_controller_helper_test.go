@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	yaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -24,6 +26,30 @@ import (
 	. "github.com/onsi/gomega"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
+
+const defaultBufferSize = 2048
+
+func deserializeIstioResources(filePath string) ([]*unstructured.Unstructured, error) {
+	var istioResourcesList []*unstructured.Unstructured
+	//create istio resources
+	file, err := os.Open(istioResourcesFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	decoder := yaml.NewYAMLOrJSONDecoder(file, defaultBufferSize)
+	for {
+		istioResource := &unstructured.Unstructured{}
+		err = decoder.Decode(istioResource)
+		if err == nil {
+			istioResourcesList = append(istioResourcesList, istioResource)
+		}
+		if errors.Is(err, io.EOF) {
+			break
+		}
+	}
+	return istioResourcesList, nil
+}
 
 func prepareRequiredCRDs(testCrdURLs []string) ([]*apiextv1.CustomResourceDefinition, error) {
 	var crds []*apiextv1.CustomResourceDefinition
@@ -40,7 +66,7 @@ func prepareRequiredCRDs(testCrdURLs []string) ([]*apiextv1.CustomResourceDefini
 			return nil, fmt.Errorf("failed pulling content for URL (%s) with status code: %d", testCrdURL, resp.StatusCode)
 		}
 		defer resp.Body.Close()
-		decoder := yaml.NewYAMLOrJSONDecoder(resp.Body, DefaultBufferSize)
+		decoder := yaml.NewYAMLOrJSONDecoder(resp.Body, defaultBufferSize)
 		for {
 			crd := &apiextv1.CustomResourceDefinition{}
 			err = decoder.Decode(crd)
@@ -95,6 +121,10 @@ func createKymaCR(kymaName string) *kymaapi.Kyma {
 					Name: "sample-kcp-module",
 				},
 			},
+			Sync: kymaapi.Sync{
+				Enabled:  false,
+				Strategy: kymaapi.SyncStrategyLocalClient,
+			},
 		},
 	}
 }
@@ -148,6 +178,14 @@ func watcherCRState(watcherObjKey client.ObjectKey) func(g Gomega) watcherapiv1a
 		err := k8sClient.Get(ctx, watcherObjKey, watcherCR)
 		g.Expect(err).NotTo(HaveOccurred())
 		return watcherCR.Status.State
+	}
+}
+
+func isWebhookDeployed(webhookName string) func(g Gomega) bool {
+	return func(g Gomega) bool {
+		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
+		err := k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: webhookName}, webhookConfig)
+		return err == nil
 	}
 }
 

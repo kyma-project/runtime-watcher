@@ -36,9 +36,9 @@ type WatchableConfig struct {
 }
 
 func UpdateWebhookConfig(ctx context.Context, chartPath, releaseName string,
-	obj *watcherv1alpha1.Watcher, k8sClient client.Client,
+	obj *watcherv1alpha1.Watcher, inClusterCfg *rest.Config, k8sClient client.Client,
 ) error {
-	restCfgs, err := getSKRRestConfigs(ctx, k8sClient)
+	restCfgs, err := getSKRRestConfigs(ctx, k8sClient, inClusterCfg)
 	if err != nil {
 		return err
 	}
@@ -95,9 +95,9 @@ func generateWebhookConfigForCR(baseCfg admissionv1.ValidatingWebhook, obj *watc
 }
 
 func RemoveWebhookConfig(ctx context.Context, chartPath, releaseName string,
-	obj *watcherv1alpha1.Watcher, k8sClient client.Client,
+	obj *watcherv1alpha1.Watcher, inClusterCfg *rest.Config, k8sClient client.Client,
 ) error {
-	restCfgs, err := getSKRRestConfigs(ctx, k8sClient)
+	restCfgs, err := getSKRRestConfigs(ctx, k8sClient, inClusterCfg)
 	if err != nil {
 		return err
 	}
@@ -158,14 +158,18 @@ func removeWebhookConfig(ctx context.Context, chartPath, releaseName string,
 	return nil
 }
 
-func getSKRRestConfigs(ctx context.Context, reader client.Reader) ([]*rest.Config, error) {
+func getSKRRestConfigs(ctx context.Context, reader client.Reader, inClusterCfg *rest.Config) (map[string]*rest.Config, error) {
 	kymas := &kymav1alpha1.KymaList{}
 	err := reader.List(ctx, kymas)
 	if err != nil {
 		return nil, err
 	}
-	restCfgs := []*rest.Config{}
+	restCfgMap := make(map[string]*rest.Config, len(kymas.Items))
 	for _, kyma := range kymas.Items {
+		if kyma.Spec.Sync.Strategy == kymav1alpha1.SyncStrategyLocalClient || !kyma.Spec.Sync.Enabled {
+			restCfgMap[kyma.Name] = inClusterCfg
+			continue
+		}
 		secret := &v1.Secret{}
 		//nolint:gosec
 		err = reader.Get(ctx, client.ObjectKeyFromObject(&kyma), secret)
@@ -174,9 +178,9 @@ func getSKRRestConfigs(ctx context.Context, reader client.Reader) ([]*rest.Confi
 		}
 		restCfg, err := clientcmd.RESTConfigFromKubeConfig(secret.Data[kubeconfigKey])
 		if err == nil {
-			restCfgs = append(restCfgs, restCfg)
+			restCfgMap[kyma.Name] = restCfg
 		}
 	}
 
-	return restCfgs, nil
+	return restCfgMap, nil
 }

@@ -20,6 +20,7 @@ package controllers_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -38,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -55,8 +56,7 @@ var (
 )
 
 const (
-	webhookChartPath    = "assets/sample-chart"
-	webhookChartRelName = "watcher"
+	webhookChartPath = "assets/sample-chart"
 )
 
 func TestAPIs(t *testing.T) {
@@ -70,6 +70,11 @@ var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.Background())
 	logger := zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true))
 	logf.SetLogger(logger)
+
+	By("verifying local chart is correct")
+	fileInfo, err := os.Stat(webhookChartPath)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(fileInfo.IsDir()).To(BeTrue())
 
 	By("preparing required CRDs")
 	//nolint:lll
@@ -91,7 +96,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	Expect(componentv1alpha1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
+	Expect(watcherv1alpha1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 	Expect(apiextv1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 	Expect(kyma.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 
@@ -111,10 +116,11 @@ var _ = BeforeSuite(func() {
 		RestConfig: k8sManager.GetConfig(),
 		Scheme:     scheme.Scheme,
 		Config: &util.WatcherConfig{
-			RequeueInterval:          util.DefaultRequeueInterval,
-			ListenerIstioGatewayPort: util.DefaultIstioGatewayPort,
-			WebhookChartPath:         webhookChartPath,
-			WebhookChartReleaseName:  webhookChartRelName,
+			VirtualServiceNamespace: util.DefaultVirtualServiceNamespace,
+			VirtualServiceName:      util.DefaultVirtualServiceName,
+			RequeueInterval:         util.DefaultRequeueInterval,
+			WebhookChartPath:        webhookChartPath,
+			WebhookChartReleaseName: util.DefaultWebhookChartReleaseName,
 		},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
