@@ -44,9 +44,10 @@ const (
 // WatcherReconciler reconciles a Watcher object.
 type WatcherReconciler struct {
 	client.Client
-	RestConfig *rest.Config
-	Scheme     *runtime.Scheme
-	Config     *util.WatcherConfig
+	RestConfig     *rest.Config
+	Scheme         *runtime.Scheme
+	Config         *util.WatcherConfig
+	SkrWatcherPath string
 }
 
 //nolint:lll

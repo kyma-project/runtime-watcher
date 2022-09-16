@@ -46,9 +46,9 @@ type WatcherConfig struct {
 	WebhookChartReleaseName string
 }
 
-func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
+func GetConfigValuesFromEnv(logger logr.Logger, skrWatcherPath string) *WatcherConfig {
 	// TODO: remove before pushing the changes
-	fileInfo, err := os.Stat(LocalTestingChartPath)
+	fileInfo, err := os.Stat(skrWatcherPath)
 	if err != nil || !fileInfo.IsDir() {
 		logger.V(1).Error(err, "failed to read local skr chart")
 	}

@@ -8,7 +8,7 @@ image:
   # -- Image name
   name: "runtime-watcher-skr"
   # -- Image tag
-  tag: "latest"
+  tag: "PR-53"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets
@@ -47,8 +47,8 @@ service:
   # -- Target port
   contactVersion: v1
 kcp:
-  IP: host.k3d.internal
-  port: 9080
+  IP: <your-IP-here>
+  port: 80
 modules: |-
   lifecycle-manager:
     statusOnly: false

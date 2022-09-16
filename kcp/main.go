@@ -58,11 +58,13 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var skrWatcherPath string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&skrWatcherPath, "skr-watcher-path", "../skr/chart/skr-webhook", "The path to skr watcher chart.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -72,7 +74,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	// get env vars for watcher config
-	// watcherConfig := util.GetConfigValuesFromEnv(setupLog)
+	watcherConfig := util.GetConfigValuesFromEnv(setupLog, skrWatcherPath)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -88,10 +90,10 @@ func main() {
 	}
 
 	if err = (&controllers.WatcherReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		RestConfig: mgr.GetConfig(),
-		Config:     util.GetConfigValuesFromEnv(setupLog),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Config:         watcherConfig,
+		SkrWatcherPath: skrWatcherPath,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
 		os.Exit(1)
