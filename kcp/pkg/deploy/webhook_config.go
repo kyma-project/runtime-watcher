@@ -73,9 +73,34 @@ func updateWebhookConfigOrInstallSKRChart(ctx context.Context, chartPath, releas
 	if len(webhookConfig.Webhooks) < 1 {
 		return fmt.Errorf("failed to get base webhook config")
 	}
-	updatedWebhookCfg := generateWebhookConfigForCR(webhookConfig.Webhooks[0], obj)
-	webhookConfig.Webhooks = append(webhookConfig.Webhooks, updatedWebhookCfg)
+	idx := lookupWebhookConfigForCR(webhookConfig.Webhooks, obj)
+	if idx != -1 {
+		//updated existing webhook
+		webhookConfig.Webhooks[idx] = generateWebhookConfigForCR(webhookConfig.Webhooks[idx], obj)
+		return remoteClient.Update(ctx, webhookConfig)
+	}
+
+	webhookConfig.Webhooks = append(webhookConfig.Webhooks, generateWebhookConfigForCR(webhookConfig.Webhooks[0], obj))
 	return remoteClient.Update(ctx, webhookConfig)
+}
+
+func lookupWebhookConfigForCR(webhooks []admissionv1.ValidatingWebhook, obj *watcherv1alpha1.Watcher) int {
+	cfgIdx := -1
+	for idx, webhook := range webhooks {
+		webhookNameParts := strings.Split(webhook.Name, ".")
+		if len(webhookNameParts) == 0 {
+			continue
+		}
+		moduleName := webhookNameParts[0]
+		objModuleName, exists := obj.Labels[util.ManagedBylabel]
+		if !exists {
+			return cfgIdx
+		}
+		if moduleName == objModuleName {
+			return idx
+		}
+	}
+	return cfgIdx
 }
 
 func generateWebhookConfigForCR(baseCfg admissionv1.ValidatingWebhook, obj *watcherv1alpha1.Watcher) admissionv1.ValidatingWebhook {
@@ -89,6 +114,7 @@ func generateWebhookConfigForCR(baseCfg admissionv1.ValidatingWebhook, obj *watc
 	watcherCrWebhookCfg.ClientConfig.Service.Path = &servicePath
 	if obj.Spec.Field == watcherv1alpha1.StatusField {
 		watcherCrWebhookCfg.Rules[0].Resources[0] = statusSubresources
+		return *watcherCrWebhookCfg
 	}
 	watcherCrWebhookCfg.Rules[0].Resources[0] = specSubresources
 	return *watcherCrWebhookCfg
@@ -133,21 +159,7 @@ func removeWebhookConfig(ctx context.Context, chartPath, releaseName string,
 		// remove the webhook configuration
 		return remoteClient.Delete(ctx, webhookConfig)
 	}
-	cfgIdx := -1
-	for idx, webhook := range webhookConfig.Webhooks {
-		webhookNameParts := strings.Split(webhook.Name, ".")
-		if len(webhookNameParts) == 0 {
-			continue
-		}
-		moduleName := webhookNameParts[0]
-		objModuleName, exists := obj.Labels[util.ManagedBylabel]
-		if !exists {
-			break
-		}
-		if moduleName == objModuleName {
-			cfgIdx = idx
-		}
-	}
+	cfgIdx := lookupWebhookConfigForCR(webhookConfig.Webhooks, obj)
 	if cfgIdx != -1 {
 		// remove corresponding config from webhook config resource
 		copy(webhookConfig.Webhooks[cfgIdx:], webhookConfig.Webhooks[cfgIdx+1:])
@@ -163,6 +175,9 @@ func getSKRRestConfigs(ctx context.Context, reader client.Reader, inClusterCfg *
 	err := reader.List(ctx, kymas)
 	if err != nil {
 		return nil, err
+	}
+	if len(kymas.Items) == 0 {
+		return nil, fmt.Errorf("no kymas found")
 	}
 	restCfgMap := make(map[string]*rest.Config, len(kymas.Items))
 	for _, kyma := range kymas.Items {

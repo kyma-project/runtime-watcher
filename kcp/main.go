@@ -72,7 +72,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	// get env vars for watcher config
-	watcherConfig := util.GetConfigValuesFromEnv(setupLog)
+	// watcherConfig := util.GetConfigValuesFromEnv(setupLog)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -88,9 +88,10 @@ func main() {
 	}
 
 	if err = (&controllers.WatcherReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Config: watcherConfig,
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RestConfig: mgr.GetConfig(),
+		Config:     util.GetConfigValuesFromEnv(setupLog),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
 		os.Exit(1)

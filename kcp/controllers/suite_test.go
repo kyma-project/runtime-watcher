@@ -71,7 +71,7 @@ var _ = BeforeSuite(func() {
 	logger := zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true))
 	logf.SetLogger(logger)
 
-	By("verifying local chart is correct")
+	By("verifying local chart path is correct")
 	fileInfo, err := os.Stat(webhookChartPath)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(fileInfo.IsDir()).To(BeTrue())

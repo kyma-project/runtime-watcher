@@ -181,13 +181,13 @@ func watcherCRState(watcherObjKey client.ObjectKey) func(g Gomega) watcherapiv1a
 	}
 }
 
-func isWebhookDeployed(webhookName string) func(g Gomega) bool {
-	return func(g Gomega) bool {
-		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-		err := k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: webhookName}, webhookConfig)
-		return err == nil
-	}
-}
+// func isWebhookDeployed(webhookName string) func(g Gomega) bool {
+// 	return func(g Gomega) bool {
+// 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
+// 		err := k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: webhookName}, webhookConfig)
+// 		return err == nil
+// 	}
+// }
 
 func createWatcherCR(moduleName string, statusOnly bool) *watcherapiv1alpha1.Watcher {
 	field := watcherapiv1alpha1.SpecField
@@ -215,39 +215,59 @@ func createWatcherCR(moduleName string, statusOnly bool) *watcherapiv1alpha1.Wat
 				fmt.Sprintf("%s-watchable", moduleName): "true",
 			},
 			Field: field,
-		}}
+		},
+	}
+}
+
+func lookupWebhook(webhookCfg *admissionv1.ValidatingWebhookConfiguration,
+	watcherCR *watcherapiv1alpha1.Watcher,
+) int {
+	cfgIdx := -1
+	for idx, webhook := range webhookCfg.Webhooks {
+		webhookNameParts := strings.Split(webhook.Name, ".")
+		if len(webhookNameParts) == 0 {
+			continue
+		}
+		moduleName := webhookNameParts[0]
+		objModuleName, exists := watcherCR.Labels[util.ManagedBylabel]
+		if !exists {
+			return cfgIdx
+		}
+		if moduleName == objModuleName {
+			return idx
+		}
+	}
+	return cfgIdx
 }
 
 func verifyWebhookConfig(
-	webhookCfg *admissionv1.ValidatingWebhookConfiguration,
+	webhook admissionv1.ValidatingWebhook,
 	watcherCR *watcherapiv1alpha1.Watcher,
 ) bool {
-	for _, webhook := range webhookCfg.Webhooks {
-		webhookNameParts := strings.Split(webhook.Name, ".")
-		if len(webhookNameParts) < 2 {
-			return false
-		}
-		moduleName := webhookNameParts[0]
-		expectedModuleName, exists := watcherCR.Labels[util.ManagedBylabel]
-		if !exists {
-			return false
-		}
-		if moduleName != expectedModuleName {
-			return false
-		}
-		if *webhook.ClientConfig.Service.Path != fmt.Sprintf(servicePathTpl, moduleName) {
-			return false
-		}
+	webhookNameParts := strings.Split(webhook.Name, ".")
+	if len(webhookNameParts) < 2 {
+		return false
+	}
+	moduleName := webhookNameParts[0]
+	expectedModuleName, exists := watcherCR.Labels[util.ManagedBylabel]
+	if !exists {
+		return false
+	}
+	if moduleName != expectedModuleName {
+		return false
+	}
+	if *webhook.ClientConfig.Service.Path != fmt.Sprintf(servicePathTpl, moduleName) {
+		return false
+	}
 
-		if !reflect.DeepEqual(webhook.ObjectSelector.MatchLabels, watcherCR.Spec.LabelsToWatch) {
-			return false
-		}
-		if watcherCR.Spec.Field == watcherapiv1alpha1.StatusField && webhook.Rules[0].Resources[0] != statusSubresources {
-			return false
-		}
-		if watcherCR.Spec.Field == watcherapiv1alpha1.SpecField && webhook.Rules[0].Resources[0] != specSubresources {
-			return false
-		}
+	if !reflect.DeepEqual(webhook.ObjectSelector.MatchLabels, watcherCR.Spec.LabelsToWatch) {
+		return false
+	}
+	if watcherCR.Spec.Field == watcherapiv1alpha1.StatusField && webhook.Rules[0].Resources[0] != statusSubresources {
+		return false
+	}
+	if watcherCR.Spec.Field == watcherapiv1alpha1.SpecField && webhook.Rules[0].Resources[0] != specSubresources {
+		return false
 	}
 
 	return true

@@ -2,30 +2,29 @@ package util
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
-	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	istioapiv1beta1 "istio.io/api/networking/v1beta1"
 	istioclientapiv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
-	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	gwPortVarName                  = "LISTENER_GW_PORT"
-	requeueIntervalVarName         = "REQUEUE_INTERVAL"
-	DefaultIstioGatewayPort        = 80
-	DefaultRequeueInterval         = 500
-	firstElementIdx                = 0
-	IstioVirtualServiceGVR         = "virtualservices.networking.istio.io/v1beta1"
-	ManagedBylabel                 = "operator.kyma-project.io/managed-by"
-	contractVersion                = "v1"
+	gwPortVarName           = "LISTENER_GW_PORT"
+	requeueIntervalVarName  = "REQUEUE_INTERVAL"
+	DefaultIstioGatewayPort = 80
+	DefaultRequeueInterval  = 500
+	firstElementIdx         = 0
+	IstioVirtualServiceGVR  = "virtualservices.networking.istio.io/v1beta1"
+	ManagedBylabel          = "operator.kyma-project.io/managed-by"
+	contractVersion         = "1"
+	//TODO: remove after local testing
+	LocalTestingChartPath          = "../skr/chart/skr-webhook"
 	DefaultWebhookChartPath        = "./skr-webhook"
 	DefaultVirtualServiceName      = "kcp-events"
 	DefaultVirtualServiceNamespace = metav1.NamespaceDefault
@@ -47,25 +46,9 @@ type WatcherConfig struct {
 	WebhookChartReleaseName string
 }
 
-func IstioResourcesErrorCheck(err error) error {
-	if err != nil && !k8sapierrors.IsNotFound(err) {
-		return err
-	}
-	if err != nil {
-		installed, err := isCrdInstalled(err)
-		if err != nil {
-			return err
-		}
-		if !installed {
-			return fmt.Errorf("API server does not recognize %s CRD", IstioVirtualServiceGVR)
-		}
-	}
-	return nil
-}
-
 func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
 	// TODO: remove before pushing the changes
-	fileInfo, err := os.Stat(DefaultWebhookChartPath)
+	fileInfo, err := os.Stat(LocalTestingChartPath)
 	if err != nil || !fileInfo.IsDir() {
 		logger.V(1).Error(err, "failed to read local skr chart")
 	}
@@ -77,15 +60,17 @@ func GetConfigValuesFromEnv(logger logr.Logger) *WatcherConfig {
 	}
 	config.RequeueInterval = DefaultRequeueInterval
 	return &WatcherConfig{
-		RequeueInterval:    DefaultRequeueInterval,
-		WebhookChartPath:   DefaultWebhookChartPath,
-		VirtualServiceName: DefaultVirtualServiceName,
+		RequeueInterval:         DefaultRequeueInterval,
+		WebhookChartPath:        LocalTestingChartPath,
+		WebhookChartReleaseName: DefaultWebhookChartReleaseName,
+		VirtualServiceName:      DefaultVirtualServiceName,
+		VirtualServiceNamespace: DefaultVirtualServiceNamespace,
 	}
 }
 
-func AddReadyCondition(obj *componentv1alpha1.Watcher, state componentv1alpha1.WatcherConditionStatus, msg string) {
-	obj.Status.Conditions = append(obj.Status.Conditions, componentv1alpha1.WatcherCondition{
-		Type:               componentv1alpha1.ConditionTypeReady,
+func AddReadyCondition(obj *watcherv1alpha1.Watcher, state watcherv1alpha1.WatcherConditionStatus, msg string) {
+	obj.Status.Conditions = append(obj.Status.Conditions, watcherv1alpha1.WatcherCondition{
+		Type:               watcherv1alpha1.ConditionTypeReady,
 		Status:             state,
 		Message:            msg,
 		LastTransitionTime: &metav1.Time{Time: time.Now()},
@@ -111,32 +96,68 @@ func isRouteConfigEqual(route1 *istioapiv1beta1.HTTPRoute, route2 *istioapiv1bet
 	return true
 }
 
-func IsVirtualServiceConfigChanged(virtualService *istioclientapiv1beta1.VirtualService,
-	obj *componentv1alpha1.Watcher,
+func IsListenerHTTPRouteConfigured(virtualService *istioclientapiv1beta1.VirtualService,
+	obj *watcherv1alpha1.Watcher,
 ) bool {
 	if len(virtualService.Spec.Http) == 0 {
-		return true
+		return false
 	}
 
 	for idx, route := range virtualService.Spec.Http {
 		if route.Name == obj.Labels[ManagedBylabel] {
 			istioHTTPRoute := prepareIstioHTTPRouteForCR(obj)
-			return !isRouteConfigEqual(virtualService.Spec.Http[idx], istioHTTPRoute)
+			return isRouteConfigEqual(virtualService.Spec.Http[idx], istioHTTPRoute)
 		}
 	}
 
-	return true
+	return false
 }
 
-func UpdateVirtualServiceConfig(virtualService *istioclientapiv1beta1.VirtualService, obj *componentv1alpha1.Watcher) {
+func UpdateVirtualServiceConfig(virtualService *istioclientapiv1beta1.VirtualService, obj *watcherv1alpha1.Watcher) {
 	if virtualService == nil {
 		return
 	}
+	//lookup cr config
+	routeIdx := lookupHTTPRouteByName(virtualService.Spec.Http, obj.Labels[ManagedBylabel])
+	if routeIdx != -1 {
+		virtualService.Spec.Http[routeIdx] = prepareIstioHTTPRouteForCR(obj)
+		return
+	}
+	//if route doesn't exist already append it to the route list
 	istioHTTPRoute := prepareIstioHTTPRouteForCR(obj)
 	virtualService.Spec.Http = append(virtualService.Spec.Http, istioHTTPRoute)
 }
+func RemoveVirtualServiceConfigForCR(virtualService *istioclientapiv1beta1.VirtualService, obj *watcherv1alpha1.Watcher) {
+	if virtualService == nil {
+		return
+	}
+	if len(virtualService.Spec.Http) == 0 {
+		return
+	}
 
-func prepareIstioHTTPRouteForCR(obj *componentv1alpha1.Watcher) *istioapiv1beta1.HTTPRoute {
+	routeIdx := lookupHTTPRouteByName(virtualService.Spec.Http, obj.Labels[ManagedBylabel])
+	if routeIdx != -1 {
+		l := len(virtualService.Spec.Http)
+		copy(virtualService.Spec.Http[routeIdx:], virtualService.Spec.Http[routeIdx+1:])
+		virtualService.Spec.Http[l-1] = nil
+		virtualService.Spec.Http = virtualService.Spec.Http[:l-1]
+	}
+
+}
+
+func lookupHTTPRouteByName(routes []*istioapiv1beta1.HTTPRoute, name string) int {
+	if len(routes) == 0 {
+		return -1
+	}
+	for idx, route := range routes {
+		if route.Name == name {
+			return idx
+		}
+	}
+	return -1
+}
+
+func prepareIstioHTTPRouteForCR(obj *watcherv1alpha1.Watcher) *istioapiv1beta1.HTTPRoute {
 	return &istioapiv1beta1.HTTPRoute{
 		Name: obj.Labels[ManagedBylabel],
 		Match: []*istioapiv1beta1.HTTPMatchRequest{
@@ -165,41 +186,16 @@ func destinationHost(serviceName, serviceNamespace string) string {
 	return fmt.Sprintf("%s.%s.svc.cluster.local", serviceName, serviceNamespace)
 }
 
-func isCrdInstalled(err error) (bool, error) {
-	if err == nil || !k8sapierrors.IsNotFound(err) {
-		return false, fmt.Errorf("expected non nil error of NotFound kind")
-	}
-	var k8sStatusErr *k8sapierrors.StatusError
-	converted := errors.As(err, &k8sStatusErr)
-	if !converted {
-		return false, fmt.Errorf("expected non nil error of StatusError type")
-	}
-	errCauses := k8sStatusErr.ErrStatus.Details.Causes
-
-	if len(errCauses) > 0 && reflect.DeepEqual(
-		errCauses[0], metav1.StatusCause{
-			Type:    metav1.CauseTypeUnexpectedServerResponse,
-			Message: "404 page not found",
-		},
-	) {
-		return false, nil
-	}
-	return true, nil
-}
-
 func PerformIstioVirtualServiceCheck(ctx context.Context, istioClientSet *istioclient.Clientset,
-	obj *componentv1alpha1.Watcher, vsName, vsNamespace string,
+	obj *watcherv1alpha1.Watcher, vsName, vsNamespace string,
 ) error {
-	virtualService, apiErr := istioClientSet.NetworkingV1beta1().
+	virtualService, err := istioClientSet.NetworkingV1beta1().
 		VirtualServices(vsNamespace).Get(ctx, vsName, metav1.GetOptions{})
-	err := IstioResourcesErrorCheck(apiErr)
 	if err != nil {
 		return err
 	}
-	if k8sapierrors.IsNotFound(apiErr) {
-		return apiErr
-	}
-	if IsVirtualServiceConfigChanged(virtualService, obj) {
+
+	if !IsListenerHTTPRouteConfigured(virtualService, obj) {
 		return fmt.Errorf("virtual service config not ready")
 	}
 	return nil

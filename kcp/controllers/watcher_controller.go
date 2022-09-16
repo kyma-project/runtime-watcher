@@ -19,12 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +34,7 @@ import (
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -75,7 +74,8 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		logger.Info(fmt.Sprintf("failed to get reconciliation object: %s", req.NamespacedName.String()))
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	watcherObj = watcherObj.DeepCopy()
+	logger.V(1).Info("Got watcher resource", "state", watcherObj.Status.State)
+	// watcherObj = watcherObj.DeepCopy()
 
 	// check if deletionTimestamp is set, retry until it gets fully deleted
 	if !watcherObj.DeletionTimestamp.IsZero() && watcherObj.Status.State != watcherv1alpha1.WatcherStateDeleting {
@@ -89,22 +89,22 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, r.Update(ctx, watcherObj)
 	}
 
-	requeueInterval := time.Duration(r.Config.RequeueInterval) * time.Second
+	// requeueInterval := time.Duration(r.Config.RequeueInterval) * time.Second
 
 	// state handling
 	switch watcherObj.Status.State {
 	case "":
 		return ctrl.Result{}, r.HandleInitialState(ctx, watcherObj)
 	case watcherv1alpha1.WatcherStateProcessing:
-		return ctrl.Result{RequeueAfter: requeueInterval},
+		return ctrl.Result{},
 			r.HandleProcessingState(ctx, logger, watcherObj)
 	case watcherv1alpha1.WatcherStateDeleting:
 		return ctrl.Result{}, r.HandleDeletingState(ctx, logger, watcherObj)
 	case watcherv1alpha1.WatcherStateError:
-		return ctrl.Result{RequeueAfter: requeueInterval},
+		return ctrl.Result{},
 			r.HandleErrorState(ctx, watcherObj)
 	case watcherv1alpha1.WatcherStateReady:
-		return ctrl.Result{RequeueAfter: requeueInterval},
+		return ctrl.Result{},
 			r.HandleReadyState(ctx, logger, watcherObj)
 	}
 
@@ -118,13 +118,13 @@ func (r *WatcherReconciler) HandleInitialState(ctx context.Context, obj *watcher
 func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 	logger logr.Logger, obj *watcherv1alpha1.Watcher,
 ) error {
-	err := r.createOrUpdateServiceMeshConfigForCR(ctx, obj)
+	err := r.updateServiceMeshConfigForCR(ctx, obj)
 	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to create or update service mesh config")
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to create or update service mesh config")
 	}
 	err = r.updateSKRWatcherConfigForCR(ctx, obj)
 	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to update SKR config")
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to update SKR config")
 	}
 	err = r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateReady, "successfully reconciled watcher cr")
 	if err != nil {
@@ -170,18 +170,19 @@ func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Lo
 			watcherv1alpha1.WatcherStateProcessing, "observed generation change")
 	}
 
-	logger.Info("checking consistent state for watcher cr")
-	err := r.checkConsistentStateForCR(ctx, obj)
-	if err != nil {
-		logger.Info("resources not yet ready for watcher cr")
-		return r.updateWatcherCRStatus(ctx, obj,
-			watcherv1alpha1.WatcherStateProcessing, "resources not yet ready")
-	}
-	logger.Info("watcher cr resources are Ready!")
+	// logger.Info("checking consistent state for watcher cr")
+	// err := r.checkConsistentStateForCR(ctx, obj)
+	// if err != nil {
+	// 	logger.Info("resources not yet ready for watcher cr")
+	// 	return r.updateWatcherCRStatus(ctx, obj,
+	// 		watcherv1alpha1.WatcherStateProcessing, "resources not yet ready")
+	// }
+	// logger.Info("watcher cr resources are Ready!")
 	return nil
+	// return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateProcessing, "observed generation change")
 }
 
-func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Context,
+func (r *WatcherReconciler) updateServiceMeshConfigForCR(ctx context.Context,
 	obj *watcherv1alpha1.Watcher,
 ) error {
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
@@ -198,14 +199,13 @@ func (r *WatcherReconciler) createOrUpdateServiceMeshConfigForCR(ctx context.Con
 func (r *WatcherReconciler) updateIstioVirtualServiceForCR(ctx context.Context,
 	istioClientSet *istioclient.Clientset, obj *watcherv1alpha1.Watcher,
 ) error {
-	virtualService, apiErr := istioClientSet.NetworkingV1beta1().
+	virtualService, err := istioClientSet.NetworkingV1beta1().
 		VirtualServices(r.Config.VirtualServiceNamespace).
 		Get(ctx, r.Config.VirtualServiceName, metav1.GetOptions{})
-	err := util.IstioResourcesErrorCheck(apiErr)
 	if err != nil {
 		return err
 	}
-	if util.IsVirtualServiceConfigChanged(virtualService, obj) {
+	if !util.IsListenerHTTPRouteConfigured(virtualService, obj) {
 		util.UpdateVirtualServiceConfig(virtualService, obj)
 		_, err = istioClientSet.NetworkingV1beta1().
 			VirtualServices(r.Config.VirtualServiceNamespace).
@@ -224,23 +224,21 @@ func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj
 }
 
 func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *watcherv1alpha1.Watcher) error {
-	namespace := obj.GetNamespace()
-	vsName := obj.GetName()
 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
-	_, err = istioClientSet.NetworkingV1beta1().VirtualServices(namespace).Get(ctx, vsName, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get istio virtual service: %w", err)
-	}
-	if errors.IsNotFound(err) {
-		// nothing to do
-		return nil
-	}
-	err = istioClientSet.NetworkingV1beta1().VirtualServices(namespace).Delete(ctx, vsName, metav1.DeleteOptions{})
+	virtualService, err := istioClientSet.NetworkingV1beta1().VirtualServices(util.DefaultVirtualServiceNamespace).Get(ctx, util.DefaultVirtualServiceName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to delete istio virtual service: %w", err)
+		return err
+	}
+
+	if util.IsListenerHTTPRouteConfigured(virtualService, obj) {
+		util.RemoveVirtualServiceConfigForCR(virtualService, obj)
+		_, err = istioClientSet.NetworkingV1beta1().
+			VirtualServices(r.Config.VirtualServiceNamespace).
+			Update(ctx, virtualService, metav1.UpdateOptions{})
+		return err
 	}
 	return nil
 }
@@ -272,21 +270,23 @@ func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger
 	return err
 }
 
-func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
-	obj *watcherv1alpha1.Watcher,
-) error {
-	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
-	if err != nil {
-		return err
-	}
-	return util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj,
-		r.Config.VirtualServiceName, r.Config.VirtualServiceNamespace)
-}
+// func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
+// 	obj *watcherv1alpha1.Watcher,
+// ) error {
+// 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj,
+// 		r.Config.VirtualServiceName, r.Config.VirtualServiceNamespace)
+
+// 	//TODO: add verify SKR webhook config step
+// }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *WatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.RestConfig = mgr.GetConfig()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&watcherv1alpha1.Watcher{}).
+		// Watches(&source.Kind{Type: &istioapi.VirtualService{}}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
