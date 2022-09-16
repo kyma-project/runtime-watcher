@@ -14,13 +14,11 @@ import (
 	watcherapiv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
-	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	yaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -79,26 +77,6 @@ func prepareRequiredCRDs(testCrdURLs []string) ([]*apiextv1.CustomResourceDefini
 		}
 	}
 	return crds, nil
-}
-
-func createInClusterConfigSecret(secretName string) (*v1.Secret, error) {
-	authUsr, err := testEnv.AddUser(envtest.User{Name: "testAdmin", Groups: []string{"system:masters"}}, testEnv.Config)
-	if err != nil {
-		return nil, err
-	}
-	kubeconfig, err := authUsr.KubeConfig()
-	if err != nil {
-		return nil, err
-	}
-	return &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: metav1.NamespaceDefault,
-		},
-		Data: map[string][]byte{
-			"config": kubeconfig,
-		},
-	}, nil
 }
 
 func createKymaCR(kymaName string) *kymaapi.Kyma {

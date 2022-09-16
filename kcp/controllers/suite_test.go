@@ -56,7 +56,7 @@ var (
 )
 
 const (
-	webhookChartPath = "assets/sample-chart"
+	webhookChartPath = "../pkg/deploy/assets/sample-chart"
 	requeueInterval  = 500
 	vsName           = "kcp-events"
 	vsNamespace      = metav1.NamespaceDefault
