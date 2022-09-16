@@ -15,7 +15,7 @@ import (
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	v1 "k8s.io/api/core/v1"
-	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	yaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -150,25 +150,20 @@ func isEven(idx int) bool {
 	return idx%2 == 0
 }
 
-func isCRDeletetionFinished(watcherObjKeys ...client.ObjectKey) func(g Gomega) bool {
+func isCrDeletetionFinished(watcherObjKeys ...client.ObjectKey) func(g Gomega) bool {
 	if len(watcherObjKeys) > 1 {
 		return nil
 	}
 	if len(watcherObjKeys) == 0 {
 		return func(g Gomega) bool {
-			err := k8sClient.List(ctx, &watcherapiv1alpha1.WatcherList{})
-			if err == nil || !k8sapierrors.IsNotFound(err) {
-				return false
-			}
-			return true
+			watchers := &watcherapiv1alpha1.WatcherList{}
+			err := k8sClient.List(ctx, watchers)
+			return err == nil && len(watchers.Items) == 0
 		}
 	}
 	return func(g Gomega) bool {
 		err := k8sClient.Get(ctx, watcherObjKeys[0], &watcherapiv1alpha1.Watcher{})
-		if err == nil || !k8sapierrors.IsNotFound(err) {
-			return false
-		}
-		return true
+		return kerrors.IsNotFound(err)
 	}
 }
 
