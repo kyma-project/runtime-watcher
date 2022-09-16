@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
@@ -34,7 +35,6 @@ import (
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -44,10 +44,24 @@ const (
 // WatcherReconciler reconciles a Watcher object.
 type WatcherReconciler struct {
 	client.Client
-	RestConfig     *rest.Config
-	Scheme         *runtime.Scheme
-	Config         *util.WatcherConfig
-	SkrWatcherPath string
+	RestConfig *rest.Config
+	Scheme     *runtime.Scheme
+	Config     *WatcherConfig
+}
+
+type WatcherConfig struct {
+	// VirtualServiceName represents the label of the virtual service resource to be updated
+	VirtualServiceName string
+	// VirtualServiceNamespace represents the namespace of the virtual service resource to be updated
+	VirtualServiceNamespace string
+	// RequeueInterval represents requeue interval in seconds
+	RequeueInterval int
+	// WebhookChartPath represents the path of the webhook chart
+	// to be installed on SKR clusters upon reconciling watcher CRs
+	WebhookChartPath string
+	// WebhookChartReleaseName represents the helm release name of the webhook chart
+	// to be installed on SKR clusters upon reconciling watcher CRs
+	WebhookChartReleaseName string
 }
 
 //nolint:lll
@@ -75,8 +89,6 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		logger.Info(fmt.Sprintf("failed to get reconciliation object: %s", req.NamespacedName.String()))
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	logger.V(1).Info("Got watcher resource", "state", watcherObj.Status.State)
-	// watcherObj = watcherObj.DeepCopy()
 
 	// check if deletionTimestamp is set, retry until it gets fully deleted
 	if !watcherObj.DeletionTimestamp.IsZero() && watcherObj.Status.State != watcherv1alpha1.WatcherStateDeleting {
@@ -90,22 +102,22 @@ func (r *WatcherReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, r.Update(ctx, watcherObj)
 	}
 
-	// requeueInterval := time.Duration(r.Config.RequeueInterval) * time.Second
+	requeueInterval := time.Duration(r.Config.RequeueInterval) * time.Second
 
 	// state handling
 	switch watcherObj.Status.State {
 	case "":
 		return ctrl.Result{}, r.HandleInitialState(ctx, watcherObj)
 	case watcherv1alpha1.WatcherStateProcessing:
-		return ctrl.Result{},
+		return ctrl.Result{RequeueAfter: requeueInterval},
 			r.HandleProcessingState(ctx, logger, watcherObj)
 	case watcherv1alpha1.WatcherStateDeleting:
 		return ctrl.Result{}, r.HandleDeletingState(ctx, logger, watcherObj)
 	case watcherv1alpha1.WatcherStateError:
-		return ctrl.Result{},
+		return ctrl.Result{RequeueAfter: requeueInterval},
 			r.HandleErrorState(ctx, watcherObj)
 	case watcherv1alpha1.WatcherStateReady:
-		return ctrl.Result{},
+		return ctrl.Result{RequeueAfter: requeueInterval},
 			r.HandleReadyState(ctx, logger, watcherObj)
 	}
 
@@ -171,16 +183,7 @@ func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Lo
 			watcherv1alpha1.WatcherStateProcessing, "observed generation change")
 	}
 
-	// logger.Info("checking consistent state for watcher cr")
-	// err := r.checkConsistentStateForCR(ctx, obj)
-	// if err != nil {
-	// 	logger.Info("resources not yet ready for watcher cr")
-	// 	return r.updateWatcherCRStatus(ctx, obj,
-	// 		watcherv1alpha1.WatcherStateProcessing, "resources not yet ready")
-	// }
-	// logger.Info("watcher cr resources are Ready!")
 	return nil
-	// return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateProcessing, "observed generation change")
 }
 
 func (r *WatcherReconciler) updateServiceMeshConfigForCR(ctx context.Context,
@@ -229,7 +232,8 @@ func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, ob
 	if err != nil {
 		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
 	}
-	virtualService, err := istioClientSet.NetworkingV1beta1().VirtualServices(util.DefaultVirtualServiceNamespace).Get(ctx, util.DefaultVirtualServiceName, metav1.GetOptions{})
+	virtualService, err := istioClientSet.NetworkingV1beta1().VirtualServices(r.Config.VirtualServiceNamespace).
+		Get(ctx, r.Config.VirtualServiceName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -250,11 +254,11 @@ func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *watc
 	obj.Status.State = state
 	switch state { //nolint:exhaustive
 	case watcherv1alpha1.WatcherStateReady:
-		util.AddReadyCondition(obj, watcherv1alpha1.ConditionStatusTrue, msg)
+		AddReadyCondition(obj, watcherv1alpha1.ConditionStatusTrue, msg)
 	case "":
-		util.AddReadyCondition(obj, watcherv1alpha1.ConditionStatusUnknown, msg)
+		AddReadyCondition(obj, watcherv1alpha1.ConditionStatusUnknown, msg)
 	default:
-		util.AddReadyCondition(obj, watcherv1alpha1.ConditionStatusFalse, msg)
+		AddReadyCondition(obj, watcherv1alpha1.ConditionStatusFalse, msg)
 	}
 	return r.Status().Update(ctx, obj.SetObservedGeneration())
 }
@@ -271,18 +275,14 @@ func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger
 	return err
 }
 
-// func (r *WatcherReconciler) checkConsistentStateForCR(ctx context.Context,
-// 	obj *watcherv1alpha1.Watcher,
-// ) error {
-// 	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, obj,
-// 		r.Config.VirtualServiceName, r.Config.VirtualServiceNamespace)
-
-// 	//TODO: add verify SKR webhook config step
-// }
+func AddReadyCondition(obj *watcherv1alpha1.Watcher, state watcherv1alpha1.WatcherConditionStatus, msg string) {
+	obj.Status.Conditions = append(obj.Status.Conditions, watcherv1alpha1.WatcherCondition{
+		Type:               watcherv1alpha1.ConditionTypeReady,
+		Status:             state,
+		Message:            msg,
+		LastTransitionTime: &metav1.Time{Time: time.Now()},
+	})
+}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *WatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {

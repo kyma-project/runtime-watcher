@@ -70,7 +70,7 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 
 			// verify istio config
 			Expect(util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, watcherCR,
-				util.DefaultVirtualServiceName, util.DefaultVirtualServiceNamespace)).To(Succeed())
+				vsName, vsNamespace)).To(Succeed())
 
 			//verify webhook config
 			webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
@@ -94,7 +94,7 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 				Should(Equal(watcherv1alpha1.WatcherStateReady))
 
 			Expect(util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, currentWatcherCR,
-				util.DefaultVirtualServiceName, util.DefaultVirtualServiceNamespace)).To(Succeed())
+				vsName, vsNamespace)).To(Succeed())
 
 			//verify webhook config
 			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)).To(Succeed())
@@ -119,7 +119,7 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			Should(BeTrue())
 
 		Expect(util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, firstToBeRemoved,
-			util.DefaultVirtualServiceName, util.DefaultVirtualServiceNamespace)).ToNot(BeNil())
+			vsName, vsNamespace)).ToNot(BeNil())
 		//verify webhook config
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
 		err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)

@@ -20,14 +20,16 @@ import (
 	"flag"
 	"os"
 
+	"github.com/go-logr/logr"
 	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -49,7 +51,7 @@ const (
 
 func init() { //nolint:gochecknoinits
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(componentv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(watcherv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kyma.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -59,12 +61,20 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var skrWatcherPath string
+	var skrWatcherRelName string
+	var vsName string
+	var vsNamepace string
+	var requeueInterval int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&skrWatcherPath, "skr-watcher-path", "../skr/chart/skr-webhook", "The path to skr watcher chart.")
+	flag.StringVar(&skrWatcherPath, "skr-watcher-path", "../skr/chart/skr-webhook", "The path to the skr watcher chart.")
+	flag.StringVar(&skrWatcherRelName, "skr-watcher-release", "watcher", "The Helm release name for the skr watcher chart.")
+	flag.StringVar(&vsName, "virtual-svc-name", "kcp-events", "The name of the Istio virtual service to be updated.")
+	flag.StringVar(&vsNamepace, "virtual-svc-namespace", metav1.NamespaceDefault, "The namespace of the Istio virtual service to be updated.")
+	flag.IntVar(&requeueInterval, "requeue-interval", 300, "The reconciliation requeue interval in seconds.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -72,9 +82,6 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	// get env vars for watcher config
-	watcherConfig := util.GetConfigValuesFromEnv(setupLog, skrWatcherPath)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -90,10 +97,9 @@ func main() {
 	}
 
 	if err = (&controllers.WatcherReconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		Config:         watcherConfig,
-		SkrWatcherPath: skrWatcherPath,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Config: getConfigValues(setupLog, skrWatcherPath, skrWatcherRelName, vsName, vsNamepace, requeueInterval),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
 		os.Exit(1)
@@ -114,5 +120,19 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+}
+
+func getConfigValues(logger logr.Logger, skrWatcherPath, skrWatcherRelName, vsName, vsNamepace string, requeueInterval int) *controllers.WatcherConfig {
+	fileInfo, err := os.Stat(skrWatcherPath)
+	if err != nil || !fileInfo.IsDir() {
+		logger.V(1).Error(err, "failed to read local skr chart")
+	}
+	return &controllers.WatcherConfig{
+		RequeueInterval:         requeueInterval,
+		WebhookChartPath:        skrWatcherPath,
+		WebhookChartReleaseName: skrWatcherRelName,
+		VirtualServiceName:      vsName,
+		VirtualServiceNamespace: vsNamepace,
 	}
 }

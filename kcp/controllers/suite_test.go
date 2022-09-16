@@ -26,10 +26,10 @@ import (
 
 	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -57,6 +57,10 @@ var (
 
 const (
 	webhookChartPath = "assets/sample-chart"
+	requeueInterval  = 500
+	vsName           = "kcp-events"
+	vsNamespace      = metav1.NamespaceDefault
+	releaseName      = "watcher"
 )
 
 func TestAPIs(t *testing.T) {
@@ -115,12 +119,12 @@ var _ = BeforeSuite(func() {
 		Client:     k8sManager.GetClient(),
 		RestConfig: k8sManager.GetConfig(),
 		Scheme:     scheme.Scheme,
-		Config: &util.WatcherConfig{
-			VirtualServiceNamespace: util.DefaultVirtualServiceNamespace,
-			VirtualServiceName:      util.DefaultVirtualServiceName,
-			RequeueInterval:         util.DefaultRequeueInterval,
+		Config: &controllers.WatcherConfig{
+			VirtualServiceNamespace: vsNamespace,
+			VirtualServiceName:      vsName,
+			RequeueInterval:         requeueInterval,
 			WebhookChartPath:        webhookChartPath,
-			WebhookChartReleaseName: util.DefaultWebhookChartReleaseName,
+			WebhookChartReleaseName: releaseName,
 		},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
