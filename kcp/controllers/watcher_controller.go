@@ -132,9 +132,11 @@ func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 
 	err := r.UpdateVirtualServiceConfig(ctx, r.Config.VirtualServiceObjKey, obj)
 	if err != nil {
-		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to create or update service mesh config")
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError,
+			"failed to create or update service mesh config")
 	}
-	err = deploy.UpdateWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.RestConfig, r.Client)
+	err = deploy.UpdateWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj,
+		r.RestConfig, r.Client)
 	if err != nil {
 		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to update SKR config")
 	}
@@ -151,9 +153,11 @@ func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr
 ) error {
 	err := r.RemoveVirtualServiceConfigForCR(ctx, r.Config.VirtualServiceObjKey, obj)
 	if err != nil {
-		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to delete service mesh config")
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError,
+			"failed to delete service mesh config")
 	}
-	err = deploy.RemoveWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.RestConfig, r.Client)
+	err = deploy.RemoveWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj,
+		r.RestConfig, r.Client)
 	if err != nil {
 		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to delete SKR config")
 	}

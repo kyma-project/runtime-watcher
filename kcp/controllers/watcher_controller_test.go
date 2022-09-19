@@ -17,9 +17,6 @@ import (
 )
 
 const (
-	servicePathTpl         = "/validate/%s"
-	specSubresources       = "*"
-	statusSubresources     = "*/status"
 	istioResourcesFilePath = "assets/istio-test-resources.yaml"
 )
 
@@ -102,8 +99,11 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 		}, watcherCREntries)
 
 	It("should delete service mesh routes and SKR config when one CR is deleted", func() {
-		idx := rand.Intn(len(watcherCRNames))
-		firstToBeRemovedObjKey := client.ObjectKey{Name: fmt.Sprintf("%s-sample", watcherCRNames[idx]), Namespace: metav1.NamespaceDefault}
+		idx := rand.Intn(len(watcherCRNames)) //nolint:gosec
+		firstToBeRemovedObjKey := client.ObjectKey{
+			Name:      fmt.Sprintf("%s-sample", watcherCRNames[idx]),
+			Namespace: metav1.NamespaceDefault,
+		}
 		firstToBeRemoved := &watcherv1alpha1.Watcher{}
 		Expect(k8sClient.Get(ctx, firstToBeRemovedObjKey, firstToBeRemoved)).To(Succeed())
 		Expect(k8sClient.Delete(ctx, firstToBeRemoved)).To(Succeed())

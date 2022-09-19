@@ -52,7 +52,7 @@ func prepareRequiredCRDs(testCrdURLs []string) ([]*apiextv1.CustomResourceDefini
 		if err != nil {
 			return nil, err
 		}
-		resp, err := http.Get(testCrdURL)
+		resp, err := http.Get(testCrdURL) //nolint:gosec
 		if err != nil {
 			return nil, fmt.Errorf("failed pulling content for URL (%s) :%w", testCrdURL, err)
 		}

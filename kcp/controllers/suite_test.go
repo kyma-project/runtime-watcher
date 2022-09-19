@@ -129,7 +129,8 @@ var _ = BeforeSuite(func() {
 			WebhookChartReleaseName: releaseName,
 		},
 	}
-	watcherReconciler.SetIstioClient()
+	err = watcherReconciler.SetIstioClient()
+	Expect(err).ToNot(HaveOccurred())
 	err = watcherReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
