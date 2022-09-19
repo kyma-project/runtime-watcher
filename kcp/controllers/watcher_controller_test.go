@@ -8,10 +8,9 @@ import (
 	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/custom"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	admissionv1 "k8s.io/api/admissionregistration/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,12 +72,9 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 				Namespace: vsNamespace,
 			}, watcherCR)).To(BeTrue())
 
-			//verify webhook config
-			webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)).To(Succeed())
-			webhookIdx := lookupWebhook(webhookConfig, watcherCR)
-			Expect(webhookIdx).NotTo(Equal(-1))
-			Expect(verifyWebhookConfig(webhookConfig.Webhooks[webhookIdx], watcherCR)).To(BeTrue())
+			// verify webhook config
+			Expect(deploy.IsWebhookDeployed(ctx, cfg)).To(BeTrue())
+			Expect(deploy.IsWebhookConfigured(ctx, watcherCR, cfg)).To(BeTrue())
 
 			// update watcher CR spec
 			currentWatcherCR := &watcherv1alpha1.Watcher{}
@@ -100,10 +96,8 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			}, currentWatcherCR)).To(BeTrue())
 
 			//verify webhook config
-			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)).To(Succeed())
-			webhookIdx = lookupWebhook(webhookConfig, watcherCR)
-			Expect(webhookIdx).NotTo(Equal(-1))
-			Expect(verifyWebhookConfig(webhookConfig.Webhooks[webhookIdx], currentWatcherCR)).To(BeTrue())
+			Expect(deploy.IsWebhookDeployed(ctx, cfg)).To(BeTrue())
+			Expect(deploy.IsWebhookConfigured(ctx, currentWatcherCR, cfg)).To(BeTrue())
 
 		}, watcherCREntries)
 
@@ -126,12 +120,9 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			Namespace: vsNamespace,
 		}, firstToBeRemoved)).To(BeFalse())
 
-		//verify webhook config
-		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-		err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
-		Expect(err).ShouldNot(HaveOccurred())
-		webhookIdx := lookupWebhook(webhookConfig, firstToBeRemoved)
-		Expect(webhookIdx).To(Equal(-1))
+		// verify webhook config
+		Expect(deploy.IsWebhookDeployed(ctx, cfg)).To(BeTrue())
+		Expect(deploy.IsWebhookConfigured(ctx, firstToBeRemoved, cfg)).To(BeFalse())
 	})
 
 	It("should delete all resources on SKR when all CRs are deleted", func() {
@@ -153,8 +144,7 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			Name:      vsName,
 			Namespace: vsNamespace,
 		})).To(BeTrue())
-		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-		err := k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
-		Expect(kerrors.IsNotFound(err)).To(BeTrue())
+
+		Expect(deploy.IsWebhookDeployed(ctx, cfg)).To(BeFalse())
 	})
 })

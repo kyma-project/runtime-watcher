@@ -7,12 +7,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
-	"strings"
 
-	kymaapi "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
+	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
-	admissionv1 "k8s.io/api/admissionregistration/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -78,19 +75,19 @@ func prepareRequiredCRDs(testCrdURLs []string) ([]*apiextv1.CustomResourceDefini
 	return crds, nil
 }
 
-func createKymaCR(kymaName string) *kymaapi.Kyma {
-	return &kymaapi.Kyma{
+func createKymaCR(kymaName string) *kyma.Kyma {
+	return &kyma.Kyma{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       string(kymaapi.KymaKind),
-			APIVersion: kymaapi.GroupVersion.String(),
+			Kind:       string(kyma.KymaKind),
+			APIVersion: kyma.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kymaName,
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: kymaapi.KymaSpec{
-			Channel: kymaapi.ChannelStable,
-			Modules: []kymaapi.Module{
+		Spec: kyma.KymaSpec{
+			Channel: kyma.ChannelStable,
+			Modules: []kyma.Module{
 				{
 					Name: "sample-skr-module",
 				},
@@ -98,9 +95,9 @@ func createKymaCR(kymaName string) *kymaapi.Kyma {
 					Name: "sample-kcp-module",
 				},
 			},
-			Sync: kymaapi.Sync{
+			Sync: kyma.Sync{
 				Enabled:  false,
-				Strategy: kymaapi.SyncStrategyLocalClient,
+				Strategy: kyma.SyncStrategyLocalClient,
 			},
 		},
 	}
@@ -181,58 +178,4 @@ func createWatcherCR(moduleName string, statusOnly bool) *watcherv1alpha1.Watche
 			Field: field,
 		},
 	}
-}
-
-func lookupWebhook(webhookCfg *admissionv1.ValidatingWebhookConfiguration,
-	watcherCR *watcherv1alpha1.Watcher,
-) int {
-	cfgIdx := -1
-	for idx, webhook := range webhookCfg.Webhooks {
-		webhookNameParts := strings.Split(webhook.Name, ".")
-		if len(webhookNameParts) == 0 {
-			continue
-		}
-		moduleName := webhookNameParts[0]
-		objModuleName, exists := watcherCR.Labels[watcherv1alpha1.ManagedBylabel]
-		if !exists {
-			return cfgIdx
-		}
-		if moduleName == objModuleName {
-			return idx
-		}
-	}
-	return cfgIdx
-}
-
-func verifyWebhookConfig(
-	webhook admissionv1.ValidatingWebhook,
-	watcherCR *watcherv1alpha1.Watcher,
-) bool {
-	webhookNameParts := strings.Split(webhook.Name, ".")
-	if len(webhookNameParts) < 2 {
-		return false
-	}
-	moduleName := webhookNameParts[0]
-	expectedModuleName, exists := watcherCR.Labels[watcherv1alpha1.ManagedBylabel]
-	if !exists {
-		return false
-	}
-	if moduleName != expectedModuleName {
-		return false
-	}
-	if *webhook.ClientConfig.Service.Path != fmt.Sprintf(servicePathTpl, moduleName) {
-		return false
-	}
-
-	if !reflect.DeepEqual(webhook.ObjectSelector.MatchLabels, watcherCR.Spec.LabelsToWatch) {
-		return false
-	}
-	if watcherCR.Spec.Field == watcherv1alpha1.StatusField && webhook.Rules[0].Resources[0] != statusSubresources {
-		return false
-	}
-	if watcherCR.Spec.Field == watcherv1alpha1.SpecField && webhook.Rules[0].Resources[0] != specSubresources {
-		return false
-	}
-
-	return true
 }
