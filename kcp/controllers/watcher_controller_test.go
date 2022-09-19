@@ -7,10 +7,9 @@ import (
 
 	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/custom"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,12 +26,12 @@ const (
 
 var _ = Describe("Watcher CR scenarios", Ordered, func() {
 
-	var istioClientSet *istioclient.Clientset
+	var customIstioClient *custom.IstioClient
 	var err error
 	kymaSample := &kyma.Kyma{}
 	var istioResources []*unstructured.Unstructured
 	BeforeAll(func() {
-		istioClientSet, err = istioclient.NewForConfig(cfg)
+		customIstioClient, err = custom.NewIstioClient(cfg)
 		Expect(err).ToNot(HaveOccurred())
 		kymaName := "kyma-sample"
 		kymaSample = createKymaCR(kymaName)
@@ -69,8 +68,10 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 				Should(Equal(watcherv1alpha1.WatcherStateReady))
 
 			// verify istio config
-			Expect(util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, watcherCR,
-				vsName, vsNamespace)).To(Succeed())
+			Expect(customIstioClient.IsListenerHTTPRouteConfigured(ctx, client.ObjectKey{
+				Name:      vsName,
+				Namespace: vsNamespace,
+			}, watcherCR)).To(BeTrue())
 
 			//verify webhook config
 			webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
@@ -93,8 +94,10 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 				WithPolling(250 * time.Millisecond).
 				Should(Equal(watcherv1alpha1.WatcherStateReady))
 
-			Expect(util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, currentWatcherCR,
-				vsName, vsNamespace)).To(Succeed())
+			Expect(customIstioClient.IsListenerHTTPRouteConfigured(ctx, client.ObjectKey{
+				Name:      vsName,
+				Namespace: vsNamespace,
+			}, currentWatcherCR)).To(BeTrue())
 
 			//verify webhook config
 			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)).To(Succeed())
@@ -118,8 +121,11 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			WithPolling(250 * time.Millisecond).
 			Should(BeTrue())
 
-		Expect(util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, firstToBeRemoved,
-			vsName, vsNamespace)).ToNot(BeNil())
+		Expect(customIstioClient.IsListenerHTTPRouteConfigured(ctx, client.ObjectKey{
+			Name:      vsName,
+			Namespace: vsNamespace,
+		}, firstToBeRemoved)).To(BeFalse())
+
 		//verify webhook config
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
 		err = k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
@@ -143,7 +149,10 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			WithTimeout(20 * time.Second).
 			WithPolling(250 * time.Millisecond).
 			Should(BeTrue())
-		//TODO: verify that all istio virtual service http routes are deleted
+		Expect(customIstioClient.IsListenerHTTPRoutesEmpty(ctx, client.ObjectKey{
+			Name:      vsName,
+			Namespace: vsNamespace,
+		})).To(BeTrue())
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
 		err := k8sClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceDefault, Name: "skr-webhook"}, webhookConfig)
 		Expect(kerrors.IsNotFound(err)).To(BeTrue())

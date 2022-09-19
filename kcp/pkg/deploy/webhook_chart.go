@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	k8syaml "sigs.k8s.io/yaml"
 )
 
@@ -75,7 +74,7 @@ func generateHelmChartArgsForCR(obj *watcherv1alpha1.Watcher) (map[string]interf
 func generateWatchableConfigForCR(obj *watcherv1alpha1.Watcher) map[string]WatchableConfig {
 	statusOnly := obj.Spec.Field == watcherv1alpha1.StatusField
 	return map[string]WatchableConfig{
-		obj.Labels[util.ManagedBylabel]: {
+		obj.GetModuleName(): {
 			Labels:     obj.Spec.LabelsToWatch,
 			StatusOnly: statusOnly,
 		},

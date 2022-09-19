@@ -31,9 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/pkg/custom"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
-	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -44,16 +43,15 @@ const (
 // WatcherReconciler reconciles a Watcher object.
 type WatcherReconciler struct {
 	client.Client
+	*custom.IstioClient
 	RestConfig *rest.Config
 	Scheme     *runtime.Scheme
 	Config     *WatcherConfig
 }
 
 type WatcherConfig struct {
-	// VirtualServiceName represents the label of the virtual service resource to be updated
-	VirtualServiceName string
-	// VirtualServiceNamespace represents the namespace of the virtual service resource to be updated
-	VirtualServiceNamespace string
+	// VirtualServiceObjKey represents the object key (name and namespace) of the virtual service resource to be updated
+	VirtualServiceObjKey client.ObjectKey
 	// RequeueInterval represents requeue interval in seconds
 	RequeueInterval int
 	// WebhookChartPath represents the path of the webhook chart
@@ -131,11 +129,12 @@ func (r *WatcherReconciler) HandleInitialState(ctx context.Context, obj *watcher
 func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 	logger logr.Logger, obj *watcherv1alpha1.Watcher,
 ) error {
-	err := r.updateServiceMeshConfigForCR(ctx, obj)
+
+	err := r.UpdateVirtualServiceConfig(ctx, r.Config.VirtualServiceObjKey, obj)
 	if err != nil {
 		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to create or update service mesh config")
 	}
-	err = r.updateSKRWatcherConfigForCR(ctx, obj)
+	err = deploy.UpdateWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.RestConfig, r.Client)
 	if err != nil {
 		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to update SKR config")
 	}
@@ -150,17 +149,17 @@ func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr.Logger,
 	obj *watcherv1alpha1.Watcher,
 ) error {
-	err := r.deleteServiceMeshConfigForCR(ctx, obj)
+	err := r.RemoveVirtualServiceConfigForCR(ctx, r.Config.VirtualServiceObjKey, obj)
 	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to delete service mesh config")
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to delete service mesh config")
 	}
-	err = r.deleteSKRWatcherConfigForCR(ctx, obj)
+	err = deploy.RemoveWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.RestConfig, r.Client)
 	if err != nil {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to update SKR config")
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to delete SKR config")
 	}
 	updated := controllerutil.RemoveFinalizer(obj, watcherFinalizer)
 	if !updated {
-		return r.updateWatcherCRErrStatus(ctx, logger, err, obj, "failed to remove finalizer")
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to remove finalizer")
 	}
 	err = r.Update(ctx, obj)
 	if err != nil {
@@ -186,96 +185,22 @@ func (r *WatcherReconciler) HandleReadyState(ctx context.Context, logger logr.Lo
 	return nil
 }
 
-func (r *WatcherReconciler) updateServiceMeshConfigForCR(ctx context.Context,
-	obj *watcherv1alpha1.Watcher,
-) error {
-	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
-	}
-	err = r.updateIstioVirtualServiceForCR(ctx, istioClientSet, obj)
-	if err != nil {
-		return fmt.Errorf("failed to create and configure Istio VirtualService resource: %w", err)
-	}
-	return nil
-}
-
-func (r *WatcherReconciler) updateIstioVirtualServiceForCR(ctx context.Context,
-	istioClientSet *istioclient.Clientset, obj *watcherv1alpha1.Watcher,
-) error {
-	virtualService, err := istioClientSet.NetworkingV1beta1().
-		VirtualServices(r.Config.VirtualServiceNamespace).
-		Get(ctx, r.Config.VirtualServiceName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	if !util.IsListenerHTTPRouteConfigured(virtualService, obj) {
-		util.UpdateVirtualServiceConfig(virtualService, obj)
-		_, err = istioClientSet.NetworkingV1beta1().
-			VirtualServices(r.Config.VirtualServiceNamespace).
-			Update(ctx, virtualService, metav1.UpdateOptions{})
-		return err
-	}
-	return nil
-}
-
-func (r *WatcherReconciler) updateSKRWatcherConfigForCR(ctx context.Context, obj *watcherv1alpha1.Watcher) error {
-	return deploy.UpdateWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.RestConfig, r.Client)
-}
-
-func (r *WatcherReconciler) deleteSKRWatcherConfigForCR(ctx context.Context, obj *watcherv1alpha1.Watcher) error {
-	return deploy.RemoveWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj, r.RestConfig, r.Client)
-}
-
-func (r *WatcherReconciler) deleteServiceMeshConfigForCR(ctx context.Context, obj *watcherv1alpha1.Watcher) error {
-	istioClientSet, err := istioclient.NewForConfig(r.RestConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create istio client set from rest config(%s): %w", r.RestConfig.String(), err)
-	}
-	virtualService, err := istioClientSet.NetworkingV1beta1().VirtualServices(r.Config.VirtualServiceNamespace).
-		Get(ctx, r.Config.VirtualServiceName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	if util.IsListenerHTTPRouteConfigured(virtualService, obj) {
-		util.RemoveVirtualServiceConfigForCR(virtualService, obj)
-		_, err = istioClientSet.NetworkingV1beta1().
-			VirtualServices(r.Config.VirtualServiceNamespace).
-			Update(ctx, virtualService, metav1.UpdateOptions{})
-		return err
-	}
-	return nil
-}
-
 func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *watcherv1alpha1.Watcher,
 	state watcherv1alpha1.WatcherState, msg string,
 ) error {
 	obj.Status.State = state
 	switch state { //nolint:exhaustive
 	case watcherv1alpha1.WatcherStateReady:
-		AddReadyCondition(obj, watcherv1alpha1.ConditionStatusTrue, msg)
+		addReadyCondition(obj, watcherv1alpha1.ConditionStatusTrue, msg)
 	case "":
-		AddReadyCondition(obj, watcherv1alpha1.ConditionStatusUnknown, msg)
+		addReadyCondition(obj, watcherv1alpha1.ConditionStatusUnknown, msg)
 	default:
-		AddReadyCondition(obj, watcherv1alpha1.ConditionStatusFalse, msg)
+		addReadyCondition(obj, watcherv1alpha1.ConditionStatusFalse, msg)
 	}
 	return r.Status().Update(ctx, obj.SetObservedGeneration())
 }
 
-func (r *WatcherReconciler) updateWatcherCRErrStatus(ctx context.Context, logger logr.Logger, err error,
-	obj *watcherv1alpha1.Watcher, errMsg string,
-) error {
-	logger.Error(err, errMsg)
-	apiErr := r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, errMsg)
-	if apiErr != nil {
-		logger.Error(apiErr, "update request to API server failed")
-		return apiErr
-	}
-	return err
-}
-
-func AddReadyCondition(obj *watcherv1alpha1.Watcher, state watcherv1alpha1.WatcherConditionStatus, msg string) {
+func addReadyCondition(obj *watcherv1alpha1.Watcher, state watcherv1alpha1.WatcherConditionStatus, msg string) {
 	obj.Status.Conditions = append(obj.Status.Conditions, watcherv1alpha1.WatcherCondition{
 		Type:               watcherv1alpha1.ConditionTypeReady,
 		Status:             state,
@@ -284,10 +209,18 @@ func AddReadyCondition(obj *watcherv1alpha1.Watcher, state watcherv1alpha1.Watch
 	})
 }
 
+func (r *WatcherReconciler) SetIstioClient() error {
+	if r.RestConfig == nil {
+		return fmt.Errorf("reconciler rest config is not set")
+	}
+	customIstioClient, err := custom.NewIstioClient(r.RestConfig)
+	r.IstioClient = customIstioClient
+	return err
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *WatcherReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&watcherv1alpha1.Watcher{}).
-		// Watches(&source.Kind{Type: &istioapi.VirtualService{}}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }

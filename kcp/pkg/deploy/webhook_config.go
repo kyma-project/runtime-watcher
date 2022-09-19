@@ -12,7 +12,6 @@ import (
 
 	kymav1alpha1 "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,10 +91,7 @@ func lookupWebhookConfigForCR(webhooks []admissionv1.ValidatingWebhook, obj *wat
 			continue
 		}
 		moduleName := webhookNameParts[0]
-		objModuleName, exists := obj.Labels[util.ManagedBylabel]
-		if !exists {
-			return cfgIdx
-		}
+		objModuleName := obj.GetModuleName()
 		if moduleName == objModuleName {
 			return idx
 		}
@@ -105,7 +101,7 @@ func lookupWebhookConfigForCR(webhooks []admissionv1.ValidatingWebhook, obj *wat
 
 func generateWebhookConfigForCR(baseCfg admissionv1.ValidatingWebhook, obj *watcherv1alpha1.Watcher) admissionv1.ValidatingWebhook {
 	watcherCrWebhookCfg := baseCfg.DeepCopy()
-	moduleName := obj.Labels[util.ManagedBylabel]
+	moduleName := obj.GetModuleName()
 	watcherCrWebhookCfg.Name = fmt.Sprintf(webhookNameTpl, moduleName)
 	if obj.Spec.LabelsToWatch != nil {
 		watcherCrWebhookCfg.ObjectSelector.MatchLabels = obj.Spec.LabelsToWatch

@@ -7,13 +7,12 @@ import (
 	"strings"
 
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kymaapi "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
-	watcherapiv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,19 +29,19 @@ const (
 var _ = Describe("deploy watcher", Ordered, func() {
 	ctx := context.TODO()
 	moduleName := "lifecyle-manager"
-	watcherCR := &watcherapiv1alpha1.Watcher{
+	watcherCR := &watcherv1alpha1.Watcher{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       watcherapiv1alpha1.WatcherKind,
-			APIVersion: watcherapiv1alpha1.GroupVersion.String(),
+			Kind:       watcherv1alpha1.WatcherKind,
+			APIVersion: watcherv1alpha1.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-sample", moduleName),
 			Namespace: metav1.NamespaceDefault,
 			Labels: map[string]string{
-				util.ManagedBylabel: moduleName,
+				watcherv1alpha1.ManagedBylabel: moduleName,
 			}},
-		Spec: watcherapiv1alpha1.WatcherSpec{
-			ServiceInfo: watcherapiv1alpha1.Service{
+		Spec: watcherv1alpha1.WatcherSpec{
+			ServiceInfo: watcherv1alpha1.Service{
 				Port:      8082,
 				Name:      fmt.Sprintf("%s-svc", moduleName),
 				Namespace: metav1.NamespaceDefault,
@@ -50,7 +49,7 @@ var _ = Describe("deploy watcher", Ordered, func() {
 			LabelsToWatch: map[string]string{
 				fmt.Sprintf("%s-watchable", moduleName): "true",
 			},
-			Field: watcherapiv1alpha1.StatusField,
+			Field: watcherv1alpha1.StatusField,
 		},
 	}
 	kymaSample := &kymaapi.Kyma{}
@@ -75,7 +74,7 @@ var _ = Describe("deploy watcher", Ordered, func() {
 	})
 
 	It("updates webhook config when helm chart is already installed", func() {
-		watcherCR.Spec.Field = watcherapiv1alpha1.SpecField
+		watcherCR.Spec.Field = watcherv1alpha1.SpecField
 		err := deploy.UpdateWebhookConfig(ctx, webhookChartPath, releaseName, watcherCR, testEnv.Config, k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
 		webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
@@ -95,7 +94,7 @@ var _ = Describe("deploy watcher", Ordered, func() {
 
 func verifyWebhookConfig(
 	webhookCfg *admissionv1.ValidatingWebhookConfiguration,
-	watcherCR *watcherapiv1alpha1.Watcher,
+	watcherCR *watcherv1alpha1.Watcher,
 ) bool {
 	for _, webhook := range webhookCfg.Webhooks {
 		webhookNameParts := strings.Split(webhook.Name, ".")
@@ -103,10 +102,7 @@ func verifyWebhookConfig(
 			return false
 		}
 		moduleName := webhookNameParts[0]
-		expectedModuleName, exists := watcherCR.Labels[util.ManagedBylabel]
-		if !exists {
-			return false
-		}
+		expectedModuleName := watcherCR.GetModuleName()
 		if moduleName != expectedModuleName {
 			return false
 		}
@@ -117,10 +113,10 @@ func verifyWebhookConfig(
 		if !reflect.DeepEqual(webhook.ObjectSelector.MatchLabels, watcherCR.Spec.LabelsToWatch) {
 			return false
 		}
-		if watcherCR.Spec.Field == watcherapiv1alpha1.StatusField && webhook.Rules[0].Resources[0] != statusSubresources {
+		if watcherCR.Spec.Field == watcherv1alpha1.StatusField && webhook.Rules[0].Resources[0] != statusSubresources {
 			return false
 		}
-		if watcherCR.Spec.Field == watcherapiv1alpha1.SpecField && webhook.Rules[0].Resources[0] != specSubresources {
+		if watcherCR.Spec.Field == watcherv1alpha1.SpecField && webhook.Rules[0].Resources[0] != specSubresources {
 			return false
 		}
 	}

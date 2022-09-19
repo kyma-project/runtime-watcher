@@ -115,18 +115,22 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&controllers.WatcherReconciler{
+	watcherReconciler := &controllers.WatcherReconciler{
 		Client:     k8sManager.GetClient(),
 		RestConfig: k8sManager.GetConfig(),
 		Scheme:     scheme.Scheme,
 		Config: &controllers.WatcherConfig{
-			VirtualServiceNamespace: vsNamespace,
-			VirtualServiceName:      vsName,
+			VirtualServiceObjKey: client.ObjectKey{
+				Name:      vsName,
+				Namespace: vsNamespace,
+			},
 			RequeueInterval:         requeueInterval,
 			WebhookChartPath:        webhookChartPath,
 			WebhookChartReleaseName: releaseName,
 		},
-	}).SetupWithManager(k8sManager)
+	}
+	watcherReconciler.SetIstioClient()
+	err = watcherReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {

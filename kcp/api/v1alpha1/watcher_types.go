@@ -20,6 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const ManagedBylabel = "operator.kyma-project.io/managed-by"
+
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // WatcherSpec defines the desired state of Watcher.
@@ -153,9 +155,16 @@ type Watcher struct {
 	Status WatcherStatus `json:"status"`
 }
 
-func (m *Watcher) SetObservedGeneration() *Watcher {
-	m.Status.ObservedGeneration = m.Generation
-	return m
+func (w *Watcher) SetObservedGeneration() *Watcher {
+	w.Status.ObservedGeneration = w.Generation
+	return w
+}
+
+func (w *Watcher) GetModuleName() string {
+	if w.Labels == nil {
+		return ""
+	}
+	return w.Labels[ManagedBylabel]
 }
 
 //+kubebuilder:object:root=true

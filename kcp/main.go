@@ -35,6 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	//+kubebuilder:scaffold:imports
@@ -95,12 +96,14 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
-	if err = (&controllers.WatcherReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Config: getConfigValues(setupLog, skrWatcherPath, skrWatcherRelName, vsName, vsNamepace, requeueInterval),
-	}).SetupWithManager(mgr); err != nil {
+	watcherReconciler := &controllers.WatcherReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RestConfig: mgr.GetConfig(),
+		Config:     getConfigValues(setupLog, skrWatcherPath, skrWatcherRelName, vsName, vsNamepace, requeueInterval),
+	}
+	watcherReconciler.SetIstioClient()
+	if err = watcherReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Watcher")
 		os.Exit(1)
 	}
@@ -123,16 +126,18 @@ func main() {
 	}
 }
 
-func getConfigValues(logger logr.Logger, skrWatcherPath, skrWatcherRelName, vsName, vsNamepace string, requeueInterval int) *controllers.WatcherConfig {
+func getConfigValues(logger logr.Logger, skrWatcherPath, skrWatcherRelName, vsName, vsNamespace string, requeueInterval int) *controllers.WatcherConfig {
 	fileInfo, err := os.Stat(skrWatcherPath)
 	if err != nil || !fileInfo.IsDir() {
 		logger.V(1).Error(err, "failed to read local skr chart")
 	}
 	return &controllers.WatcherConfig{
+		VirtualServiceObjKey: client.ObjectKey{
+			Name:      vsName,
+			Namespace: vsNamespace,
+		},
 		RequeueInterval:         requeueInterval,
 		WebhookChartPath:        skrWatcherPath,
 		WebhookChartReleaseName: skrWatcherRelName,
-		VirtualServiceName:      vsName,
-		VirtualServiceNamespace: vsNamepace,
 	}
 }
