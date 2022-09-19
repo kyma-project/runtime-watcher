@@ -36,7 +36,8 @@ var _ = BeforeSuite(func() {
 	ctx = context.Background()
 
 	By("preparing required CRDs")
-	resp, err := http.Get("https://raw.githubusercontent.com/kyma-project/lifecycle-manager/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml")
+	resp, err := http.Get("https://raw.githubusercontent.com/kyma-project/lifecycle-manager/" +
+		"main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml")
 	Expect(err).ToNot(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	defer resp.Body.Close()
