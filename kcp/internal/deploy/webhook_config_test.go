@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
+	"github.com/kyma-project/runtime-watcher/kcp/internal/deploy"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 

@@ -7,8 +7,8 @@ import (
 
 	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/custom"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
+	"github.com/kyma-project/runtime-watcher/kcp/internal/custom"
+	"github.com/kyma-project/runtime-watcher/kcp/internal/deploy"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/custom"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
+	"github.com/kyma-project/runtime-watcher/kcp/internal/custom"
+	"github.com/kyma-project/runtime-watcher/kcp/internal/deploy"
 )
 
 const (
