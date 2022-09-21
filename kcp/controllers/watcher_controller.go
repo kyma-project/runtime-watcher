@@ -33,7 +33,6 @@ import (
 	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/custom"
 	"github.com/kyma-project/runtime-watcher/kcp/pkg/deploy"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -195,22 +194,13 @@ func (r *WatcherReconciler) updateWatcherCRStatus(ctx context.Context, obj *watc
 	obj.Status.State = state
 	switch state { //nolint:exhaustive
 	case watcherv1alpha1.WatcherStateReady:
-		addReadyCondition(obj, watcherv1alpha1.ConditionStatusTrue, msg)
+		obj.AddOrUpdateReadyCondition(watcherv1alpha1.ConditionStatusTrue, msg)
 	case "":
-		addReadyCondition(obj, watcherv1alpha1.ConditionStatusUnknown, msg)
+		obj.AddOrUpdateReadyCondition(watcherv1alpha1.ConditionStatusUnknown, msg)
 	default:
-		addReadyCondition(obj, watcherv1alpha1.ConditionStatusFalse, msg)
+		obj.AddOrUpdateReadyCondition(watcherv1alpha1.ConditionStatusFalse, msg)
 	}
 	return r.Status().Update(ctx, obj.SetObservedGeneration())
-}
-
-func addReadyCondition(obj *watcherv1alpha1.Watcher, state watcherv1alpha1.WatcherConditionStatus, msg string) {
-	obj.Status.Conditions = append(obj.Status.Conditions, watcherv1alpha1.WatcherCondition{
-		Type:               watcherv1alpha1.ConditionTypeReady,
-		Status:             state,
-		Message:            msg,
-		LastTransitionTime: &metav1.Time{Time: time.Now()},
-	})
 }
 
 func (r *WatcherReconciler) SetIstioClient() error {
