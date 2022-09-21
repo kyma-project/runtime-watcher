@@ -27,7 +27,7 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 	kymaSample := &kyma.Kyma{}
 	var istioResources []*unstructured.Unstructured
 	BeforeAll(func() {
-		customIstioClient, err = custom.NewIstioClient(cfg)
+		customIstioClient, err = custom.NewVersionedIstioClient(cfg)
 		Expect(err).ToNot(HaveOccurred())
 		kymaName := "kyma-sample"
 		kymaSample = createKymaCR(kymaName)

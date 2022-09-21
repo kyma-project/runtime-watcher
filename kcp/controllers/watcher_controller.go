@@ -217,7 +217,7 @@ func (r *WatcherReconciler) SetIstioClient() error {
 	if r.RestConfig == nil {
 		return fmt.Errorf("reconciler rest config is not set")
 	}
-	customIstioClient, err := custom.NewIstioClient(r.RestConfig)
+	customIstioClient, err := custom.NewVersionedIstioClient(r.RestConfig)
 	r.IstioClient = customIstioClient
 	return err
 }

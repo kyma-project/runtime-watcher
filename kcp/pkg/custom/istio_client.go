@@ -19,16 +19,16 @@ const (
 )
 
 type IstioClient struct {
-	*istioclient.Clientset
+	istioclient.Interface
 }
 
-func NewIstioClient(cfg *rest.Config) (*IstioClient, error) {
+func NewVersionedIstioClient(cfg *rest.Config) (*IstioClient, error) {
 	cs, err := istioclient.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 	return &IstioClient{
-		Clientset: cs,
+		Interface: cs,
 	}, nil
 }
 
