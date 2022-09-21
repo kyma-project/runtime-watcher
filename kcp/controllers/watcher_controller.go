@@ -141,8 +141,9 @@ func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 	}
 	err = r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateReady, "successfully reconciled watcher cr")
 	if err != nil {
-		logger.Error(err, "failed to update watcher cr to ready status")
-		return err
+		msg := "failed to update watcher cr to ready status"
+		logger.Error(err, msg)
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, msg)
 	}
 	logger.Info("watcher cr is Ready!")
 	return nil
@@ -167,8 +168,9 @@ func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr
 	}
 	err = r.Update(ctx, obj)
 	if err != nil {
-		logger.Error(err, "failed to update watcher cr")
-		return err
+		msg := "failed to update watcher cr"
+		logger.Error(err, msg)
+		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, msg)
 	}
 	logger.Info("deletion state handling was successful")
 	return nil
