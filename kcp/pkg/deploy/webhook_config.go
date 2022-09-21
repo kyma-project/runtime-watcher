@@ -70,7 +70,9 @@ func RemoveWebhookConfig(ctx context.Context, chartPath, releaseName string,
 	return err
 }
 
-func IsWebhookConfigured(ctx context.Context, obj *watcherv1alpha1.Watcher, restConfig *rest.Config, releaseName string) bool {
+func IsWebhookConfigured(ctx context.Context, obj *watcherv1alpha1.Watcher, restConfig *rest.Config,
+	releaseName string,
+) bool {
 	remoteClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return false
