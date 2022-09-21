@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	webhookChartPath = "assets/sample-chart"
+	webhookChartPath = "../../../skr/chart/skr-webhook"
 	releaseName      = "watcher"
 )
 
@@ -59,21 +59,21 @@ var _ = Describe("deploy watcher", Ordered, func() {
 	It("deploys watcher helm chart with correct webhook config", func() {
 		err := deploy.UpdateWebhookConfig(ctx, webhookChartPath, releaseName, watcherCR, testEnv.Config, k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(deploy.IsWebhookConfigured(ctx, watcherCR, testEnv.Config)).To(BeTrue())
+		Expect(deploy.IsWebhookConfigured(ctx, watcherCR, testEnv.Config, releaseName)).To(BeTrue())
 	})
 
 	It("updates webhook config when helm chart is already installed", func() {
 		watcherCR.Spec.Field = watcherv1alpha1.SpecField
 		err := deploy.UpdateWebhookConfig(ctx, webhookChartPath, releaseName, watcherCR, testEnv.Config, k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(deploy.IsWebhookConfigured(ctx, watcherCR, testEnv.Config)).To(BeTrue())
+		Expect(deploy.IsWebhookConfigured(ctx, watcherCR, testEnv.Config, releaseName)).To(BeTrue())
 
 	})
 
 	It("removes webhook config resource from SKR cluster when last cr is deleted", func() {
 		err := deploy.RemoveWebhookConfig(ctx, webhookChartPath, releaseName, watcherCR, testEnv.Config, k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(deploy.IsWebhookDeployed(ctx, testEnv.Config)).To(BeFalse())
+		Expect(deploy.IsWebhookDeployed(ctx, testEnv.Config, releaseName)).To(BeFalse())
 	})
 })
 

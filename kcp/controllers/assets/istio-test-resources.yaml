@@ -19,8 +19,6 @@ kind: VirtualService
 metadata:
   name: kcp-events
   namespace: default
-  labels:
-    kcp-watcher-resource: "true"
 spec:
   gateways:
     - kcp-gateway

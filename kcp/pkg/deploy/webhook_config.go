@@ -24,6 +24,7 @@ const (
 	kubeconfigKey                       = "config"
 	servicePathTpl                      = "/validate/%s"
 	webhookNameTpl                      = "%s.operator.kyma-project.io"
+	webhookConfigNameTpl                = "%s-webhook"
 	specSubresources                    = "*"
 	statusSubresources                  = "*/status"
 	configuredWebhooksDeletionThreshold = 1
@@ -69,7 +70,7 @@ func RemoveWebhookConfig(ctx context.Context, chartPath, releaseName string,
 	return err
 }
 
-func IsWebhookConfigured(ctx context.Context, obj *watcherv1alpha1.Watcher, restConfig *rest.Config) bool {
+func IsWebhookConfigured(ctx context.Context, obj *watcherv1alpha1.Watcher, restConfig *rest.Config, releaseName string) bool {
 	remoteClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return false
@@ -77,7 +78,7 @@ func IsWebhookConfigured(ctx context.Context, obj *watcherv1alpha1.Watcher, rest
 	webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
 	err = remoteClient.Get(ctx, client.ObjectKey{
 		Namespace: metav1.NamespaceDefault,
-		Name:      "skr-webhook",
+		Name:      webhookConfigName(releaseName),
 	}, webhookConfig)
 	if err != nil {
 		return false
@@ -93,7 +94,7 @@ func IsWebhookConfigured(ctx context.Context, obj *watcherv1alpha1.Watcher, rest
 	return false
 }
 
-func IsWebhookDeployed(ctx context.Context, restConfig *rest.Config) bool {
+func IsWebhookDeployed(ctx context.Context, restConfig *rest.Config, releaseName string) bool {
 	remoteClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return false
@@ -101,7 +102,7 @@ func IsWebhookDeployed(ctx context.Context, restConfig *rest.Config) bool {
 	webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
 	err = remoteClient.Get(ctx, client.ObjectKey{
 		Namespace: metav1.NamespaceDefault,
-		Name:      "skr-webhook",
+		Name:      webhookConfigName(releaseName),
 	}, webhookConfig)
 	return err == nil
 }
@@ -147,10 +148,9 @@ func updateWebhookConfigOrInstallSKRChart(ctx context.Context, chartPath, releas
 		return err
 	}
 	webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-	// TODO: make webhook config name a chart value
 	err = remoteClient.Get(ctx, client.ObjectKey{
 		Namespace: metav1.NamespaceDefault,
-		Name:      "skr-webhook",
+		Name:      webhookConfigName(releaseName),
 	}, webhookConfig)
 	if client.IgnoreNotFound(err) != nil {
 		return err
@@ -216,10 +216,9 @@ func removeWebhookConfig(ctx context.Context, chartPath, releaseName string,
 		return err
 	}
 	webhookConfig := &admissionv1.ValidatingWebhookConfiguration{}
-	// TODO: make webhook config name a chart value
 	err = remoteClient.Get(ctx, client.ObjectKey{
 		Namespace: metav1.NamespaceDefault,
-		Name:      "skr-webhook",
+		Name:      webhookConfigName(releaseName),
 	}, webhookConfig)
 	if client.IgnoreNotFound(err) != nil {
 		return err
@@ -273,4 +272,8 @@ func getSKRRestConfigs(ctx context.Context, reader client.Reader, inClusterCfg *
 	}
 
 	return restCfgMap, nil
+}
+
+func webhookConfigName(releaseName string) string {
+	return fmt.Sprintf(webhookConfigNameTpl, releaseName)
 }

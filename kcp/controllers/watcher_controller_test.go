@@ -70,8 +70,8 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			}, watcherCR)).To(BeTrue())
 
 			// verify webhook config
-			Expect(deploy.IsWebhookDeployed(ctx, cfg)).To(BeTrue())
-			Expect(deploy.IsWebhookConfigured(ctx, watcherCR, cfg)).To(BeTrue())
+			Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeTrue())
+			Expect(deploy.IsWebhookConfigured(ctx, watcherCR, cfg, releaseName)).To(BeTrue())
 
 			// update watcher CR spec
 			currentWatcherCR := &watcherv1alpha1.Watcher{}
@@ -93,8 +93,8 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			}, currentWatcherCR)).To(BeTrue())
 
 			//verify webhook config
-			Expect(deploy.IsWebhookDeployed(ctx, cfg)).To(BeTrue())
-			Expect(deploy.IsWebhookConfigured(ctx, currentWatcherCR, cfg)).To(BeTrue())
+			Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeTrue())
+			Expect(deploy.IsWebhookConfigured(ctx, currentWatcherCR, cfg, releaseName)).To(BeTrue())
 
 		}, watcherCREntries)
 
@@ -121,8 +121,8 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 		}, firstToBeRemoved)).To(BeFalse())
 
 		// verify webhook config
-		Expect(deploy.IsWebhookDeployed(ctx, cfg)).To(BeTrue())
-		Expect(deploy.IsWebhookConfigured(ctx, firstToBeRemoved, cfg)).To(BeFalse())
+		Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeTrue())
+		Expect(deploy.IsWebhookConfigured(ctx, firstToBeRemoved, cfg, releaseName)).To(BeFalse())
 	})
 
 	It("should delete all resources on SKR when all CRs are deleted", func() {
@@ -145,6 +145,6 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 			Namespace: vsNamespace,
 		})).To(BeTrue())
 
-		Expect(deploy.IsWebhookDeployed(ctx, cfg)).To(BeFalse())
+		Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeFalse())
 	})
 })
