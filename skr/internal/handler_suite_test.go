@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal"
-	util "github.com/kyma-project/runtime-watcher/skr/internal/test_util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -66,7 +65,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	kcpTestHandler := util.BootStrapKcpMockHandlers(moduleName)
+	kcpTestHandler := BootStrapKcpMockHandlers(moduleName)
 	kcpRecorder = kcpTestHandler.Recorder
 
 	// start listener server

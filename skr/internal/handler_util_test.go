@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/kyma-project/runtime-watcher/skr/internal"
 	"io"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal"
 
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"k8s.io/apimachinery/pkg/runtime/schema"

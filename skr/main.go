@@ -52,25 +52,36 @@ func serverParams(logger logr.Logger) (internal.ServerParameters, error) {
 	}
 	parameters.Port = port
 
-	// tls
-	tlsEnabledEnv := os.Getenv("TLS_ENABLED")
-	tlsEnabled, err := strconv.ParseBool(tlsEnabledEnv)
+	// tls server
+	tlsServerEnv := os.Getenv("TLS_SERVER")
+	parameters.TLSServer, err = strconv.ParseBool(tlsServerEnv)
 	if err != nil {
-		logger.V(1).Error(err, "failed parsing  tls flag")
-		parameters.TlsEnabled = defaultTLSEnabledMode
+		logger.V(1).Error(err, "failed parsing tls server flag")
+		parameters.TLSServer = defaultTLSEnabledMode
 	}
-	parameters.TlsEnabled = tlsEnabled
-	if tlsEnabled {
+
+	// tls callback
+	tlsCallbackEnv := os.Getenv("TLS_CALLBACK")
+	parameters.TLSCallback, err = strconv.ParseBool(tlsCallbackEnv)
+	if err != nil {
+		logger.V(1).Error(err, "failed parsing tls callback flag")
+		parameters.TLSCallback = defaultTLSEnabledMode
+	}
+
+	if parameters.TLSServer {
+		// CA cert
 		parameters.CACert = os.Getenv("CA_CERT")
 		if parameters.CACert == "" {
 			return parameters, flagError("CA_CERT")
 		}
-		parameters.TlsCert = os.Getenv("TLS_CERT")
-		if parameters.CACert == "" {
+		// client cert
+		parameters.TLSCert = os.Getenv("TLS_CERT")
+		if parameters.TLSCert == "" {
 			return parameters, flagError("TLS_CERT")
 		}
-		parameters.TlsKey = os.Getenv("TLS_KEY")
-		if parameters.CACert == "" {
+		// client key
+		parameters.TLSKey = os.Getenv("TLS_KEY")
+		if parameters.TLSKey == "" {
 			return parameters, flagError("TLS_KEY")
 		}
 	}
@@ -112,12 +123,15 @@ func main() {
 	http.HandleFunc("/validate/", handler.Handle)
 
 	// server
+	server := http.Server{
+		Addr:        fmt.Sprintf(":%s", strconv.Itoa(params.Port)),
+		ReadTimeout: internal.HTTPClientTimeout,
+	}
 	logger.Info("starting web server", "Port:", params.Port)
-	if params.TlsEnabled {
-		err = http.ListenAndServeTLS(":"+strconv.Itoa(params.Port), params.TlsCert,
-			params.TlsKey, nil)
+	if params.TLSServer {
+		err = server.ListenAndServeTLS(params.TLSCert, params.TLSKey)
 	} else {
-		err = http.ListenAndServe(":"+strconv.Itoa(params.Port), nil)
+		err = server.ListenAndServe()
 	}
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")

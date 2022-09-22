@@ -25,6 +25,7 @@ tolerations: []
 priorityClassName: ""
 # -- Security context
 securityContext: {}
+# -- Resources
 resources:
   limits:
     # -- Memory limit
@@ -46,9 +47,27 @@ service:
   targetPort: 8443
   # -- Target port
   contactVersion: v1
+# -- KCP information
 kcp:
-  IP: a.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com
-  port: 443
+  # -- KCP IP
+  IP: "kcp.ip"
+  # -- KCP Port
+  port: ""
+  # -- KCP protocol
+  protocol: "http"
+# -- TLS information
+tls:
+  # -- CA Cert (base64 encoded)
+  caCert: ""
+  # -- Client Cert (base64 encoded)
+  clientCert: ""
+  # -- Client Key (base64 encoded)
+  clientKey: ""
+  # -- TLS webhook server
+  webhookServer: "true"
+  # -- TLS callback to KCP
+  callback: "false"
+# -- Module list
 modules: |-
   lifecycle-manager:
     statusOnly: false

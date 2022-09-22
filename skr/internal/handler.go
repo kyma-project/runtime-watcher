@@ -30,7 +30,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const EventEndpoint = "event"
+const (
+	HTTPClientTimeout = time.Minute * 3
+	EventEndpoint     = "event"
+)
 
 type Handler struct {
 	Client     client.Client
@@ -39,11 +42,12 @@ type Handler struct {
 }
 
 type ServerParameters struct {
-	Port       int    // webhook server port
-	CACert     string // CA key used to sign the certificate
-	TlsCert    string // path to TLS certificate for https
-	TlsKey     string // path to TLS key matching for certificate
-	TlsEnabled bool   // indicates if TLS is enabled
+	Port        int    // webhook server port
+	CACert      string // CA key used to sign the certificate
+	TLSCert     string // path to TLS certificate for https
+	TLSKey      string // path to TLS key matching for certificate
+	TLSServer   bool   // indicates if an HTTPS server should be created
+	TLSCallback bool   // indicates if KCP accepts HTTP or HTTPS requests
 }
 
 type admissionResponseInfo struct {
@@ -337,43 +341,17 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	if kcpIP == "" || contract == "" {
 		return KcpReqFailedMsg
 	}
-
 	if kcpPort != "" {
 		kcpIP = net.JoinHostPort(kcpIP, kcpPort)
 	}
+
 	uri := fmt.Sprintf("%s/%s/%s/%s", kcpIP, contract, moduleName, EventEndpoint)
-	protocol := "http"
-
-	httpClient := http.Client{}
-	if h.Parameters.TlsEnabled {
-		protocol = "https"
-		certificate, err := tls.X509KeyPair([]byte(h.Parameters.TlsCert), []byte(h.Parameters.TlsCert))
-		if err != nil {
-			h.Logger.Error(err, "could not load certificate")
-			return ""
-		}
-
-		publicPemBlock, _ := pem.Decode([]byte(h.Parameters.CACert))
-		rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
-		if errParse != nil {
-			h.Logger.Error(errParse, "failed to parse public key")
-			return ""
-		}
-		rootCertpool := x509.NewCertPool()
-		rootCertpool.AddCert(rootPubCrt)
-
-		httpClient.Timeout = time.Minute * 3
-		httpClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs:      rootCertpool,
-				Certificates: []tls.Certificate{certificate},
-			},
-		}
+	httpClient, url, err := h.getHTTPClientAndURL(uri)
+	if err != nil {
+		h.Logger.Error(err, "")
+		return err.Error()
 	}
 
-	url := fmt.Sprintf("%s://%s", protocol, uri)
-	h.Logger.Info("KCP", "url", url)
-	//nolint:gosec
 	resp, err := httpClient.Post(url, "application/json", responseBody)
 	if err != nil {
 		h.Logger.Error(err, "")
@@ -425,4 +403,47 @@ func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo 
 		message: message,
 		status:  metav1.StatusSuccess,
 	}
+}
+
+func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
+	httpClient := http.Client{}
+	protocol := "http"
+
+	if h.Parameters.TLSCallback {
+		h.Logger.Info("will attempt to send an https request")
+		protocol = "https"
+
+		certificate, err := tls.LoadX509KeyPair(h.Parameters.TLSCert, h.Parameters.TLSKey)
+		if err != nil {
+			msg := "could not load tls certificate"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+
+		caCertBytes, err := os.ReadFile(h.Parameters.CACert)
+		if err != nil {
+			msg := "could not load CA certificate"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+		publicPemBlock, _ := pem.Decode(caCertBytes)
+		rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
+		if errParse != nil {
+			msg := "failed to parse public key"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+		rootCertpool := x509.NewCertPool()
+		rootCertpool.AddCert(rootPubCrt)
+
+		httpClient.Timeout = HTTPClientTimeout
+		//nolint:gosec
+		httpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:      rootCertpool,
+				Certificates: []tls.Certificate{certificate},
+			},
+		}
+	}
+
+	url := fmt.Sprintf("%s://%s", protocol, uri)
+	h.Logger.Info("KCP", "url", url)
+	return httpClient, url, nil
 }

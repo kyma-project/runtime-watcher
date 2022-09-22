@@ -41,8 +41,10 @@ spec:
                   fieldPath: metadata.name
             - name: WEBHOOK_PORT
               value: "{{.Values.service.targetPort}}"
-            - name: TLS_ENABLED
-              value: "true"
+            - name: TLS_SERVER
+              value: {{.Values.tls.webhookServer}}
+            - name: TLS_CALLBACK
+              value: {{.Values.tls.callback}}
             - name: TLS_KEY
               value: "/app/etc/ssl/tls.key"
             - name: TLS_CERT
