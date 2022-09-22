@@ -25,7 +25,7 @@ const defaultBufferSize = 2048
 
 func deserializeIstioResources(filePath string) ([]*unstructured.Unstructured, error) {
 	var istioResourcesList []*unstructured.Unstructured
-	//create istio resources
+
 	file, err := os.Open(istioResourcesFilePath)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,8 @@ func createWatcherCR(moduleName string, statusOnly bool) *watcherv1alpha1.Watche
 			Namespace: metav1.NamespaceDefault,
 			Labels: map[string]string{
 				watcherv1alpha1.ManagedBylabel: moduleName,
-			}},
+			},
+		},
 		Spec: watcherv1alpha1.WatcherSpec{
 			ServiceInfo: watcherv1alpha1.Service{
 				Port:      8082,

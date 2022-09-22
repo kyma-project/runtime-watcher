@@ -44,7 +44,6 @@ func (c *IstioClient) getVirtualService(ctx context.Context, vsObjectKey client.
 }
 
 func (c *IstioClient) updateVirtualService(ctx context.Context, virtualService *istioclientapi.VirtualService) error {
-
 	_, err := c.NetworkingV1beta1().
 		VirtualServices(virtualService.Namespace).
 		Update(ctx, virtualService, metav1.UpdateOptions{})
@@ -105,6 +104,7 @@ func (c *IstioClient) UpdateVirtualServiceConfig(ctx context.Context, vsObjectKe
 	virtualService.Spec.Http = append(virtualService.Spec.Http, istioHTTPRoute)
 	return c.updateVirtualService(ctx, virtualService)
 }
+
 func (c *IstioClient) RemoveVirtualServiceConfigForCR(ctx context.Context, vsObjectKey client.ObjectKey,
 	obj *watcherv1alpha1.Watcher,
 ) error {

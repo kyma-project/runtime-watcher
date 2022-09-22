@@ -128,22 +128,33 @@ func (r *WatcherReconciler) HandleInitialState(ctx context.Context, obj *watcher
 func (r *WatcherReconciler) HandleProcessingState(ctx context.Context,
 	logger logr.Logger, obj *watcherv1alpha1.Watcher,
 ) error {
-
 	err := r.UpdateVirtualServiceConfig(ctx, r.Config.VirtualServiceObjKey, obj)
 	if err != nil {
-		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError,
+		updateErr := r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError,
 			"failed to create or update service mesh config")
+		if updateErr == nil {
+			return err
+		}
+		return updateErr
 	}
 	err = deploy.UpdateWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj,
 		r.RestConfig, r.Client)
 	if err != nil {
-		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to update SKR config")
+		updateErr := r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to update SKR config")
+		if updateErr == nil {
+			return err
+		}
+		return updateErr
 	}
 	err = r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateReady, "successfully reconciled watcher cr")
 	if err != nil {
 		msg := "failed to update watcher cr to ready status"
 		logger.Error(err, msg)
-		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, msg)
+		updateErr := r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, msg)
+		if updateErr == nil {
+			return err
+		}
+		return updateErr
 	}
 	logger.Info("watcher cr is Ready!")
 	return nil
@@ -154,13 +165,21 @@ func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr
 ) error {
 	err := r.RemoveVirtualServiceConfigForCR(ctx, r.Config.VirtualServiceObjKey, obj)
 	if err != nil {
-		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError,
+		updateErr := r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError,
 			"failed to delete service mesh config")
+		if updateErr == nil {
+			return err
+		}
+		return updateErr
 	}
 	err = deploy.RemoveWebhookConfig(ctx, r.Config.WebhookChartPath, r.Config.WebhookChartReleaseName, obj,
 		r.RestConfig, r.Client)
 	if err != nil {
-		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to delete SKR config")
+		updateErr := r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, "failed to delete SKR config")
+		if updateErr == nil {
+			return err
+		}
+		return updateErr
 	}
 	updated := controllerutil.RemoveFinalizer(obj, watcherFinalizer)
 	if !updated {
@@ -170,7 +189,11 @@ func (r *WatcherReconciler) HandleDeletingState(ctx context.Context, logger logr
 	if err != nil {
 		msg := "failed to update watcher cr"
 		logger.Error(err, msg)
-		return r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, msg)
+		updateErr := r.updateWatcherCRStatus(ctx, obj, watcherv1alpha1.WatcherStateError, msg)
+		if updateErr == nil {
+			return err
+		}
+		return updateErr
 	}
 	logger.Info("deletion state handling was successful")
 	return nil

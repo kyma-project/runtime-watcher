@@ -31,7 +31,8 @@ var _ = Describe("deploy watcher", Ordered, func() {
 			Namespace: metav1.NamespaceDefault,
 			Labels: map[string]string{
 				watcherv1alpha1.ManagedBylabel: moduleName,
-			}},
+			},
+		},
 		Spec: watcherv1alpha1.WatcherSpec{
 			ServiceInfo: watcherv1alpha1.Service{
 				Port:      8082,
@@ -67,7 +68,6 @@ var _ = Describe("deploy watcher", Ordered, func() {
 		err := deploy.UpdateWebhookConfig(ctx, webhookChartPath, releaseName, watcherCR, testEnv.Config, k8sClient)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(deploy.IsWebhookConfigured(ctx, watcherCR, testEnv.Config, releaseName)).To(BeTrue())
-
 	})
 
 	It("removes webhook config resource from SKR cluster when last cr is deleted", func() {

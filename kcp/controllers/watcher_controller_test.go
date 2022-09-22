@@ -21,7 +21,6 @@ const (
 )
 
 var _ = Describe("Watcher CR scenarios", Ordered, func() {
-
 	var customIstioClient *custom.IstioClient
 	var err error
 	kymaSample := &kyma.Kyma{}
@@ -37,7 +36,6 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 		for _, istioResource := range istioResources {
 			Expect(k8sClient.Create(ctx, istioResource)).To(Succeed())
 		}
-
 	})
 
 	AfterAll(func() {
@@ -47,7 +45,6 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 		for _, istioResource := range istioResources {
 			Expect(k8sClient.Delete(ctx, istioResource)).To(Succeed())
 		}
-
 	})
 
 	DescribeTable("should reconcile istio service mesh resources according to watcher CR config",
@@ -92,10 +89,9 @@ var _ = Describe("Watcher CR scenarios", Ordered, func() {
 				Namespace: vsNamespace,
 			}, currentWatcherCR)).To(BeTrue())
 
-			//verify webhook config
+			// verify webhook config
 			Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeTrue())
 			Expect(deploy.IsWebhookConfigured(ctx, currentWatcherCR, cfg, releaseName)).To(BeTrue())
-
 		}, watcherCREntries)
 
 	It("should delete service mesh routes and SKR config when one CR is deleted", func() {
