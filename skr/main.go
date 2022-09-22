@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -30,41 +31,50 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-type ServerParameters struct {
-	port       int    // webhook server port
-	certFile   string // path to TLS certificate for https
-	keyFile    string // path to TLS key matching for certificate
-	tlsEnabled bool   // indicates if TLS is enabled
-}
-
 const (
 	defaultPort           = 8443
 	defaultTLSEnabledMode = false
 )
 
-func serverParams(logger logr.Logger) ServerParameters {
-	parameters := ServerParameters{}
+func flagError(flagName string) error {
+	return fmt.Errorf("failed parsing %s flag", flagName)
+}
+
+func serverParams(logger logr.Logger) (internal.ServerParameters, error) {
+	parameters := internal.ServerParameters{}
 
 	// port
 	portEnv := os.Getenv("WEBHOOK_PORT")
 	port, err := strconv.Atoi(portEnv)
 	if err != nil {
-		logger.V(1).Error(err, "failed parsing web-hook server port")
-		parameters.port = defaultPort
+		logger.V(1).Error(err, flagError("WEBHOOK_PORT").Error())
+		parameters.Port = defaultPort
 	}
-	parameters.port = port
+	parameters.Port = port
 
 	// tls
 	tlsEnabledEnv := os.Getenv("TLS_ENABLED")
 	tlsEnabled, err := strconv.ParseBool(tlsEnabledEnv)
 	if err != nil {
 		logger.V(1).Error(err, "failed parsing  tls flag")
-		parameters.tlsEnabled = defaultTLSEnabledMode
+		parameters.TlsEnabled = defaultTLSEnabledMode
 	}
-	parameters.tlsEnabled = tlsEnabled
-	parameters.certFile = os.Getenv("TLS_CERT")
-	parameters.keyFile = os.Getenv("TLS_KEY")
-	return parameters
+	parameters.TlsEnabled = tlsEnabled
+	if tlsEnabled {
+		parameters.CACert = os.Getenv("CA_CERT")
+		if parameters.CACert == "" {
+			return parameters, flagError("CA_CERT")
+		}
+		parameters.TlsCert = os.Getenv("TLS_CERT")
+		if parameters.CACert == "" {
+			return parameters, flagError("TLS_CERT")
+		}
+		parameters.TlsKey = os.Getenv("TLS_KEY")
+		if parameters.CACert == "" {
+			return parameters, flagError("TLS_KEY")
+		}
+	}
+	return parameters, nil
 }
 
 func main() {
@@ -79,7 +89,11 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	params := serverParams(logger)
+	params, err := serverParams(logger)
+	if err != nil {
+		logger.Error(err, "necessary bootstrap settings missing")
+		return
+	}
 
 	restConfig := ctrl.GetConfigOrDie()
 
@@ -91,18 +105,19 @@ func main() {
 
 	// handler
 	handler := &internal.Handler{
-		Client: restClient,
-		Logger: logger,
+		Client:     restClient,
+		Logger:     logger,
+		Parameters: params,
 	}
 	http.HandleFunc("/validate/", handler.Handle)
 
 	// server
-	logger.Info("starting web server", "Port:", params.port)
-	if params.tlsEnabled {
-		err = http.ListenAndServeTLS(":"+strconv.Itoa(params.port), params.certFile,
-			params.keyFile, nil)
+	logger.Info("starting web server", "Port:", params.Port)
+	if params.TlsEnabled {
+		err = http.ListenAndServeTLS(":"+strconv.Itoa(params.Port), params.TlsCert,
+			params.TlsKey, nil)
 	} else {
-		err = http.ListenAndServe(":"+strconv.Itoa(params.port), nil)
+		err = http.ListenAndServe(":"+strconv.Itoa(params.Port), nil)
 	}
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")

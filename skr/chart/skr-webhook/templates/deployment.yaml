@@ -47,6 +47,8 @@ spec:
               value: "/app/etc/ssl/tls.key"
             - name: TLS_CERT
               value: "/app/etc/ssl/tls.crt"
+            - name: CA_CERT
+              value: "/app/etc/ssl/ca.crt"
             - name: KCP_IP
               value: "{{.Values.kcp.IP}}"
             - name: KCP_PORT
@@ -93,5 +95,7 @@ spec:
             path: tls.key
           - key: tls.crt
             path: tls.crt
+          - key: ca.crt
+            path: ca.crt
       - name: request
         emptyDir: {}

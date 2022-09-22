@@ -8,7 +8,7 @@ image:
   # -- Image name
   name: "runtime-watcher-skr"
   # -- Image tag
-  tag: "PR-53"
+  tag: "PR-78"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets
@@ -47,8 +47,8 @@ service:
   # -- Target port
   contactVersion: v1
 kcp:
-  IP: <your-IP-here>
-  port: 80
+  IP: a.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com
+  port: 443
 modules: |-
   lifecycle-manager:
     statusOnly: false
