@@ -1,140 +1,146 @@
 package controllers_test
 
 import (
-	"errors"
-	"io"
-	"os"
+	"fmt"
+	"math/rand"
 	"time"
 
-	watcherapiv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
-	"github.com/kyma-project/runtime-watcher/kcp/controllers"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
+	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
+	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	"github.com/kyma-project/runtime-watcher/kcp/internal/custom"
+	"github.com/kyma-project/runtime-watcher/kcp/internal/deploy"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	istioclient "istio.io/client-go/pkg/clientset/versioned"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	yaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	DefaultBufferSize = 2048
+	istioResourcesFilePath = "assets/istio-test-resources.yaml"
 )
 
-//nolint:gochecknoglobals
-var watcherCREntries = []TableEntry{
-	Entry("lifecycle manager Watcher CR", &watcherapiv1alpha1.Watcher{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       watcherapiv1alpha1.WatcherKind,
-			APIVersion: watcherapiv1alpha1.GroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: "watcher-sample", Namespace: metav1.NamespaceDefault, Labels: map[string]string{
-			util.ManagedBylabel: "lifecycle-manager",
-		}},
-		Spec: watcherapiv1alpha1.WatcherSpec{
-			ServiceInfo: watcherapiv1alpha1.Service{
-				Port:      8082,
-				Name:      "lifecycle-manager-svc",
-				Namespace: metav1.NamespaceDefault,
-			},
-			LabelsToWatch: map[string]string{
-				"lifecycle-watchable": "true",
-			},
-			Field: watcherapiv1alpha1.SpecField,
-		},
-	}),
-}
-
-var _ = Context("Watcher CR scenarios", Ordered, func() {
-	istioCrdList := &apiextensionsv1.CustomResourceDefinitionList{}
+var _ = Describe("Watcher CR scenarios", Ordered, func() {
+	var customIstioClient *custom.IstioClient
+	var err error
+	kymaSample := &kyma.Kyma{}
+	var istioResources []*unstructured.Unstructured
 	BeforeAll(func() {
-		Skip("skipped for now in favor of local testing due to time constraints")
-		istioCrds, err := os.Open("assets/istio.networking.crds.yaml")
+		customIstioClient, err = custom.NewVersionedIstioClient(cfg)
+		Expect(err).ToNot(HaveOccurred())
+		kymaName := "kyma-sample"
+		kymaSample = createKymaCR(kymaName)
+		Expect(k8sClient.Create(ctx, kymaSample)).To(Succeed())
+		istioResources, err = deserializeIstioResources(istioResourcesFilePath)
 		Expect(err).NotTo(HaveOccurred())
-		defer istioCrds.Close()
-		decoder := yaml.NewYAMLOrJSONDecoder(istioCrds, 2048)
-		for {
-			crd := apiextensionsv1.CustomResourceDefinition{}
-			err = decoder.Decode(&crd)
-			if err == nil {
-				istioCrdList.Items = append(istioCrdList.Items, crd)
-				// create istio CRD
-				Expect(k8sClient.Create(ctx, &crd)).To(Succeed())
-			}
-			if errors.Is(err, io.EOF) {
-				break
-			}
+		for _, istioResource := range istioResources {
+			Expect(k8sClient.Create(ctx, istioResource)).To(Succeed())
 		}
 	})
 
 	AfterAll(func() {
-		Skip("skipped for now in favor of local testing due to time constraints")
-		// clean up istio CRDs
-		//nolint:gosec
-		for _, crd := range istioCrdList.Items {
-			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
+		// clean up kyma CR
+		Expect(k8sClient.Delete(ctx, kymaSample)).To(Succeed())
+		// clean up istio resources
+		for _, istioResource := range istioResources {
+			Expect(k8sClient.Delete(ctx, istioResource)).To(Succeed())
 		}
 	})
 
 	DescribeTable("should reconcile istio service mesh resources according to watcher CR config",
-		func(watcherCR *watcherapiv1alpha1.Watcher) {
-			Skip("skipped for now in favor of local testing due to time constraints")
+		func(watcherCR *watcherv1alpha1.Watcher) {
 			// create watcher CR
-			Expect(k8sClient.Create(ctx, watcherCR)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, watcherCR)).To(Succeed())
 
-			watcherObjKey := client.ObjectKeyFromObject(watcherCR)
-			Eventually(watcherCRState(watcherObjKey)).WithTimeout(3 * time.Second).
-				WithPolling(30 * time.Microsecond).
-				Should(Equal(watcherapiv1alpha1.WatcherStateReady))
+			time.Sleep(250 * time.Millisecond)
+			crObjectKey := client.ObjectKeyFromObject(watcherCR)
+
+			Eventually(watcherCRState(crObjectKey)).
+				WithTimeout(20 * time.Second).
+				WithPolling(250 * time.Millisecond).
+				Should(Equal(watcherv1alpha1.WatcherStateReady))
 
 			// verify istio config
-			istioClientSet, err := istioclient.NewForConfig(cfg)
-			Expect(err).ToNot(HaveOccurred())
-			returns, err := util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, watcherCR,
-				controllers.IstioGatewayResourceName, controllers.IstioGatewayNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returns).To(BeFalse())
+			Expect(customIstioClient.IsListenerHTTPRouteConfigured(ctx, client.ObjectKey{
+				Name:      vsName,
+				Namespace: vsNamespace,
+			}, watcherCR)).To(BeTrue())
 
-			// update watcher CR
-			currentWatcherCR := &watcherapiv1alpha1.Watcher{}
-			Expect(k8sClient.Get(ctx, watcherObjKey, currentWatcherCR)).To(Succeed())
-			currentWatcherCR.SetLabels(map[string]string{"label-name": "label-value"})
+			// verify webhook config
+			Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeTrue())
+			Expect(deploy.IsWebhookConfigured(ctx, watcherCR, cfg, releaseName)).To(BeTrue())
+
+			// update watcher CR spec
+			currentWatcherCR := &watcherv1alpha1.Watcher{}
+			Expect(k8sClient.Get(ctx, crObjectKey, currentWatcherCR)).To(Succeed())
+			currentWatcherCR.Spec.ServiceInfo.Port = 9090
+			currentWatcherCR.Spec.Field = watcherv1alpha1.StatusField
 			Expect(k8sClient.Update(ctx, currentWatcherCR)).Should(Succeed())
 
-			Eventually(watcherCRState(watcherObjKey)).WithTimeout(2 * time.Second).
-				WithPolling(20 * time.Microsecond).
-				Should(Equal(watcherapiv1alpha1.WatcherStateReady))
-			returns, err = util.PerformIstioVirtualServiceCheck(ctx, istioClientSet, watcherCR,
-				controllers.IstioGatewayResourceName, controllers.IstioGatewayNamespace)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returns).To(BeFalse())
+			time.Sleep(250 * time.Millisecond)
 
-			Expect(k8sClient.Get(ctx, watcherObjKey, currentWatcherCR)).To(Succeed())
-			Expect(k8sClient.Delete(ctx, currentWatcherCR)).To(Succeed())
-			Eventually(isCRDeletetionSuccessful(watcherObjKey)).WithTimeout(2 * time.Second).
-				WithPolling(20 * time.Microsecond).Should(BeTrue())
+			Eventually(watcherCRState(crObjectKey)).
+				WithTimeout(20 * time.Second).
+				WithPolling(250 * time.Millisecond).
+				Should(Equal(watcherv1alpha1.WatcherStateReady))
+
+			Expect(customIstioClient.IsListenerHTTPRouteConfigured(ctx, client.ObjectKey{
+				Name:      vsName,
+				Namespace: vsNamespace,
+			}, currentWatcherCR)).To(BeTrue())
+
+			// verify webhook config
+			Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeTrue())
+			Expect(deploy.IsWebhookConfigured(ctx, currentWatcherCR, cfg, releaseName)).To(BeTrue())
 		}, watcherCREntries)
-})
 
-//nolint:unused
-func isCRDeletetionSuccessful(watcherObjKey client.ObjectKey) func(g Gomega) bool {
-	return func(g Gomega) bool {
-		err := k8sClient.Get(ctx, watcherObjKey, &watcherapiv1alpha1.Watcher{})
-		if err == nil || !k8sapierrors.IsNotFound(err) {
-			return false
+	It("should delete service mesh routes and SKR config when one CR is deleted", func() {
+		idx := rand.Intn(len(watcherCRNames)) //nolint:gosec
+		firstToBeRemovedObjKey := client.ObjectKey{
+			Name:      fmt.Sprintf("%s-sample", watcherCRNames[idx]),
+			Namespace: metav1.NamespaceDefault,
 		}
-		return true
-	}
-}
+		firstToBeRemoved := &watcherv1alpha1.Watcher{}
+		Expect(k8sClient.Get(ctx, firstToBeRemovedObjKey, firstToBeRemoved)).To(Succeed())
+		Expect(k8sClient.Delete(ctx, firstToBeRemoved)).To(Succeed())
 
-//nolint:unused
-func watcherCRState(watcherObjKey client.ObjectKey) func(g Gomega) watcherapiv1alpha1.WatcherState {
-	return func(g Gomega) watcherapiv1alpha1.WatcherState {
-		watcherCR := &watcherapiv1alpha1.Watcher{}
-		err := k8sClient.Get(ctx, watcherObjKey, watcherCR)
-		g.Expect(err).NotTo(HaveOccurred())
-		return watcherCR.Status.State
-	}
-}
+		time.Sleep(250 * time.Millisecond)
+
+		Eventually(isCrDeletetionFinished(firstToBeRemovedObjKey)).
+			WithTimeout(20 * time.Second).
+			WithPolling(250 * time.Millisecond).
+			Should(BeTrue())
+
+		Expect(customIstioClient.IsListenerHTTPRouteConfigured(ctx, client.ObjectKey{
+			Name:      vsName,
+			Namespace: vsNamespace,
+		}, firstToBeRemoved)).To(BeFalse())
+
+		// verify webhook config
+		Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeTrue())
+		Expect(deploy.IsWebhookConfigured(ctx, firstToBeRemoved, cfg, releaseName)).To(BeFalse())
+	})
+
+	It("should delete all resources on SKR when all CRs are deleted", func() {
+		watchers := &watcherv1alpha1.WatcherList{}
+		Expect(k8sClient.List(ctx, watchers)).To(Succeed())
+		Expect(len(watchers.Items)).To(Equal(len(watcherCRNames) - 1))
+		for _, watcher := range watchers.Items {
+			//nolint:gosec
+			Expect(k8sClient.Delete(ctx, &watcher)).To(Succeed())
+		}
+
+		time.Sleep(250 * time.Millisecond)
+
+		Eventually(isCrDeletetionFinished()).
+			WithTimeout(20 * time.Second).
+			WithPolling(250 * time.Millisecond).
+			Should(BeTrue())
+		Expect(customIstioClient.IsListenerHTTPRoutesEmpty(ctx, client.ObjectKey{
+			Name:      vsName,
+			Namespace: vsNamespace,
+		})).To(BeTrue())
+
+		Expect(deploy.IsWebhookDeployed(ctx, cfg, releaseName)).To(BeFalse())
+	})
+})
