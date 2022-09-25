@@ -1,0 +1,60 @@
+apiVersion: cert.gardener.cloud/v1alpha1
+kind: Certificate
+metadata:
+  name: cert-kcp
+  namespace: istio-system
+spec:
+  commonName: "*.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com"
+  dnsNames:
+    - "a.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com"
+  secretRef:
+    name: kcp-tls
+    namespace: istio-system
+  issuerRef:
+    name: issuer-ca
+    namespace: istio-system
+---
+
+apiVersion: cert.gardener.cloud/v1alpha1
+kind: Certificate
+metadata:
+  name: cert-skr
+  namespace: istio-system
+spec:
+  commonName: "*.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com"
+  dnsNames:
+    - "a.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com"
+    - "localhost"
+    - "watcher-webhook.default.svc.cluster.local"
+    - "watcher-webhook.default.svc"
+  secretRef:
+    name: skr-tls
+    namespace: istio-system
+  issuerRef:
+    name: issuer-ca
+    namespace: istio-system
+---
+
+apiVersion: dns.gardener.cloud/v1alpha1
+kind: DNSEntry
+metadata:
+  annotations:
+    dns.gardener.cloud/class: garden
+  name: dns-entry
+  namespace: watcher
+spec:
+  dnsName: a.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com
+  targets:
+    - ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com
+
+---
+apiVersion: cert.gardener.cloud/v1alpha1
+kind: Issuer
+metadata:
+  name: issuer-ca
+  namespace: istio-system
+spec:
+  ca:
+    privateKeySecretRef:
+      name: issuer-ca-secret
+      namespace: istio-system
