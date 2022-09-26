@@ -1,5 +1,5 @@
 {
-    "CN": "*.jellyfish.shoot.canary.k8s-hana.ondemand.com",
+    "CN": "kyma-runtime.kyma-project.io",
     "key": {
       "algo": "rsa",
       "size": 2048
@@ -14,7 +14,8 @@
       }
     ],
     "hosts": [
-      "skr1.jellyfish.shoot.canary.k8s-hana.ondemand.com",
+      "ak-skr.jellyfish.shoot.canary.k8s-hana.ondemand.com",
+      "skr-webhook.kyma-system.svc.cluster.local",
       "localhost"
     ]
   }

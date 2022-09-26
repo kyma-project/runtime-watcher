@@ -1,5 +1,6 @@
 ##@ Vars
 PREFIX=localhost
+ENV_DIR=$(KUSTOMIZE_DIR)/base/env
 CA=$(PREFIX)-ca
 CA_CERT_PEM=$(CA).pem
 CA_KEY_PEM=$(CA)-key.pem
@@ -21,9 +22,7 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Location to write certs to
-KUSTOMIZE_DIR ?= $(abspath $(shell pwd)/../kustomize)
-$(KUSTOMIZE_DIR):
-	mkdir -p $(KUSTOMIZE_DIR)
+KUSTOMIZE_DIR = $(abspath $(shell pwd)/..)
 
 cfssl: $(CFSSL) ## Download cfssl locally if necessary.
 $(CFSSL): $(LOCALBIN)
@@ -38,15 +37,26 @@ gen-ca-cert: cfssl
 	rm cfssl-out.json
 
 .PHONY: gen-skr-cert
-gen-skr-cert: cfssl gen-ca-cert 
+gen-skr-cert: gen-ca-cert 
 	$(CFSSL) gencert -ca $(CA_CERT_PEM) -ca-key $(CA_KEY_PEM) -config $(CFSSL_PROFILES_CONFIG) -profile=$(SKR_PROFILE) skr-cluster.json > cfssl-out.json
 	jq -r .cert cfssl-out.json > $(SKR_CERT_PEM)
 	jq -r .key cfssl-out.json > $(SKR_KEY_PEM)
 	rm cfssl-out.json
 
-.PHONY: kustomize
-kustomize:  
-	kubectl kustomize $(KUSTOMIZE_DIR)
+
+.PHONY: write-secrets
+write-secrets: gen-ca-cert gen-skr-cert
+	export CA_CERT=$(shell cat $(CA_CERT_PEM) | sed 's/---//g' | base64) && \
+	sed -ir "s/^[#]*\s*CA_CERT=.*/CA_CERT=$$CA_CERT/" $(ENV_DIR)/secret-keys.env
+	export TLS_CERT=$(shell cat $(SKR_CERT_PEM) | sed 's/---//g' | base64) && \
+	sed -ir "s/^[#]*\s*TLS_CERT=.*/TLS_CERT=$$TLS_CERT/" $(ENV_DIR)/secret-keys.env
+	export TLS_KEY=$(shell cat $(SKR_KEY_PEM) | sed 's/---//g' | base64) && \
+	sed -ir "s/^[#]*\s*TLS_KEY=.*/TLS_KEY=$$TLS_KEY/" $(ENV_DIR)/secret-keys.env
+
+
+.PHONY: kustomize-deploy-test
+kustomize-deploy-test:  
+	kubectl apply -k $(KUSTOMIZE_DIR)/overlays/test
 
 
 .PHONY: clean-up
