@@ -8,7 +8,7 @@ image:
   # -- Image name
   name: "runtime-watcher-skr"
   # -- Image tag
-  tag: "PR-53"
+  tag: "PR-78"
   # -- Image pull policy
   pullPolicy: "Always"
 # -- Image pull secrets
@@ -25,6 +25,7 @@ tolerations: []
 priorityClassName: ""
 # -- Security context
 securityContext: {}
+# -- Resources
 resources:
   limits:
     # -- Memory limit
@@ -46,9 +47,27 @@ service:
   targetPort: 8443
   # -- Target port
   contactVersion: v1
+# -- KCP information
 kcp:
-  IP: <your-IP-here>
-  port: 80
+  # -- KCP IP
+  IP: "kcp.ip"
+  # -- KCP Port
+  port: ""
+  # -- KCP protocol
+  protocol: "http"
+# -- TLS information
+tls:
+  # -- CA Cert (base64 encoded)
+  caCert: ""
+  # -- Client Cert (base64 encoded)
+  clientCert: ""
+  # -- Client Key (base64 encoded)
+  clientKey: ""
+  # -- TLS webhook server
+  webhookServer: "true"
+  # -- TLS callback to KCP
+  callback: "false"
+# -- Module list
 modules: |-
   lifecycle-manager:
     statusOnly: false

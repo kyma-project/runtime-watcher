@@ -2,7 +2,10 @@ package internal
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -26,11 +30,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const EventEndpoint = "event"
+const (
+	HTTPClientTimeout = time.Minute * 3
+	EventEndpoint     = "event"
+)
 
 type Handler struct {
-	Client client.Client
-	Logger logr.Logger
+	Client     client.Client
+	Logger     logr.Logger
+	Parameters ServerParameters
+}
+
+type ServerParameters struct {
+	Port        int    // webhook server port
+	CACert      string // CA key used to sign the certificate
+	TLSCert     string // path to TLS certificate for https
+	TLSKey      string // path to TLS key matching for certificate
+	TLSServer   bool   // indicates if an HTTPS server should be created
+	TLSCallback bool   // indicates if KCP accepts HTTP or HTTPS requests
 }
 
 type admissionResponseInfo struct {
@@ -124,16 +141,16 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()),
 	)
 
-	admissionResponseInfo := h.validateResources(admissionReview, moduleName)
+	validation := h.validateResources(admissionReview, moduleName)
 
 	// log admission response message
-	h.Logger.Info(admissionResponseInfo.message)
+	h.Logger.Info(validation.message)
 
 	// store incoming request
 	h.storeIncomingRequest(body)
 
 	// prepare response
-	responseBytes := h.prepareResponse(admissionReview, admissionResponseInfo)
+	responseBytes := h.prepareResponse(admissionReview, validation)
 	if responseBytes == nil {
 		return
 	}
@@ -321,16 +338,21 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	kcpPort := os.Getenv("KCP_PORT")
 	contract := os.Getenv("KCP_CONTRACT")
 
-	if kcpIP == "" || kcpPort == "" || contract == "" {
+	if kcpIP == "" || contract == "" {
 		return KcpReqFailedMsg
 	}
+	if kcpPort != "" {
+		kcpIP = net.JoinHostPort(kcpIP, kcpPort)
+	}
 
-	url := fmt.Sprintf("http://%s/%s/%s/%s", net.JoinHostPort(kcpIP, kcpPort),
-		contract, moduleName, EventEndpoint)
+	uri := fmt.Sprintf("%s/%s/%s/%s", kcpIP, contract, moduleName, EventEndpoint)
+	httpClient, url, err := h.getHTTPClientAndURL(uri)
+	if err != nil {
+		h.Logger.Error(err, "")
+		return err.Error()
+	}
 
-	h.Logger.V(1).Info("KCP", "url", url)
-	//nolint:gosec
-	resp, err := http.Post(url, "application/json", responseBody)
+	resp, err := httpClient.Post(url, "application/json", responseBody)
 	if err != nil {
 		h.Logger.Error(err, "")
 		return KcpReqFailedMsg
@@ -381,4 +403,47 @@ func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo 
 		message: message,
 		status:  metav1.StatusSuccess,
 	}
+}
+
+func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
+	httpClient := http.Client{}
+	protocol := "http"
+
+	if h.Parameters.TLSCallback {
+		h.Logger.Info("will attempt to send an https request")
+		protocol = "https"
+
+		certificate, err := tls.LoadX509KeyPair(h.Parameters.TLSCert, h.Parameters.TLSKey)
+		if err != nil {
+			msg := "could not load tls certificate"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+
+		caCertBytes, err := os.ReadFile(h.Parameters.CACert)
+		if err != nil {
+			msg := "could not load CA certificate"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+		publicPemBlock, _ := pem.Decode(caCertBytes)
+		rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
+		if errParse != nil {
+			msg := "failed to parse public key"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+		rootCertpool := x509.NewCertPool()
+		rootCertpool.AddCert(rootPubCrt)
+
+		httpClient.Timeout = HTTPClientTimeout
+		//nolint:gosec
+		httpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:      rootCertpool,
+				Certificates: []tls.Certificate{certificate},
+			},
+		}
+	}
+
+	url := fmt.Sprintf("%s://%s", protocol, uri)
+	h.Logger.Info("KCP", "url", url)
+	return httpClient, url, nil
 }
