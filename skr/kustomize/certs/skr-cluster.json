@@ -1,0 +1,20 @@
+{
+    "CN": "*.jellyfish.shoot.canary.k8s-hana.ondemand.com",
+    "key": {
+      "algo": "rsa",
+      "size": 2048
+    },
+    "names": [
+      {
+        "C": "DE",
+        "L": "Munich",
+        "O": "SAP SE",
+        "OU": "Kyma Project",
+        "ST": "Bavaria"
+      }
+    ],
+    "hosts": [
+      "skr1.jellyfish.shoot.canary.k8s-hana.ondemand.com",
+      "localhost"
+    ]
+  }

@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kyma-system
+resources:
+- namespace.yaml
+- deployment.yaml
+- service.yaml
+- rbac.yaml
+- webhook.yaml
+configMapGenerator:
+- name: skr-webhook-cm
+  envs:
+  - env/deploy-env-vars.env
+secretGenerator:
+- name: skr-mtls-secret
+  envs: 
+  - env/secret-keys.env
+images:
+- name: skr-watcher
+  newName: eu.gcr.io/kyma-project/runtime-watcher-skr
+  newTag: 2f126b14
