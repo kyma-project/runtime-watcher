@@ -91,3 +91,6 @@ go.work*
 
 # ignore .lock files
 */.lock
+
+# ignore generated secret
+skr/kustomize/base/secret.yaml
