@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -22,12 +21,13 @@ import (
 
 	"github.com/go-logr/logr"
 
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 )
 
 const (
@@ -334,18 +334,14 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 
 	responseBody := bytes.NewBuffer(postBody)
 
-	kcpIP := os.Getenv("KCP_IP")
-	kcpPort := os.Getenv("KCP_PORT")
+	kcpAddr := os.Getenv("KCP_ADDR")
 	contract := os.Getenv("KCP_CONTRACT")
 
-	if kcpIP == "" || contract == "" {
+	if kcpAddr == "" || contract == "" {
 		return KcpReqFailedMsg
 	}
-	if kcpPort != "" {
-		kcpIP = net.JoinHostPort(kcpIP, kcpPort)
-	}
 
-	uri := fmt.Sprintf("%s/%s/%s/%s", kcpIP, contract, moduleName, EventEndpoint)
+	uri := fmt.Sprintf("%s/%s/%s/%s", kcpAddr, contract, moduleName, EventEndpoint)
 	httpClient, url, err := h.getHTTPClientAndURL(uri)
 	if err != nil {
 		h.Logger.Error(err, "")
