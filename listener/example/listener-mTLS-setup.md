@@ -1,12 +1,8 @@
-
----
-
 | Title  | Description  |  Keywords | Owner  |
 | ------------ | ------------ | ------------ | ------------ |
 | Listener mTLS setup  | Enable mTLS between KCP and SKR using gardner cert management extention.   |  runtime-watcher,istio,kcp-listener | kyma-project.io/jellyfish   |
 
 ---
-
 ## Before you begin
 
 1. Ensure that you have enabled the Gardner `CertConfig` extension on your `Shoot` cluster by adding the following lines to its yaml Manifest:

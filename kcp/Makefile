@@ -73,7 +73,7 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-.PHONY:
+.PHONY: docker-build
 docker-build: copy-skr-chart ## Build docker image with the manager.
 	docker build -t ${IMG} .
 	$(MAKE) remove-skr-chart
