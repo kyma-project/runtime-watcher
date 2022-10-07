@@ -8,15 +8,17 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
-	"log"
-	"net/http"
-	"os"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 func main() {
@@ -38,8 +40,8 @@ func main() {
 		return
 	}
 
-	//caCertPool := x509.NewCertPool()
-	//caCertPool.AppendCertsFromPEM(secret.Data["ca.crt"])
+	// caCertPool := x509.NewCertPool()
+	// caCertPool.AppendCertsFromPEM(secret.Data["ca.crt"])
 
 	certificate, err := tls.X509KeyPair(secret.Data["tls.crt"], secret.Data["tls.key"])
 	if err != nil {
