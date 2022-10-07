@@ -9,8 +9,8 @@ require (
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
 	helm.sh/helm/v3 v3.9.4
-	istio.io/api v0.0.0-20220825141607-b5f730f29ce4
-	istio.io/client-go v1.14.3
+	istio.io/api v0.0.0-20220826132550-04f2b20dc284
+	istio.io/client-go v1.15.0
 	k8s.io/api v0.24.4
 	k8s.io/apiextensions-apiserver v0.24.4
 	k8s.io/apimachinery v0.24.4

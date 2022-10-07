@@ -9,7 +9,6 @@ import (
 
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
-	util "github.com/kyma-project/runtime-watcher/skr/internal/test_util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -34,7 +33,7 @@ type testCaseParams struct {
 	ownerName     string
 	watchedName   string
 	moduleName    string
-	changeObjType util.ChangeObj
+	changeObjType ChangeObj
 }
 
 //nolint:gochecknoglobals
@@ -54,20 +53,20 @@ var baseTestCase = testCase{
 func createTableEntries() []TableEntry {
 	tableEntries := make([]TableEntry, 0)
 	// add all operations
-	for _, operationToTest := range util.OperationsToTest {
+	for _, operationToTest := range OperationsToTest {
 		// add all changed object types
-		for _, changeType := range util.ChangeObjTypes {
+		for _, changeType := range ChangeObjTypes {
 			currentTestCase := baseTestCase
 			currentTestCase.params.operation = operationToTest
 			currentTestCase.params.changeObjType = changeType
 
-			if changeType == util.NoChange && operationToTest == admissionv1.Update {
+			if changeType == NoChange && operationToTest == admissionv1.Update {
 				currentTestCase.results.resultMsg = fmt.Sprintf("no change detected on watched resource %s/%s",
 					metav1.NamespaceDefault, crName1)
 			} else if operationToTest == admissionv1.Connect {
 				currentTestCase.results.resultMsg = fmt.Sprintf("operation %s not supported for resource %s",
 					admissionv1.Connect, metav1.GroupVersionKind(schema.FromAPIVersionAndKind(
-						util.WatchedResourceAPIVersion, util.WatchedResourceKind)))
+						WatchedResourceAPIVersion, WatchedResourceKind)))
 			}
 
 			description := fmt.Sprintf("when %s operation is triggered on watched resource with %s change",
@@ -87,7 +86,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Client: k8sClient,
 			Logger: ctrl.Log.WithName("skr-watcher-test"),
 		}
-		request, err := util.GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
+		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
 			testCase.params.moduleName, ownerLabels, testCase.params.changeObjType)
 		Expect(err).ShouldNot(HaveOccurred())
 		skrRecorder := httptest.NewRecorder()
@@ -106,7 +105,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 		// check listener event
 		Expect(kcpRecorder.Code).To(BeEquivalentTo(http.StatusOK))
 		kcpPayload, err := io.ReadAll(kcpRecorder.Body)
-		if (testCase.params.changeObjType == util.NoChange && testCase.params.operation == admissionv1.Update) ||
+		if (testCase.params.changeObjType == NoChange && testCase.params.operation == admissionv1.Update) ||
 			testCase.params.operation == admissionv1.Connect {
 			Expect(kcpRecorder.Code).To(BeEquivalentTo(http.StatusOK))
 			// no request was sent to KCP
@@ -119,8 +118,8 @@ var _ = Describe("given watched resource", Ordered, func() {
 				&listenerTypes.WatchEvent{
 					Watched: ctrlClient.ObjectKey{Name: testCase.params.watchedName, Namespace: metav1.NamespaceDefault},
 					Owner:   ctrlClient.ObjectKey{Name: ownerName, Namespace: metav1.NamespaceDefault},
-					WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(util.WatchedResourceAPIVersion,
-						util.WatchedResourceKind)),
+					WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(WatchedResourceAPIVersion,
+						WatchedResourceKind)),
 				},
 			))
 		}

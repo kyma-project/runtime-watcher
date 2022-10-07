@@ -17,8 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const ManagedBylabel = "operator.kyma-project.io/managed-by"
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -153,9 +157,34 @@ type Watcher struct {
 	Status WatcherStatus `json:"status"`
 }
 
-func (m *Watcher) SetObservedGeneration() *Watcher {
-	m.Status.ObservedGeneration = m.Generation
-	return m
+func (w *Watcher) SetObservedGeneration() *Watcher {
+	w.Status.ObservedGeneration = w.Generation
+	return w
+}
+
+func (w *Watcher) GetModuleName() string {
+	if w.Labels == nil {
+		return ""
+	}
+	return w.Labels[ManagedBylabel]
+}
+
+func (w *Watcher) AddOrUpdateReadyCondition(state WatcherConditionStatus, msg string) {
+	lastTransitionTime := &metav1.Time{Time: time.Now()}
+	if len(w.Status.Conditions) == 0 {
+		w.Status.Conditions = []WatcherCondition{{
+			Type:               ConditionTypeReady,
+			Status:             state,
+			Message:            msg,
+			LastTransitionTime: lastTransitionTime,
+		}}
+	}
+	for _, condition := range w.Status.Conditions {
+		if condition.Type == ConditionTypeReady {
+			condition.Status = state
+			condition.LastTransitionTime = lastTransitionTime
+		}
+	}
 }
 
 //+kubebuilder:object:root=true

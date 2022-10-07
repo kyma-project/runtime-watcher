@@ -20,17 +20,16 @@ package controllers_test
 
 import (
 	"context"
-	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 
 	kyma "github.com/kyma-project/lifecycle-manager/operator/api/v1alpha1"
 	"github.com/kyma-project/runtime-watcher/kcp/controllers"
-	"github.com/kyma-project/runtime-watcher/kcp/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	yaml "k8s.io/apimachinery/pkg/util/yaml"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	componentv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
+	watcherv1alpha1 "github.com/kyma-project/runtime-watcher/kcp/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -56,6 +55,14 @@ var (
 	cancel     context.CancelFunc   //nolint:gochecknoglobals
 )
 
+const (
+	webhookChartPath = "../../skr/chart/skr-webhook"
+	requeueInterval  = 500
+	vsName           = "kcp-events"
+	vsNamespace      = metav1.NamespaceDefault
+	releaseName      = "watcher"
+)
+
 func TestAPIs(t *testing.T) {
 	t.Parallel()
 	RegisterFailHandler(Fail)
@@ -64,29 +71,28 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	ctx, cancel = context.WithCancel(context.TODO())
+	ctx, cancel = context.WithCancel(context.Background())
 	logger := zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true))
 	logf.SetLogger(logger)
 
+	By("verifying local chart path is correct")
+	fileInfo, err := os.Stat(webhookChartPath)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(fileInfo.IsDir()).To(BeTrue())
+
+	By("preparing required CRDs")
+	//nolint:lll
+	requiredCrds, err := prepareRequiredCRDs([]string{
+		"https://raw.githubusercontent.com/istio/istio/master/manifests/charts/base/crds/crd-all.gen.yaml",
+		"https://raw.githubusercontent.com/kyma-project/runtime-watcher/main/kcp/config/crd/bases/operator.kyma-project.io_watchers.yaml",
+		"https://raw.githubusercontent.com/kyma-project/lifecycle-manager/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml",
+	})
+	Expect(err).NotTo(HaveOccurred())
+
 	By("bootstrapping test environment")
-
-	watcherCrd := &v1.CustomResourceDefinition{}
-	res, err := http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/runtime-watcher/main/kcp/config/crd/bases/operator.kyma-project.io_watchers.yaml") //nolint:lll
-	Expect(err).NotTo(HaveOccurred())
-	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
-	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(watcherCrd)).To(Succeed())
-
-	kymaCrd := &v1.CustomResourceDefinition{}
-	res, err = http.DefaultClient.Get(
-		"https://raw.githubusercontent.com/kyma-project/lifecycle-manager/main/operator/config/crd/bases/operator.kyma-project.io_kymas.yaml") //nolint:lll
-	Expect(err).NotTo(HaveOccurred())
-	Expect(res.StatusCode).To(BeEquivalentTo(http.StatusOK))
-	Expect(yaml.NewYAMLOrJSONDecoder(res.Body, 2048).Decode(kymaCrd)).To(Succeed())
-
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
-		CRDs:                  []*v1.CustomResourceDefinition{watcherCrd, kymaCrd},
+		CRDs:                  requiredCrds,
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -94,8 +100,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	Expect(componentv1alpha1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
-	Expect(v1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
+	Expect(watcherv1alpha1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
+	Expect(apiextv1.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 	Expect(kyma.AddToScheme(scheme.Scheme)).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -109,14 +115,23 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&controllers.WatcherReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: scheme.Scheme,
-		Config: &util.WatcherConfig{
-			RequeueInterval:          util.DefaultRequeueInterval,
-			ListenerIstioGatewayPort: util.DefaultIstioGatewayPort,
+	watcherReconciler := &controllers.WatcherReconciler{
+		Client:     k8sManager.GetClient(),
+		RestConfig: k8sManager.GetConfig(),
+		Scheme:     scheme.Scheme,
+		Config: &controllers.WatcherConfig{
+			VirtualServiceObjKey: client.ObjectKey{
+				Name:      vsName,
+				Namespace: vsNamespace,
+			},
+			RequeueInterval:         requeueInterval,
+			WebhookChartPath:        webhookChartPath,
+			WebhookChartReleaseName: releaseName,
 		},
-	}).SetupWithManager(k8sManager)
+	}
+	err = watcherReconciler.SetIstioClient()
+	Expect(err).ToNot(HaveOccurred())
+	err = watcherReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
