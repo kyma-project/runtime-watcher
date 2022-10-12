@@ -3,7 +3,7 @@
 
 ## Components
 
-* [kcp-watcher](./kcp)
+* [kcp-watcher](https://github.com/kyma-project/lifecycle-manager/blob/main/operator/api/v1alpha1/watcher_types.go)
   
     Responsible for reconciling _WatcherCRs_. Based on this reconciliation resources of [skr-watcher](./skr) are configured for all available SKRs.
 
