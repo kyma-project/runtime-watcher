@@ -348,11 +348,11 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	}
 
 	resp, err := httpClient.Post(url, "application/json", requestPayload)
-	defer resp.Body.Close()
 	if err != nil {
 		h.Logger.Error(err, KcpReqFailedMsg)
 		return KcpReqFailedMsg
 	}
+	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		h.Logger.Error(err, fmt.Sprintf("responseBody: %s", responseBody))
