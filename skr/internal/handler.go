@@ -116,18 +116,16 @@ func getModuleName(urlPath string) (string, error) {
 }
 
 func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
+	defer req.Body.Close()
 	moduleName, err := getModuleName(req.URL.Path)
 	if err != nil {
 		h.Logger.Error(err, "failed to get module name")
 		return
 	}
-
 	// read incoming request to bytes
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		if !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
-			h.Logger.Error(fmt.Errorf("%s%s %w", admissionError, errorSeparator, err), "")
-		}
+		h.Logger.Error(err, admissionError)
 		return
 	}
 
@@ -152,10 +150,11 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	// prepare response
 	responseBytes := h.prepareResponse(admissionReview, validation)
 	if responseBytes == nil {
+		h.Logger.Info("empty response from incoming admission review")
 		return
 	}
 	if _, err = writer.Write(responseBytes); err != nil {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, admissionError)
 		return
 	}
 }
@@ -168,7 +167,7 @@ func (h *Handler) storeIncomingRequest(body []byte) {
 	if enableSideCarStr != "" {
 		sideCarEnabled, err = strconv.ParseBool(enableSideCarStr)
 		if err != nil {
-			h.Logger.Error(fmt.Errorf("cannot parse sidecar enable env variable %w", err), "")
+			h.Logger.Error(err, "cannot parse sidecar enable env variable ")
 			return
 		}
 	}
@@ -214,7 +213,7 @@ func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 
 	admissionReviewBytes, err := json.Marshal(&finalizedAdmissionReview)
 	if err != nil {
-		h.Logger.Error(fmt.Errorf("%s%s %w", admissionError, errorSeparator, err), "")
+		h.Logger.Error(err, admissionError)
 		return nil
 	}
 	return admissionReviewBytes
@@ -309,7 +308,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	ownerKey, err := getKcpResourceName(watched)
 	if err != nil {
 		h.Logger.Error(err, "resource owner name could not be determined")
-		return ""
+		return "resource owner name could not be determined"
 	}
 
 	ownerParts := strings.Split(ownerKey, "__")
@@ -328,11 +327,11 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	}
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, KcpReqFailedMsg)
 		return KcpReqFailedMsg
 	}
 
-	responseBody := bytes.NewBuffer(postBody)
+	requestPayload := bytes.NewBuffer(postBody)
 
 	kcpAddr := os.Getenv("KCP_ADDR")
 	contract := os.Getenv("KCP_CONTRACT")
@@ -344,17 +343,19 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	uri := fmt.Sprintf("%s/%s/%s/%s", kcpAddr, contract, moduleName, EventEndpoint)
 	httpClient, url, err := h.getHTTPClientAndURL(uri)
 	if err != nil {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, KcpReqFailedMsg)
 		return err.Error()
 	}
 
-	resp, err := httpClient.Post(url, "application/json", responseBody)
+	resp, err := httpClient.Post(url, "application/json", requestPayload)
+	defer resp.Body.Close()
 	if err != nil {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, KcpReqFailedMsg)
 		return KcpReqFailedMsg
 	}
+	responseBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, fmt.Sprintf("responseBody: %s", responseBody))
 		return KcpReqFailedMsg
 	}
 
