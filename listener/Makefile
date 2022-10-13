@@ -54,9 +54,9 @@ lint: ## Run golangci-lint against code.
 	$(LOCALBIN)/golangci-lint run
 
 .PHONY: docker-build
-docker-build: ## Build docker image with the manager.
+docker-build: ## Build docker image for sample-listener.
 	docker build -t $(IMG) .
 
 .PHONY: docker-push
-docker-push: ## Push docker image with the manager.
+docker-push: ## Push docker image for sample-listener.
 	docker push $(IMG)

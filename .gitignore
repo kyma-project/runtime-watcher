@@ -87,9 +87,14 @@ kcp/bin/**
 
 # rendered webhook configuration during test execution
 kcp/pkg/deploy/assets/sample-chart/templates/webhook-config-rendered.yaml
-*/bin
+**/bin
 # ignore go.work
 go.work*
 kcp/pkg/deploy/assets/custom-modules-config.yaml
 */.lock
 kcp/webhook-chart/
+# ignore pem and csr files
+*.pem
+*.csr
+# ignore .cfg files
+*.cfg
