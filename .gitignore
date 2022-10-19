@@ -82,14 +82,15 @@ out.txt
 
 # ignore vscode delve debug binary
 */__debug_bin
-skr/bin/**
-kcp/bin/**
 
-# rendered webhook configuration during test execution
-kcp/pkg/deploy/assets/sample-chart/templates/webhook-config-rendered.yaml
-*/bin
+# ignore any /bin subdirectory
+**/bin
+
 # ignore go.work
 go.work*
-kcp/pkg/deploy/assets/custom-modules-config.yaml
+
+# ignore .lock files
 */.lock
-kcp/webhook-chart/
+
+# ignore generated secret
+skr/kustomize/base/secret.yaml

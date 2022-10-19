@@ -1,0 +1,21 @@
+{
+    "CN": "kyma-runtime.kyma-project.io",
+    "key": {
+      "algo": "rsa",
+      "size": 2048
+    },
+    "names": [
+      {
+        "C": "DE",
+        "L": "Munich",
+        "O": "SAP SE",
+        "OU": "Kyma Project",
+        "ST": "Bavaria"
+      }
+    ],
+    "hosts": [
+      "ak-skr.jellyfish.shoot.canary.k8s-hana.ondemand.com",
+      "skr-webhook.kyma-system.svc.cluster.local",
+      "localhost"
+    ]
+  }

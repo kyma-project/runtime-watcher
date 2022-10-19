@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skr-webhook
+  labels:
+    app: skr-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: skr-webhook
+  template:
+    metadata:
+      labels:
+        app: skr-webhook
+    spec:
+      serviceAccountName: skr-webhook-sa
+      containers:
+        - name: server
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: WEBHOOK_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: skr-webhook-cm 
+                  key: WEBHOOK_PORT 
+            - name: TLS_SERVER
+              value: "true"
+            - name: TLS_CALLBACK
+              valueFrom:
+                configMapKeyRef:
+                  name: skr-webhook-cm 
+                  key: TLS_CALLBACK
+            - name: TLS_KEY
+              value: "/app/etc/ssl/tls.key"
+            - name: TLS_CERT
+              value: "/app/etc/ssl/tls.crt"
+            - name: CA_CERT
+              value: "/app/etc/ssl/ca.crt"
+            - name: KCP_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: skr-webhook-cm 
+                  key: KCP_IP 
+            - name: KCP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: skr-webhook-cm 
+                  key: KCP_PORT 
+            - name: KCP_CONTRACT
+              valueFrom:
+                configMapKeyRef:
+                  name: skr-webhook-cm 
+                  key: KCP_CONTRACT
+            - name: WEBHOOK_SIDE_CAR
+              value: "false"
+          image: skr-watcher:latest
+          imagePullPolicy: Always
+          volumeMounts:
+          - name: ssl
+            mountPath: /app/etc/ssl
+          resources:
+            requests:
+              memory: 20Mi
+              cpu: "0.01"
+            limits:
+              memory: 200Mi
+              cpu: "0.1"
+          ports:
+            - containerPort: 8433
+              name: watcher-port
+      volumes:
+      - name: ssl
+        secret:
+          secretName: skr-mtls-secret
+          items:
+          - key: TLS_KEY
+            path: tls.key
+          - key: TLS_CERT
+            path: tls.crt
+          - key: CA_CERT
+            path: ca.crt
