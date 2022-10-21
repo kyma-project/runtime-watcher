@@ -1,4 +1,4 @@
-package internal
+package sign
 
 import (
 	"bytes"
@@ -25,6 +25,10 @@ const (
 	// Authorization will place the HTTP Signature into the 'Authorization'
 	// HTTP header.
 	Authorization SignatureScheme = "Authorization"
+	// The HTTP Signatures specification uses the "Signature" auth-scheme
+	// for the Authorization header. This is coincidentally named, but not
+	// semantically the same, as the "Signature" HTTP header value.
+	signatureAuthScheme = "Signature"
 )
 
 const (
@@ -41,29 +45,20 @@ const (
 	headersDelimiter     = "\n"
 
 	// Signature Parameters
-	keyIdParameter            = "keyId"
-	algorithmParameter        = "algorithm"
-	headersParameter          = "headers"
-	signatureParameter        = "signature"
-	prefixSeparater           = " "
-	parameterKVSeparater      = "="
-	parameterValueDelimiter   = "\""
-	parameterSeparater        = ","
-	headerParameterValueDelim = " "
-)
-
-const (
-	// The HTTP Signatures specification uses the "Signature" auth-scheme
-	// for the Authorization header. This is coincidentally named, but not
-	// semantically the same, as the "Signature" HTTP header value.
-	signatureAuthScheme = "Signature"
+	keyIdParameter          = "keyId"
+	algorithmParameter      = "algorithm"
+	signatureParameter      = "signature"
+	prefixSeparater         = " "
+	parameterKVSeparater    = "="
+	parameterValueDelimiter = "\""
+	parameterSeparater      = ","
 )
 
 var (
 	defaultHeaders = []string{dateHeader, createdHeader}
 )
 
-func sign(pKey crypto.PrivateKey, pubKeyId string, r *http.Request, body []byte) error {
+func signRequest(pKey crypto.PrivateKey, pubKeyId string, r *http.Request, body []byte) error {
 
 	// Add Digest
 	var h = crypto.SHA256.New()
@@ -79,7 +74,7 @@ func sign(pKey crypto.PrivateKey, pubKeyId string, r *http.Request, body []byte)
 	created := time.Now().Unix()
 	sigString, err := signatureString(created)
 
-	// Sign
+	// Create Signature
 	pKeyBytes, ok := pKey.([]byte)
 	if !ok {
 		return fmt.Errorf("private key for MAC signing must be of type []byte")
@@ -90,6 +85,7 @@ func sign(pKey crypto.PrivateKey, pubKeyId string, r *http.Request, body []byte)
 	}
 	encSig := base64.StdEncoding.EncodeToString(sig)
 
+	// Sign request with Signature
 	setSignatureHeader(r.Header, Signature, pubKeyId, algorithm, encSig, created)
 	return nil
 }
