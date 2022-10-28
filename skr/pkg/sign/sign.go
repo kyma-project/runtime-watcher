@@ -3,64 +3,91 @@ package sign
 import (
 	"bytes"
 	"crypto"
-	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"hash"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// HTTP Signatures can be applied to different HTTP headers, depending on the
-// expected application behavior.
-type SignatureScheme string
-
 const (
-	// Signature will place the HTTP Signature into the 'Signature' HTTP
-	// header.
-	Signature SignatureScheme = "Signature"
-	// Authorization will place the HTTP Signature into the 'Authorization'
-	// HTTP header.
-	Authorization SignatureScheme = "Authorization"
-	// The HTTP Signatures specification uses the "Signature" auth-scheme
-	// for the Authorization header. This is coincidentally named, but not
-	// semantically the same, as the "Signature" HTTP header value.
+	//Authentication scheme hte HTTP Signatures specification uses for the Authorization header.
 	signatureAuthScheme = "Signature"
-)
 
-const (
+	// Algorithm used for signing
 	algorithm = "SHA-256"
 
-	digestHeader = "Digest"
-	digestDelim  = "="
-
-	createdHeader = "created"
-	dateHeader    = "date"
+	// Headers
+	digestHeader    = "Digest"
+	digestDelim     = "="
+	SignatureHeader = "Signature"
 
 	// Signature String Construction
 	headerFieldDelimiter = ": "
 	headersDelimiter     = "\n"
 
 	// Signature Parameters
-	keyIdParameter          = "keyId"
-	algorithmParameter      = "algorithm"
-	signatureParameter      = "signature"
-	prefixSeparater         = " "
-	parameterKVSeparater    = "="
-	parameterValueDelimiter = "\""
-	parameterSeparater      = ","
+	createdParameter               = "created"
+	pubKeySecretNameParameter      = "pubKeySecretName"
+	pubKeySecretNamespaceParameter = "pubKeySecretNamespace"
+	signatureParameter             = "signature"
+	prefixSeparater                = " "
+	parameterKVSeparater           = "="
+	parameterValueDelimiter        = "\""
+	parameterSeparater             = ","
 )
 
 var (
-	defaultHeaders = []string{dateHeader, createdHeader}
+	// TODO include expires Header
+	defaultHeaders = []string{createdParameter}
 )
 
-func signRequest(pKey crypto.PrivateKey, pubKeyId string, r *http.Request, body []byte) error {
+// SignRequest signs the request using the RSA-SHA-256 algorithm.
+// The HTTP server uses the public key secret to determine which public key to use when verifying a signed request.
+// Furthermore, a Digest will be attached to the request (RFC 3230). The given body may be nil
+// but must match the body specified in the request.
+// The Digest verifies that the request body is not changed while it is being transmitted,
+// and the HTTP Signature verifies that neither the Digest nor the body have been
+// fraudulently altered to falsely represent different information.
+func SignRequest(pKey crypto.PrivateKey, pubKeySecret types.NamespacedName, r *http.Request, body []byte) error {
+
+	rsa := &rsaAlgorithm{
+		Hash: sha256.New(),
+		kind: crypto.SHA256,
+	}
+	if body == nil {
+		return fmt.Errorf("body cannot be nil")
+	}
 
 	// Add Digest
+	addDigest(r, body)
+
+	// Create Signature String
+	created := time.Now().Unix()
+	sigString, err := signatureString(created)
+
+	// Create Signature
+	sig, err := rsa.Sign(rand.Reader, pKey, []byte(sigString))
+	if err != nil {
+		return err
+	}
+	encSig := base64.StdEncoding.EncodeToString(sig)
+
+	// Sign request with Signature
+	setSignatureHeader(r.Header, SignatureHeader, pubKeySecret.Name, pubKeySecret.Namespace, encSig, created)
+	return nil
+}
+
+func addDigest(r *http.Request, body []byte) error {
+	_, set := r.Header[digestHeader]
+	if set {
+		return fmt.Errorf("digest already set in headers")
+
+	}
 	var h = crypto.SHA256.New()
 	h.Write(body)
 	sum := h.Sum(nil)
@@ -69,24 +96,6 @@ func signRequest(pKey crypto.PrivateKey, pubKeyId string, r *http.Request, body 
 			algorithm,
 			digestDelim,
 			base64.StdEncoding.EncodeToString(sum[:])))
-
-	// Create Signature String
-	created := time.Now().Unix()
-	sigString, err := signatureString(created)
-
-	// Create Signature
-	pKeyBytes, ok := pKey.([]byte)
-	if !ok {
-		return fmt.Errorf("private key for MAC signing must be of type []byte")
-	}
-	sig, err := SignHMAC([]byte(sigString), pKeyBytes)
-	if err != nil {
-		return err
-	}
-	encSig := base64.StdEncoding.EncodeToString(sig)
-
-	// Sign request with Signature
-	setSignatureHeader(r.Header, Signature, pubKeyId, algorithm, encSig, created)
 	return nil
 }
 
@@ -95,7 +104,7 @@ func signatureString(created int64) (string, error) {
 	for n, i := range defaultHeaders {
 		i := strings.ToLower(i)
 
-		if i == createdHeader {
+		if i == createdParameter {
 			if created == 0 {
 				return "", fmt.Errorf("empty created value")
 			}
@@ -110,50 +119,26 @@ func signatureString(created int64) (string, error) {
 	return b.String(), nil
 }
 
-func SignHMAC(sig, key []byte) ([]byte, error) {
-	hs := hmac.New(
-		func() hash.Hash {
-			h := sha256.New()
-			return h
-		}, key)
-	if err := setSignature(hs, sig); err != nil {
-		return nil, err
-	}
-	return hs.Sum(nil), nil
-}
-
-func setSignature(h hash.Hash, b []byte) error {
-	n, err := h.Write(b)
-	if err != nil {
-		h.Reset()
-		return err
-	} else if n != len(b) {
-		h.Reset()
-		return fmt.Errorf("only %d of %d bytes could be written to hash", n, len(b))
-	}
-	return nil
-}
-
-func setSignatureHeader(h http.Header, targetHeader SignatureScheme, pubKeyId, algo, enc string, created int64) {
+func setSignatureHeader(h http.Header, targetHeader, pubKeySecretName, pubKeySecretNamespace, enc string, created int64) {
 	var b bytes.Buffer
-	// KeyId
+	// Public Key Secret Name
 	b.WriteString(signatureAuthScheme)
 	b.WriteString(prefixSeparater)
-	b.WriteString(keyIdParameter)
+	b.WriteString(pubKeySecretNameParameter)
 	b.WriteString(parameterKVSeparater)
 	b.WriteString(parameterValueDelimiter)
-	b.WriteString(pubKeyId)
+	b.WriteString(pubKeySecretName)
 	b.WriteString(parameterValueDelimiter)
 	b.WriteString(parameterSeparater)
-	// Algorithm
-	b.WriteString(algorithmParameter)
+	// Public Key Secret Namespace
+	b.WriteString(pubKeySecretNamespaceParameter)
 	b.WriteString(parameterKVSeparater)
 	b.WriteString(parameterValueDelimiter)
-	b.WriteString(algo) //real algorithm is hidden, see newest version of spec draft
+	b.WriteString(pubKeySecretNamespace)
 	b.WriteString(parameterValueDelimiter)
 	b.WriteString(parameterSeparater)
 	// Created
-	b.WriteString(createdHeader)
+	b.WriteString(createdParameter)
 	b.WriteString(parameterKVSeparater)
 	b.WriteString(strconv.FormatInt(created, 10))
 	b.WriteString(parameterSeparater)
@@ -163,5 +148,5 @@ func setSignatureHeader(h http.Header, targetHeader SignatureScheme, pubKeyId, a
 	b.WriteString(parameterValueDelimiter)
 	b.WriteString(enc)
 	b.WriteString(parameterValueDelimiter)
-	h.Add(string(targetHeader), b.String())
+	h.Add(targetHeader, b.String())
 }
