@@ -26,12 +26,12 @@ const (
 	keyBitSize = 2048
 )
 
-type rsaAlgorithm struct {
+type RSAAlgorithm struct {
 	hash.Hash
-	kind crypto.Hash
+	Kind crypto.Hash
 }
 
-func (r *rsaAlgorithm) Sign(rand io.Reader, privateKey crypto.PrivateKey, sig []byte) ([]byte, error) {
+func (r *RSAAlgorithm) Sign(rand io.Reader, privateKey crypto.PrivateKey, sig []byte) ([]byte, error) {
 	defer r.Reset()
 
 	if err := r.setSignature(sig); err != nil {
@@ -41,10 +41,10 @@ func (r *rsaAlgorithm) Sign(rand io.Reader, privateKey crypto.PrivateKey, sig []
 	if !ok {
 		return nil, errors.New("given PrivatKey cannot be converted to *rsa.PrivateKey")
 	}
-	return rsa.SignPKCS1v15(rand, rsaK, r.kind, r.Sum(nil))
+	return rsa.SignPKCS1v15(rand, rsaK, r.Kind, r.Sum(nil))
 }
 
-func (r *rsaAlgorithm) Verify(pub crypto.PublicKey, toHash, signature []byte) error {
+func (r *RSAAlgorithm) Verify(pub crypto.PublicKey, toHash, signature []byte) error {
 	defer r.Reset()
 	rsaK, ok := pub.(*rsa.PublicKey)
 	if !ok {
@@ -53,10 +53,10 @@ func (r *rsaAlgorithm) Verify(pub crypto.PublicKey, toHash, signature []byte) er
 	if err := r.setSignature(toHash); err != nil {
 		return err
 	}
-	return rsa.VerifyPKCS1v15(rsaK, r.kind, r.Sum(nil), signature)
+	return rsa.VerifyPKCS1v15(rsaK, r.Kind, r.Sum(nil), signature)
 }
 
-func (r *rsaAlgorithm) setSignature(b []byte) error {
+func (r *RSAAlgorithm) setSignature(b []byte) error {
 	n, err := r.Write(b)
 	if err != nil {
 		r.Reset()
@@ -127,7 +127,7 @@ func getKey(ctx context.Context, keySecretReference types.NamespacedName, key st
 }
 
 // generateRSAKeys generates a private/public RSA Key pair and returns them as encoded PEM blocks(RFC 1421).
-func generateRSAKeys() (encodedPvtKey, encodedPubKey []byte, err error) {
+func GenerateRSAKeys() (encodedPvtKey, encodedPubKey []byte, err error) {
 	// generate key
 	privatekey, err := rsa.GenerateKey(rand.Reader, keyBitSize)
 	if err != nil {

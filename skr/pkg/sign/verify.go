@@ -15,20 +15,18 @@ import (
 )
 
 const (
-	hostHeader = "Host"
-
 	// Maximum clock offset between sender and receiver
 	signatureClockOffset = 5
 )
 
-// TODO next Step: Check digest in verify
 // Implement test
 
 func VerifyRequest(r *http.Request, k8sClient client.Client) (bool, error) {
-	// TODO: Maybe remove host treatment, since maybe not really needed here
 	h := r.Header
-	if _, hasHostHeader := h[hostHeader]; len(r.Host) > 0 && !hasHostHeader {
-		h[hostHeader] = []string{r.Host}
+
+	// Verify Digest
+	if err := VerifyDigest(r); err != nil {
+		return false, err
 	}
 
 	// Get parameters from signature
@@ -55,9 +53,9 @@ func VerifyRequest(r *http.Request, k8sClient client.Client) (bool, error) {
 		created:         created,
 	}
 	// Create new signer to Verify
-	signer := &rsaAlgorithm{
+	signer := &RSAAlgorithm{
 		Hash: sha256.New(),
-		kind: crypto.SHA256,
+		Kind: crypto.SHA256,
 	}
 	if err := v.verify(signer, publicKey); err != nil {
 		return false, errors.New("incomming request could not be verified")
@@ -137,7 +135,7 @@ type verifier struct {
 	created         int64
 }
 
-func (v *verifier) verify(signer *rsaAlgorithm, publicKey crypto.PublicKey) error {
+func (v *verifier) verify(signer *RSAAlgorithm, publicKey crypto.PublicKey) error {
 
 	toHash, err := signatureString(v.created)
 	if err != nil {

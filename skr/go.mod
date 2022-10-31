@@ -8,6 +8,7 @@ require (
 	github.com/kyma-project/runtime-watcher/listener v0.0.0-20220905120552-de040bddeba1
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
+	github.com/stretchr/testify v1.8.0
 	k8s.io/api v0.24.4
 	k8s.io/apimachinery v0.24.4
 	sigs.k8s.io/controller-runtime v0.12.3
@@ -39,6 +40,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect

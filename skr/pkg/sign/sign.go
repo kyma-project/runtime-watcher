@@ -18,12 +18,8 @@ const (
 	//Authentication scheme hte HTTP Signatures specification uses for the Authorization header.
 	signatureAuthScheme = "Signature"
 
-	// Algorithm used for signing
-	algorithm = "SHA-256"
-
 	// Headers
 	digestHeader    = "Digest"
-	digestDelim     = "="
 	SignatureHeader = "Signature"
 
 	// Signature String Construction
@@ -53,18 +49,15 @@ var (
 // The Digest verifies that the request body is not changed while it is being transmitted,
 // and the HTTP Signature verifies that neither the Digest nor the body have been
 // fraudulently altered to falsely represent different information.
-func SignRequest(pKey crypto.PrivateKey, pubKeySecret types.NamespacedName, r *http.Request, body []byte) error {
+func SignRequest(pKey crypto.PrivateKey, pubKeySecret types.NamespacedName, r *http.Request) error {
 
-	rsa := &rsaAlgorithm{
+	rsa := &RSAAlgorithm{
 		Hash: sha256.New(),
-		kind: crypto.SHA256,
-	}
-	if body == nil {
-		return fmt.Errorf("body cannot be nil")
+		Kind: crypto.SHA256,
 	}
 
 	// Add Digest
-	addDigest(r, body)
+	AddDigest(r)
 
 	// Create Signature String
 	created := time.Now().Unix()
@@ -79,23 +72,6 @@ func SignRequest(pKey crypto.PrivateKey, pubKeySecret types.NamespacedName, r *h
 
 	// Sign request with Signature
 	setSignatureHeader(r.Header, SignatureHeader, pubKeySecret.Name, pubKeySecret.Namespace, encSig, created)
-	return nil
-}
-
-func addDigest(r *http.Request, body []byte) error {
-	_, set := r.Header[digestHeader]
-	if set {
-		return fmt.Errorf("digest already set in headers")
-
-	}
-	var h = crypto.SHA256.New()
-	h.Write(body)
-	sum := h.Sum(nil)
-	r.Header.Add(digestHeader,
-		fmt.Sprintf("%s%s%s",
-			algorithm,
-			digestDelim,
-			base64.StdEncoding.EncodeToString(sum[:])))
 	return nil
 }
 
