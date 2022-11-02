@@ -49,7 +49,7 @@ var (
 // The Digest verifies that the request body is not changed while it is being transmitted,
 // and the HTTP Signature verifies that neither the Digest nor the body have been
 // fraudulently altered to falsely represent different information.
-func SignRequest(pKey crypto.PrivateKey, pubKeySecret types.NamespacedName, r *http.Request) error {
+func SignRequest(pKey string, pubKeySecret types.NamespacedName, r *http.Request) error {
 
 	rsa := &RSAAlgorithm{
 		Hash: sha256.New(),

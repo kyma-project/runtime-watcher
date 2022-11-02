@@ -31,17 +31,22 @@ type RSAAlgorithm struct {
 	Kind crypto.Hash
 }
 
-func (r *RSAAlgorithm) Sign(rand io.Reader, privateKey crypto.PrivateKey, sig []byte) ([]byte, error) {
+func (r *RSAAlgorithm) Sign(rand io.Reader, privateKey string, sig []byte) ([]byte, error) {
 	defer r.Reset()
+
+	if privateKey == "" {
+		return nil, errors.New("private key must not be empty")
+	}
+	block, _ := pem.Decode([]byte(privateKey))
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("given PrivatKey cannot be converted to *rsa.PrivateKey: %w ", err)
+	}
 
 	if err := r.setSignature(sig); err != nil {
 		return nil, err
 	}
-	rsaK, ok := privateKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("given PrivatKey cannot be converted to *rsa.PrivateKey")
-	}
-	return rsa.SignPKCS1v15(rand, rsaK, r.Kind, r.Sum(nil))
+	return rsa.SignPKCS1v15(rand, key, r.Kind, r.Sum(nil))
 }
 
 func (r *RSAAlgorithm) Verify(pub crypto.PublicKey, toHash, signature []byte) error {
