@@ -29,7 +29,7 @@ func VerifyRequest(r *http.Request, k8sClient client.Client) (bool, error) {
 		return false, err
 	}
 
-	// Get parameters from signature
+	// Get parameters from ReceivedSignature
 	signature, err := getSignature(h)
 	if err != nil {
 		return false, err
@@ -45,7 +45,7 @@ func VerifyRequest(r *http.Request, k8sClient client.Client) (bool, error) {
 		return false, err
 	}
 
-	// Create verifier for verifying the signature
+	// Create verifier for verifying the ReceivedSignature
 	v := &verifier{
 		header:          h,
 		publicKeySecret: publicKey,
@@ -76,7 +76,7 @@ func getSignature(h http.Header) (string, error) {
 	if ok {
 		return s, nil
 	} else {
-		return "", fmt.Errorf("signature header `%s` does not contain needed parameters (%v): %s", SignatureHeader, neededParameters, s)
+		return "", fmt.Errorf("ReceivedSignature header `%s` does not contain needed parameters (%v): %s", SignatureHeader, neededParameters, s)
 	}
 }
 func getSignatureParameters(s string) (secretReference types.NamespacedName, sig string, created int64, err error) {
@@ -86,7 +86,7 @@ func getSignatureParameters(s string) (secretReference types.NamespacedName, sig
 	for _, p := range params {
 		kv := strings.SplitN(p, parameterKVSeparater, 2)
 		if len(kv) != 2 {
-			err = fmt.Errorf("signature parameter has wrong format (`<key>=<value>`): %v", p)
+			err = fmt.Errorf("ReceivedSignature parameter has wrong format (`<key>=<value>`): %v", p)
 			return
 		}
 		key := kv[0]
@@ -113,7 +113,7 @@ func getSignatureParameters(s string) (secretReference types.NamespacedName, sig
 		Name:      secretName,
 	}
 
-	errFmt := "missing %q parameter in http signature"
+	errFmt := "missing %q parameter in http ReceivedSignature"
 	now := time.Now().Unix()
 	if created-now > signatureClockOffset {
 		// maximum offset of 5 seconds

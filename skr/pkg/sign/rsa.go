@@ -31,34 +31,35 @@ type RSAAlgorithm struct {
 	Kind crypto.Hash
 }
 
-func (r *RSAAlgorithm) Sign(rand io.Reader, privateKey string, sig []byte) ([]byte, error) {
+func (r *RSAAlgorithm) Sign(rand io.Reader, privateKey *rsa.PrivateKey, sig []byte) ([]byte, error) {
 	defer r.Reset()
 
-	if privateKey == "" {
+	if privateKey == nil {
 		return nil, errors.New("private key must not be empty")
-	}
-	block, _ := pem.Decode([]byte(privateKey))
-	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("given PrivatKey cannot be converted to *rsa.PrivateKey: %w ", err)
 	}
 
 	if err := r.setSignature(sig); err != nil {
 		return nil, err
 	}
-	return rsa.SignPKCS1v15(rand, key, r.Kind, r.Sum(nil))
+	return rsa.SignPKCS1v15(rand, privateKey, r.Kind, r.Sum(nil))
 }
 
-func (r *RSAAlgorithm) Verify(pub crypto.PublicKey, toHash, signature []byte) error {
+func (r *RSAAlgorithm) Verify(publicKey crypto.PublicKey, toHash, signature []byte) error {
 	defer r.Reset()
-	rsaK, ok := pub.(*rsa.PublicKey)
-	if !ok {
-		return errors.New("given PublicKey cannot be converted to *rsa.PublicKey")
+
+	if publicKey == nil {
+		return errors.New("public key must not be empty")
 	}
+
+	rsaPubKey, ok := publicKey.(*rsa.PublicKey)
+	if !ok {
+		return errors.New("public key cannot be converted to RSA Public Key")
+	}
+
 	if err := r.setSignature(toHash); err != nil {
 		return err
 	}
-	return rsa.VerifyPKCS1v15(rsaK, r.Kind, r.Sum(nil), signature)
+	return rsa.VerifyPKCS1v15(rsaPubKey, r.Kind, r.Sum(nil), signature)
 }
 
 func (r *RSAAlgorithm) setSignature(b []byte) error {
@@ -94,41 +95,49 @@ func getPublicKeyReference(ctx context.Context, keysSecret types.NamespacedName,
 // GetPublicKey fetches the PublicKey using the given publicKeyReference and the given k8sCLient.
 // Should be called in the listener to Verify the incoming request
 func GetPublicKey(ctx context.Context, publicKeyReference types.NamespacedName, k8sClient client.Client) (crypto.PublicKey, error) {
-	return getKey(ctx, publicKeyReference, pubKeyKey, k8sClient)
+	var pKeySecret v1.Secret
+	err := k8sClient.Get(ctx, publicKeyReference, &pKeySecret)
+	if err != nil {
+		return nil, err
+	}
+	pKey := pKeySecret.Data[pubKeyKey] // TODO maybe decryption is needed
+
+	block, _ := pem.Decode(pKey)
+	if block == nil {
+		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+	}
+
+	var pub any
+	pub, err = x509.ParsePKCS1PublicKey(block.Bytes)
+	if err != nil {
+		pub, err = x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse DER encoded public key: %w", err)
+		}
+	}
+	return pub, nil
 }
 
 // GetPrivateKey fetches the PrivayeKey using the given privateKeyReference and the given k8sCLient.
 // Should be called in the watcher for signing the request.
-func GetPrivateKey(ctx context.Context, privateKeyReference types.NamespacedName, k8sClient client.Client) (crypto.PublicKey, error) {
-	return getKey(ctx, privateKeyReference, pvtKeyKey, k8sClient)
-}
-
-func getKey(ctx context.Context, keySecretReference types.NamespacedName, key string, k8sClient client.Client) (crypto.PublicKey, error) {
+func GetPrivateKey(ctx context.Context, privateKeyReference types.NamespacedName, k8sClient client.Client) (*rsa.PrivateKey, error) {
 	var pKeySecret v1.Secret
-	err := k8sClient.Get(ctx, keySecretReference, &pKeySecret)
+	err := k8sClient.Get(ctx, privateKeyReference, &pKeySecret)
 	if err != nil {
 		return nil, err
 	}
-	pKey := pKeySecret.Data[key] // TODO maybe decryption is needed
+	pKey := pKeySecret.Data[pvtKeyKey] // TODO maybe decryption is needed
 
 	block, _ := pem.Decode(pKey)
 	if block == nil {
-		panic("failed to parse PEM block containing the public key")
+		return nil, fmt.Errorf("failed to parse PEM block containing the private key")
 	}
 
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	prvt, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		panic("failed to parse DER encoded public key: " + err.Error())
+		return nil, fmt.Errorf("failed to parse DER encoded private key: %w", err)
 	}
-
-	switch pub := pub.(type) {
-	case *rsa.PrivateKey:
-		return pub, nil
-	case *rsa.PublicKey:
-		return pub, nil
-	default:
-		return nil, errors.New("unknown type of public key")
-	}
+	return prvt, nil
 }
 
 // generateRSAKeys generates a private/public RSA Key pair and returns them as encoded PEM blocks(RFC 1421).
