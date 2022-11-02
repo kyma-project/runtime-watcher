@@ -1,10 +1,10 @@
-package sign_test
+package signature_test
 
 import (
 	"bytes"
 	"encoding/json"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
-	"github.com/kyma-project/runtime-watcher/skr/pkg/sign"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/signature"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,7 +55,7 @@ func TestAddDigest(t *testing.T) {
 			test := test
 
 			req := test.r()
-			err := sign.AddDigest(req)
+			err := signature.AddDigest(req)
 			if test.expectError {
 				require.Error(t, err)
 				return
@@ -106,7 +106,7 @@ func TestVerifyDigest(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			test := test
 			req := test.r()
-			err := sign.VerifyDigest(req)
+			err := signature.VerifyDigest(req)
 			if test.expectError {
 				require.Error(t, err)
 				return

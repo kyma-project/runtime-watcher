@@ -1,4 +1,4 @@
-package sign_test
+package signature_test
 
 import (
 	"crypto"
@@ -8,48 +8,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/kyma-project/runtime-watcher/skr/pkg/sign"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/signature"
 	"github.com/stretchr/testify/require"
 	"testing"
-)
-
-var (
-	RSAPubKey = "-----BEGIN PUBLIC KEY-----\n" +
-		"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiaQuPD8SJZ+kw5NF0Mlf\n" +
-		"3FvKfeXxAiXUFnURp/+CgNPOy+2vzeDthLP5zpZrk8OV5GpX7///E448ATSo5lVo\n" +
-		"Zz2pdvpHPAMGtf06gdX3B79FCzuidxXz0kGdr0bX1Ozy3OKWCmudPsR9DtOR4Me+\n" +
-		"Hg2+neLKgBf7rNWUPc/9CwYkbIt6BmMjhHk1Ijs4e8YUF809WYdJlN8c0ErKJ1b5\n" +
-		"vCqs2Ja/xfREveNU6Psadbf2iOKNVr8ipa5YFCfHM7OoFARYaIWB4q6cRavf5fjf\n" +
-		"hPTV7kc6twX5liLRsM4kWe2MaTQ0snGCauWA03+wi+FJXYcUAqZSTLj0pJ2UA71S\n" +
-		"twIDAQAB\n" +
-		"-----END PUBLIC KEY-----"
-	RSAPrvtKey = "-----BEGIN RSA PRIVATE KEY-----\n" +
-		"MIIEowIBAAKCAQEAiaQuPD8SJZ+kw5NF0Mlf3FvKfeXxAiXUFnURp/+CgNPOy+2v\n" +
-		"zeDthLP5zpZrk8OV5GpX7///E448ATSo5lVoZz2pdvpHPAMGtf06gdX3B79FCzui\n" +
-		"dxXz0kGdr0bX1Ozy3OKWCmudPsR9DtOR4Me+Hg2+neLKgBf7rNWUPc/9CwYkbIt6\n" +
-		"BmMjhHk1Ijs4e8YUF809WYdJlN8c0ErKJ1b5vCqs2Ja/xfREveNU6Psadbf2iOKN\n" +
-		"Vr8ipa5YFCfHM7OoFARYaIWB4q6cRavf5fjfhPTV7kc6twX5liLRsM4kWe2MaTQ0\n" +
-		"snGCauWA03+wi+FJXYcUAqZSTLj0pJ2UA71StwIDAQABAoIBAE7RlqxnTaP/5GEe\n" +
-		"f7dM6bkNU0p/F2EsemQVy/ORLJFLOTusM6VIrZr1WRLFLntiX/56KztDNDVlmNTz\n" +
-		"69hihjPAqr94GLyz2u7yQMPC3AAytn31O1bIWmRHsN2DSusiePymQFddQqGD8T1B\n" +
-		"SGMY3rTlGAffrChoE3XopEg1R2k81w14u3ZqCN/aU85t7h98lGnv+DRUn/TqhiX6\n" +
-		"rdzW6xJGUAKidyhuEvM3to19EZQUkJHO2LjNDnbMowsia25HdphJL/P3ZxPKwupe\n" +
-		"MZtP6pDaSQTFkhAG0duAk1KufwMPAMO7UaYHlNqCtUaxevIPMGWXN5y/ILXTAHtv\n" +
-		"voRisqkCgYEAw0MFdcb6ugg5ViRSaEwmUQng3XkNDgvJRBTQySTVq0ni7fyCGR93\n" +
-		"VwEGLEpGoXfMavBf1EXwFcI0aCWB/qfNEDErnpYtKKxGajHHHJyllSwQ/gtxfri2\n" +
-		"XoExuZG3mauQjqkmydxKVztOXIlOjZSzukPNtqXHJYriA+lkvwvLeisCgYEAtHTC\n" +
-		"EpQUEgWxPPOK7vfXO/JGDC0k7dmMFNNKjjBHM9I6MkHteGbq+b+MCI7aybVYqaQ0\n" +
-		"3CTGya9qLk7/IEkICFoj/BHpRoVFLTTTl/QYZvUtCaeRDsYTgpc/c+bJF/7/sj08\n" +
-		"7ruKiyRMEuR8lWlCDB4c5Oyun7YrkH+86HMVP6UCgYBjUNWYIEsrED/JltPrhMAA\n" +
-		"fBvJymZffJM0c7n2dSvQ4dXw4nxxttWGhVjUcjsWqc5pnjW/zIrfJlZtmpZSJptg\n" +
-		"3wGmug/iHi36mbMC1JJMG4vRC5UAtYbc7q2SC5HtMZxnU5YNGmUdlWa4Hoa78KSx\n" +
-		"2wbpHcz7RXbMMowxuBgY3QKBgQChcihDSNnf+dnE5zrwaynUBwAmWqlEZrKN2y9D\n" +
-		"oOvC8B2C4zra0nD9OiLFcVFKzwTg2Pk1z21N+bMsdR6Juu0F0+eH2Fp07jyiojWA\n" +
-		"KDFAw68kiRcdOZcw6bIqNlrJLimDRIhkKcNckv/Ak0zmu4IMp1BAe4QLfYbiQ3Y2\n" +
-		"HOfwxQKBgAPNqWUgdqhy9Za3fmlp4I3xj11olnYB/T44qfI6hfz6m3C4gGWrAkBZ\n" +
-		"+1K92SPGT46FUMFc2tKv/ZIlDndVcQWpj/FUgUKzG+Ppktfpy+uAde6A9ffVQsq9\n" +
-		"Buas8uvcttBXolR+GfI6Gn1ssqT1ejjGTK6YaY508liOlrCWB7hu\n" +
-		"-----END RSA PRIVATE KEY-----"
 )
 
 func TestSign(t *testing.T) {
@@ -92,7 +53,7 @@ func TestSign(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 			test := test
 
-			rsa := &sign.RSAAlgorithm{
+			rsa := &signature.RSAAlgorithm{
 				Hash: sha256.New(),
 				Kind: crypto.SHA256,
 			}
@@ -147,7 +108,7 @@ func TestVerify(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 			test := test
 
-			rsa := &sign.RSAAlgorithm{
+			rsa := &signature.RSAAlgorithm{
 				Hash: sha256.New(),
 				Kind: crypto.SHA256,
 			}
@@ -162,6 +123,73 @@ func TestVerify(t *testing.T) {
 		})
 	}
 }
+
+var (
+	RSAPubKey = "-----BEGIN PUBLIC KEY-----\n" +
+		"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiaQuPD8SJZ+kw5NF0Mlf\n" +
+		"3FvKfeXxAiXUFnURp/+CgNPOy+2vzeDthLP5zpZrk8OV5GpX7///E448ATSo5lVo\n" +
+		"Zz2pdvpHPAMGtf06gdX3B79FCzuidxXz0kGdr0bX1Ozy3OKWCmudPsR9DtOR4Me+\n" +
+		"Hg2+neLKgBf7rNWUPc/9CwYkbIt6BmMjhHk1Ijs4e8YUF809WYdJlN8c0ErKJ1b5\n" +
+		"vCqs2Ja/xfREveNU6Psadbf2iOKNVr8ipa5YFCfHM7OoFARYaIWB4q6cRavf5fjf\n" +
+		"hPTV7kc6twX5liLRsM4kWe2MaTQ0snGCauWA03+wi+FJXYcUAqZSTLj0pJ2UA71S\n" +
+		"twIDAQAB\n" +
+		"-----END PUBLIC KEY-----"
+	RSAPrvtKey = "-----BEGIN RSA PRIVATE KEY-----\n" +
+		"MIIEowIBAAKCAQEAiaQuPD8SJZ+kw5NF0Mlf3FvKfeXxAiXUFnURp/+CgNPOy+2v\n" +
+		"zeDthLP5zpZrk8OV5GpX7///E448ATSo5lVoZz2pdvpHPAMGtf06gdX3B79FCzui\n" +
+		"dxXz0kGdr0bX1Ozy3OKWCmudPsR9DtOR4Me+Hg2+neLKgBf7rNWUPc/9CwYkbIt6\n" +
+		"BmMjhHk1Ijs4e8YUF809WYdJlN8c0ErKJ1b5vCqs2Ja/xfREveNU6Psadbf2iOKN\n" +
+		"Vr8ipa5YFCfHM7OoFARYaIWB4q6cRavf5fjfhPTV7kc6twX5liLRsM4kWe2MaTQ0\n" +
+		"snGCauWA03+wi+FJXYcUAqZSTLj0pJ2UA71StwIDAQABAoIBAE7RlqxnTaP/5GEe\n" +
+		"f7dM6bkNU0p/F2EsemQVy/ORLJFLOTusM6VIrZr1WRLFLntiX/56KztDNDVlmNTz\n" +
+		"69hihjPAqr94GLyz2u7yQMPC3AAytn31O1bIWmRHsN2DSusiePymQFddQqGD8T1B\n" +
+		"SGMY3rTlGAffrChoE3XopEg1R2k81w14u3ZqCN/aU85t7h98lGnv+DRUn/TqhiX6\n" +
+		"rdzW6xJGUAKidyhuEvM3to19EZQUkJHO2LjNDnbMowsia25HdphJL/P3ZxPKwupe\n" +
+		"MZtP6pDaSQTFkhAG0duAk1KufwMPAMO7UaYHlNqCtUaxevIPMGWXN5y/ILXTAHtv\n" +
+		"voRisqkCgYEAw0MFdcb6ugg5ViRSaEwmUQng3XkNDgvJRBTQySTVq0ni7fyCGR93\n" +
+		"VwEGLEpGoXfMavBf1EXwFcI0aCWB/qfNEDErnpYtKKxGajHHHJyllSwQ/gtxfri2\n" +
+		"XoExuZG3mauQjqkmydxKVztOXIlOjZSzukPNtqXHJYriA+lkvwvLeisCgYEAtHTC\n" +
+		"EpQUEgWxPPOK7vfXO/JGDC0k7dmMFNNKjjBHM9I6MkHteGbq+b+MCI7aybVYqaQ0\n" +
+		"3CTGya9qLk7/IEkICFoj/BHpRoVFLTTTl/QYZvUtCaeRDsYTgpc/c+bJF/7/sj08\n" +
+		"7ruKiyRMEuR8lWlCDB4c5Oyun7YrkH+86HMVP6UCgYBjUNWYIEsrED/JltPrhMAA\n" +
+		"fBvJymZffJM0c7n2dSvQ4dXw4nxxttWGhVjUcjsWqc5pnjW/zIrfJlZtmpZSJptg\n" +
+		"3wGmug/iHi36mbMC1JJMG4vRC5UAtYbc7q2SC5HtMZxnU5YNGmUdlWa4Hoa78KSx\n" +
+		"2wbpHcz7RXbMMowxuBgY3QKBgQChcihDSNnf+dnE5zrwaynUBwAmWqlEZrKN2y9D\n" +
+		"oOvC8B2C4zra0nD9OiLFcVFKzwTg2Pk1z21N+bMsdR6Juu0F0+eH2Fp07jyiojWA\n" +
+		"KDFAw68kiRcdOZcw6bIqNlrJLimDRIhkKcNckv/Ak0zmu4IMp1BAe4QLfYbiQ3Y2\n" +
+		"HOfwxQKBgAPNqWUgdqhy9Za3fmlp4I3xj11olnYB/T44qfI6hfz6m3C4gGWrAkBZ\n" +
+		"+1K92SPGT46FUMFc2tKv/ZIlDndVcQWpj/FUgUKzG+Ppktfpy+uAde6A9ffVQsq9\n" +
+		"Buas8uvcttBXolR+GfI6Gn1ssqT1ejjGTK6YaY508liOlrCWB7hu\n" +
+		"-----END RSA PRIVATE KEY-----"
+
+	MalformattedRSAPrvtKey = "-----BEGIN RSA PRIVATE KEY-----\n" +
+		"MIIEowIBAAKCAQEAiaQuPD8SJZ+kw5NF0Mlf3FvKfeXxAiXUFnURp/+CgNPOy+2v\n" +
+		"zeDthLP5zpZrk8OV5GpX7///E448ATSo5lVoZz2pdvpHPAMGtf06gdX3B79FCzui\n" +
+		"dxXz0kGdr0bX1Ozy3OKWCmKSB&A9DtOR4Me+Hg2+neLKgBf7rNWUPc/9CwYkbIt6\n" +
+		"BmMjhHk1Ijs4e8YUF809WYdJlN8c0ErKJ1b5vCqs2Ja/xfREveNU6Psadbf2iOKN\n" +
+		"Vr8ipa5YFCfHM7OoFARYaIWB4q6cRavf5fjfhPTV7kc6twX5liLRsM4kWe2MaTQ0\n" +
+		"snGCauWA03+wi+FJXYcUAqZSTLj0pJ2UA71StwIDAQABAoIBAE7RlqxnTaP/5GEe\n" +
+		"f7dM6bkNU0p/F2EsemQVy/ORLJFLOTusM6VIrZr1WRLFLntiX/56KztDNDVlmNTz\n" +
+		"69hihjPAqr94GLyz2u7yQMPC3AAytn31O1bIWmRHsN2DSusiePymQFddQqGD8T1B\n" +
+		"SGMY3rTlGAffrChoE3XopEg1R2k81w14u3ZqCN/aU85t7h98lGnv+DRUn/TqhiX6\n" +
+		"rdzW6xJGUAKidyhuEvM3to19EZQUkJHO2LjNDnbMowsia25HdphJL/P3ZxPKwupe\n" +
+		"MZtP6pDaSQTFkhAG0duAk1KufwMPAMO7UaYHlNqCtUaxevIPMGWXN5y/ILXTAHtv\n" +
+		"voRisqkCgYEAw0MFdcb6ugg5ViRSaEwmUQng3XkNDgvJRBTQySTVq0ni7fyCGR93\n" +
+		"VwEGLEpGoXfMavBf1EXwFcI0aCWB/qfNEDErnpYtKKxGajHHHJyllSwQ/gtxfri2\n" +
+		"XoExuZG3mauQjqkmydxKVztOXIlOjZSzukPNtqXHJYriA+lkvwvLeisCgYEAtHTC\n" +
+		"EpQUEgWxPPOK7vfXO/JGDC0k7dmMFNNKjjBHM9I6MkHteGbq+b+MCI7aybVYqaQ0\n" +
+		"3CTGya9qLk7/IEkICFoj/BHpRoVFLTTTl/QYZvUtCaeRDsYTgpc/c+bJF/7/sj08\n" +
+		"7ruKiyRMEuR8lWlCDB4c5Oyun7YrkH+86HMVP6UCgYBjUNWYIEsrED/JltPrhMAA\n" +
+		"fBvJymZffJM0c7n2dSvQ4dXw4nxxttWGhVjUcjsWqc5pnjW/zIrfJlZtmpZSJptg\n" +
+		"3wGmug/iHi36mbMC1JJMG4vRC5UAtYbc7q2SC5HtMZxnU5YNGmUdlWa4Hoa78KSx\n" +
+		"2wbpHcz7RXbMMowxuBgY3QKBgQChcihDSNnf+dnE5zrwaynUBwAmWqlEZrKN2y9D\n" +
+		"oOvC8B2C4zra0nD9OiLFcVFKzwTg2Pk1z21N+bMsdR6Juu0F0+eH2Fp07jyiojWA\n" +
+		"KDFAw68kiRcdOZcw6bIqNlrJLimDRIhkKcNckv/Ak0zmu4IMp1BAe4QLfYbiQ3Y2\n" +
+		"HOfwxQKBgAPNqWUgdqhy9Za3fmlp4I3xj11olnYB/T44qfI6hfz6m3C4gGWrAkBZ\n" +
+		"+1K92SPGT46FUMFc2tKv/ZIlDndVcQWpj/FUgUKzG+Ppktfpy+uAde6A9ffVQsq9\n" +
+		"Buas8uvcttBXolR+GfI6Gn1ssqT1ejjGTK6YaY508liOlrCWB7hu\n" +
+		"-----END RSA PRIVATE KEY-----"
+)
 
 func parsePrivateKey(t *testing.T, key string) *rsa.PrivateKey {
 	block, _ := pem.Decode([]byte(key))

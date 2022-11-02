@@ -1,45 +1,22 @@
-package sign
+package signature
 
 import (
 	"bytes"
 	"crypto"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"k8s.io/apimachinery/pkg/types"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const (
-	//Authentication scheme hte HTTP Signatures specification uses for the Authorization header.
-	signatureAuthScheme = "Signature"
-
-	// Headers
-	digestHeader    = "Digest"
-	SignatureHeader = "Signature"
-
-	// Signature String Construction
-	headerFieldDelimiter = ": "
-	headersDelimiter     = "\n"
-
-	// Signature Parameters
-	createdParameter               = "created"
-	pubKeySecretNameParameter      = "pubKeySecretName"
-	pubKeySecretNamespaceParameter = "pubKeySecretNamespace"
-	signatureParameter             = "ReceivedSignature"
-	prefixSeparater                = " "
-	parameterKVSeparater           = "="
-	parameterValueDelimiter        = "\""
-	parameterSeparater             = ","
-)
-
 var (
-	// TODO include expires Header
+	// TODO include 'expires Header
 	defaultHeaders = []string{createdParameter}
 )
 
@@ -50,11 +27,23 @@ var (
 // The Digest verifies that the request body is not changed while it is being transmitted,
 // and the HTTP Signature verifies that neither the Digest nor the body have been
 // fraudulently altered to falsely represent different information.
-func SignRequest(pKey *rsa.PrivateKey, pubKeySecret types.NamespacedName, r *http.Request) error {
+func SignRequest(r *http.Request, keySecretReference types.NamespacedName, k8sClient client.Client) error {
 
 	rsa := &RSAAlgorithm{
 		Hash: sha256.New(),
 		Kind: crypto.SHA256,
+	}
+
+	// Get Private Key
+	prvtKey, err := GetPrivateKey(r.Context(), keySecretReference, k8sClient)
+	if err != nil {
+		return err
+	}
+
+	// Get Public Key Reference
+	pubKeyReference, err := getPublicKeyReference(r.Context(), keySecretReference, k8sClient)
+	if err != nil {
+		return nil
 	}
 
 	// Add Digest
@@ -65,14 +54,14 @@ func SignRequest(pKey *rsa.PrivateKey, pubKeySecret types.NamespacedName, r *htt
 	sigString, err := signatureString(created)
 
 	// Create Signature
-	sig, err := rsa.Sign(rand.Reader, pKey, []byte(sigString))
+	sig, err := rsa.Sign(rand.Reader, prvtKey, []byte(sigString))
 	if err != nil {
 		return err
 	}
 	encSig := base64.StdEncoding.EncodeToString(sig)
 
 	// Sign request with Signature
-	setSignatureHeader(r.Header, SignatureHeader, pubKeySecret.Name, pubKeySecret.Namespace, encSig, created)
+	setSignatureHeader(r.Header, pubKeyReference, SignatureHeader, encSig, created)
 	return nil
 }
 
@@ -96,22 +85,20 @@ func signatureString(created int64) (string, error) {
 	return b.String(), nil
 }
 
-func setSignatureHeader(h http.Header, targetHeader, pubKeySecretName, pubKeySecretNamespace, enc string, created int64) {
+func setSignatureHeader(h http.Header, pubKeySecretReference types.NamespacedName, targetHeader, enc string, created int64) {
 	var b bytes.Buffer
 	// Public Key Secret Name
-	b.WriteString(signatureAuthScheme)
-	b.WriteString(prefixSeparater)
 	b.WriteString(pubKeySecretNameParameter)
 	b.WriteString(parameterKVSeparater)
 	b.WriteString(parameterValueDelimiter)
-	b.WriteString(pubKeySecretName)
+	b.WriteString(pubKeySecretReference.Name)
 	b.WriteString(parameterValueDelimiter)
 	b.WriteString(parameterSeparater)
 	// Public Key Secret Namespace
 	b.WriteString(pubKeySecretNamespaceParameter)
 	b.WriteString(parameterKVSeparater)
 	b.WriteString(parameterValueDelimiter)
-	b.WriteString(pubKeySecretNamespace)
+	b.WriteString(pubKeySecretReference.Namespace)
 	b.WriteString(parameterValueDelimiter)
 	b.WriteString(parameterSeparater)
 	// Created

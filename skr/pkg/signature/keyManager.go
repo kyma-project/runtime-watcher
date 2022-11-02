@@ -1,4 +1,4 @@
-package sign
+package signature
 
 import (
 	"context"
@@ -6,73 +6,14 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
-	"errors"
 	"fmt"
-	"hash"
-	"io"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-const (
-	pubKeyKey          = "publicKey"
-	pvtKeyKey          = "privateKey"
-	pubKeyNamespaceKey = "publicKeyNamespace"
-	pubKeyNameKey      = "publicKeyName"
-
-	keyBitSize = 2048
-)
-
-type RSAAlgorithm struct {
-	hash.Hash
-	Kind crypto.Hash
-}
-
-func (r *RSAAlgorithm) Sign(rand io.Reader, privateKey *rsa.PrivateKey, sig []byte) ([]byte, error) {
-	defer r.Reset()
-
-	if privateKey == nil {
-		return nil, errors.New("private key must not be empty")
-	}
-
-	if err := r.setSignature(sig); err != nil {
-		return nil, err
-	}
-	return rsa.SignPKCS1v15(rand, privateKey, r.Kind, r.Sum(nil))
-}
-
-func (r *RSAAlgorithm) Verify(publicKey crypto.PublicKey, toHash, signature []byte) error {
-	defer r.Reset()
-
-	if publicKey == nil {
-		return errors.New("public key must not be empty")
-	}
-
-	rsaPubKey, ok := publicKey.(*rsa.PublicKey)
-	if !ok {
-		return errors.New("public key cannot be converted to RSA Public Key")
-	}
-
-	if err := r.setSignature(toHash); err != nil {
-		return err
-	}
-	return rsa.VerifyPKCS1v15(rsaPubKey, r.Kind, r.Sum(nil), signature)
-}
-
-func (r *RSAAlgorithm) setSignature(b []byte) error {
-	n, err := r.Write(b)
-	if err != nil {
-		r.Reset()
-		return err
-	} else if n != len(b) {
-		r.Reset()
-		return fmt.Errorf("only %d of %d bytes could be written to hash", n, len(b))
-	}
-	return nil
-}
 
 // getPublicKeyReference fetches the Namespace and the Name of the Secret the Public Key is stored in the KCP.
 // Should be called in the Watcher when sending a request to the KCP.
@@ -82,8 +23,22 @@ func getPublicKeyReference(ctx context.Context, keysSecret types.NamespacedName,
 	if err != nil {
 		return types.NamespacedName{}, err
 	}
-	pubKeyNamespace := pubKeySecret.Data[pubKeyNamespaceKey] // TODO maybe decryption is needed
-	pubKeyName := pubKeySecret.Data[pubKeyNameKey]           // TODO maybe decryption is needed
+	encPubKeyNamespace, ok := pubKeySecret.Data[PubKeyNamespaceKey]
+	if !ok {
+		return types.NamespacedName{}, fmt.Errorf("secret does not contain key '%s'", PvtKeyKey)
+	}
+	pubKeyNamespace, err := base64.StdEncoding.DecodeString(string(encPubKeyNamespace))
+	if err != nil {
+		return types.NamespacedName{}, err
+	}
+	encPubKeyName, ok := pubKeySecret.Data[PubKeyNameKey]
+	if !ok {
+		return types.NamespacedName{}, fmt.Errorf("secret does not contain key '%s'", PvtKeyKey)
+	}
+	pubKeyName, err := base64.StdEncoding.DecodeString(string(encPubKeyName))
+	if err != nil {
+		return types.NamespacedName{}, err
+	}
 
 	pubKeyReference := types.NamespacedName{
 		Namespace: string(pubKeyNamespace),
@@ -118,7 +73,7 @@ func GetPublicKey(ctx context.Context, publicKeyReference types.NamespacedName, 
 	return pub, nil
 }
 
-// GetPrivateKey fetches the PrivayeKey using the given privateKeyReference and the given k8sCLient.
+// GetPrivateKey fetches the PrivateKey using the given privateKeyReference and the given k8sCLient.
 // Should be called in the watcher for signing the request.
 func GetPrivateKey(ctx context.Context, privateKeyReference types.NamespacedName, k8sClient client.Client) (*rsa.PrivateKey, error) {
 	var pKeySecret v1.Secret
@@ -126,9 +81,16 @@ func GetPrivateKey(ctx context.Context, privateKeyReference types.NamespacedName
 	if err != nil {
 		return nil, err
 	}
-	pKey := pKeySecret.Data[pvtKeyKey] // TODO maybe decryption is needed
+	encodedPrvtKey, ok := pKeySecret.Data[PvtKeyKey] // TODO maybe decryption is needed
+	if !ok {
+		return nil, fmt.Errorf("secret does not contain key '%s'", PvtKeyKey)
+	}
+	prvtKey, err := base64.StdEncoding.DecodeString(string(encodedPrvtKey))
+	if err != nil {
+		return nil, err
+	}
 
-	block, _ := pem.Decode(pKey)
+	block, _ := pem.Decode(prvtKey)
 	if block == nil {
 		return nil, fmt.Errorf("failed to parse PEM block containing the private key")
 	}
