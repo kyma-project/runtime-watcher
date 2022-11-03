@@ -2,9 +2,10 @@ package signature_test
 
 import (
 	"bytes"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/signature"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
-
 )
 
 func TestAddDigest(t *testing.T) {
