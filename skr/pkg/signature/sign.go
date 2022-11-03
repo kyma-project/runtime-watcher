@@ -18,9 +18,9 @@ import (
 )
 
 // SignRequest signs the request using the RSA-SHA-256 algorithm.
-// The HTTP server uses the public key secret to determine which public key to use when verifying a signed request.
+// The function uses the private key secret to determine which public key to use when verifying a signed request.
 // Furthermore, a Digest will be attached to the request (RFC 3230). The given body may be nil
-// but must match the body specified in the request.
+// but can still be verified.
 // The Digest verifies that the request body is not changed while it is being transmitted,
 // and the HTTP Signature verifies that neither the Digest nor the body have been
 // fraudulently altered to falsely represent different information.
@@ -31,7 +31,7 @@ func SignRequest(request *http.Request, keySecretReference types.NamespacedName,
 	}
 
 	// Get Private Key
-	prvtKey, err := GetPrivateKey(request.Context(), keySecretReference, k8sClient)
+	prvtKey, err := getPrivateKey(request.Context(), keySecretReference, k8sClient)
 	if err != nil {
 		return err
 	}

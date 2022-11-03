@@ -23,8 +23,11 @@ const (
 	bitsize = 64
 )
 
-// Implement test
-
+// VerifyRequest verifies the request using the RSA-SHA-256 algorithm.
+// The function uses the parameters from the `Signature` header of the received request to
+// determine which public key to use to verfiy the signed request.
+// Furthermore, the Digest will be recalculated and evaluated to ensure the request body has
+// not been modified during transfer of the request (RFC 3230).
 func VerifyRequest(request *http.Request, k8sClient client.Client) (bool, error) {
 	header := request.Header
 
@@ -44,7 +47,7 @@ func VerifyRequest(request *http.Request, k8sClient client.Client) (bool, error)
 	}
 
 	// Fetch publicKey using the Secret Reference from the Parameters
-	publicKey, err := GetPublicKey(request.Context(), publicKeySecret, k8sClient)
+	publicKey, err := getPublicKey(request.Context(), publicKeySecret, k8sClient)
 	if err != nil {
 		return false, err
 	}

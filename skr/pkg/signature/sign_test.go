@@ -40,7 +40,7 @@ func TestSignRequest(t *testing.T) { //nolint:funlen
 				&v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "kyma-1", Namespace: "default"},
 					Data: map[string][]byte{
-						signature.PvtKeyKey:          rsaPrvtKeyEncoded,
+						signature.PrvtKeyKey:         rsaPrvtKeyEncoded,
 						signature.PubKeyNamespaceKey: []byte("ZGVmYXVsdA=="), // "default"
 						signature.PubKeyNameKey:      []byte("a3ltYS0x"),     // "kyma-1"
 					},
@@ -84,7 +84,7 @@ func TestSignRequest(t *testing.T) { //nolint:funlen
 				&v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "kyma-1", Namespace: "default"},
 					Data: map[string][]byte{
-						signature.PvtKeyKey:          malformattedRSAPrvtKeyEncoded,
+						signature.PrvtKeyKey:         malformattedRSAPrvtKeyEncoded,
 						signature.PubKeyNamespaceKey: []byte("ZGVmYXVsdA=="), // "default"
 						signature.PubKeyNameKey:      []byte("a3ltYS0x"),     // "kyma-1"
 					},

@@ -9,6 +9,8 @@ import (
 	"net/http"
 )
 
+// AddDigest add a digest to the given request (RFX 3230). The given body can be nil.
+// The Digest is used to verify that the request body is not changed while it is being transmitted.
 func AddDigest(request *http.Request) error {
 	data, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -26,6 +28,8 @@ func AddDigest(request *http.Request) error {
 	return nil
 }
 
+// VerifyDigest verifies the given request by calculating a new digest using the body of the request
+// and comparing it to the digest given in the header of the request.
 func VerifyDigest(request *http.Request) error {
 	data, err := io.ReadAll(request.Body)
 	if err != nil {
