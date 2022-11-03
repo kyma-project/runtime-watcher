@@ -3,20 +3,22 @@ package signature_test
 import (
 	"bytes"
 	"fmt"
+	"net/http"
+	"regexp"
+	"testing"
+
 	"github.com/kyma-project/runtime-watcher/skr/pkg/signature"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
-	"regexp"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
-func TestSignRequest(t *testing.T) {
-
+func TestSignRequest(t *testing.T) { //nolint:funlen
+	t.Parallel()
 	tests := []struct {
 		testName     string
 		keyreference types.NamespacedName
@@ -38,7 +40,7 @@ func TestSignRequest(t *testing.T) {
 				&v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "kyma-1", Namespace: "default"},
 					Data: map[string][]byte{
-						signature.PvtKeyKey:          RSAPrvtKeyEncoded,
+						signature.PvtKeyKey:          rsaPrvtKeyEncoded,
 						signature.PubKeyNamespaceKey: []byte("ZGVmYXVsdA=="), // "default"
 						signature.PubKeyNameKey:      []byte("a3ltYS0x"),     // "kyma-1"
 					},
@@ -82,7 +84,7 @@ func TestSignRequest(t *testing.T) {
 				&v1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "kyma-1", Namespace: "default"},
 					Data: map[string][]byte{
-						signature.PvtKeyKey:          MalformattedRSAPrvtKeyEncoded,
+						signature.PvtKeyKey:          malformattedRSAPrvtKeyEncoded,
 						signature.PubKeyNamespaceKey: []byte("ZGVmYXVsdA=="), // "default"
 						signature.PubKeyNameKey:      []byte("a3ltYS0x"),     // "kyma-1"
 					},
@@ -92,8 +94,9 @@ func TestSignRequest(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.testName, func(t *testing.T) {
-			test := test
+			t.Parallel()
 			req := test.r()
 
 			err := signature.SignRequest(req, test.keyreference, test.k8sclient)

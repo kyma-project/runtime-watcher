@@ -8,15 +8,15 @@ const (
 
 	keyBitSize = 2048
 
-	// Headers
+	// Headers.
 	DigestHeader    = "Digest"
 	SignatureHeader = "Signature"
 
-	// Signature String Construction
+	// Signature String Construction.
 	headerFieldDelimiter = ": "
 	headersDelimiter     = "\n"
 
-	// Signature Parameters
+	// Signature Parameters.
 	createdParameter               = "created"
 	pubKeySecretNameParameter      = "pubKeySecretName"
 	pubKeySecretNamespaceParameter = "pubKeySecretNamespace"
@@ -25,3 +25,6 @@ const (
 	parameterValueDelimiter        = "\""
 	parameterSeparater             = ","
 )
+
+// TODO include expires header.
+var defaultHeaders = []string{createdParameter} //nolint:gochecknoglobals

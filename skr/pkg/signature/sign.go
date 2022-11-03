@@ -7,17 +7,14 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"strings"
 	"time"
-)
 
-var (
-	// TODO include 'expires Header
-	defaultHeaders = []string{createdParameter}
+	"k8s.io/apimachinery/pkg/types"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // SignRequest signs the request using the RSA-SHA-256 algorithm.
@@ -27,31 +24,35 @@ var (
 // The Digest verifies that the request body is not changed while it is being transmitted,
 // and the HTTP Signature verifies that neither the Digest nor the body have been
 // fraudulently altered to falsely represent different information.
-func SignRequest(r *http.Request, keySecretReference types.NamespacedName, k8sClient client.Client) error {
-
+func SignRequest(request *http.Request, keySecretReference types.NamespacedName, k8sClient client.Client) error {
 	rsa := &RSAAlgorithm{
 		Hash: sha256.New(),
 		Kind: crypto.SHA256,
 	}
 
 	// Get Private Key
-	prvtKey, err := GetPrivateKey(r.Context(), keySecretReference, k8sClient)
+	prvtKey, err := GetPrivateKey(request.Context(), keySecretReference, k8sClient)
 	if err != nil {
 		return err
 	}
 
 	// Get Public Key Reference
-	pubKeyReference, err := getPublicKeyReference(r.Context(), keySecretReference, k8sClient)
+	pubKeyReference, err := getPublicKeyReference(request.Context(), keySecretReference, k8sClient)
 	if err != nil {
 		return nil
 	}
 
 	// Add Digest
-	AddDigest(r)
+	if err := AddDigest(request); err != nil {
+		return err
+	}
 
 	// Create Signature String
 	created := time.Now().Unix()
 	sigString, err := signatureString(created)
+	if err != nil {
+		return err
+	}
 
 	// Create Signature
 	sig, err := rsa.Sign(rand.Reader, prvtKey, []byte(sigString))
@@ -61,56 +62,58 @@ func SignRequest(r *http.Request, keySecretReference types.NamespacedName, k8sCl
 	encSig := base64.StdEncoding.EncodeToString(sig)
 
 	// Sign request with Signature
-	setSignatureHeader(r.Header, pubKeyReference, SignatureHeader, encSig, created)
+	setSignatureHeader(request.Header, pubKeyReference, SignatureHeader, encSig, created)
 	return nil
 }
 
 func signatureString(created int64) (string, error) {
-	var b bytes.Buffer
-	for n, i := range defaultHeaders {
-		i := strings.ToLower(i)
+	var buffer bytes.Buffer
+	for n, header := range defaultHeaders { //nolint:varnamelen
+		header = strings.ToLower(header)
 
-		if i == createdParameter {
+		if header == createdParameter {
 			if created == 0 {
 				return "", fmt.Errorf("empty created value")
 			}
-			b.WriteString(i)
-			b.WriteString(headerFieldDelimiter)
-			b.WriteString(strconv.FormatInt(created, 10))
+			buffer.WriteString(header)
+			buffer.WriteString(headerFieldDelimiter)
+			buffer.WriteString(strconv.FormatInt(created, base))
 		} // TODO else if: add more headers if needed
 		if n < len(defaultHeaders)-1 {
-			b.WriteString(headersDelimiter)
+			buffer.WriteString(headersDelimiter)
 		}
 	}
-	return b.String(), nil
+	return buffer.String(), nil
 }
 
-func setSignatureHeader(h http.Header, pubKeySecretReference types.NamespacedName, targetHeader, enc string, created int64) {
-	var b bytes.Buffer
+func setSignatureHeader(header http.Header, pubKeySecretReference types.NamespacedName,
+	targetHeader, enc string, created int64,
+) {
+	var buffer bytes.Buffer
 	// Public Key Secret Name
-	b.WriteString(pubKeySecretNameParameter)
-	b.WriteString(parameterKVSeparater)
-	b.WriteString(parameterValueDelimiter)
-	b.WriteString(pubKeySecretReference.Name)
-	b.WriteString(parameterValueDelimiter)
-	b.WriteString(parameterSeparater)
+	buffer.WriteString(pubKeySecretNameParameter)
+	buffer.WriteString(parameterKVSeparater)
+	buffer.WriteString(parameterValueDelimiter)
+	buffer.WriteString(pubKeySecretReference.Name)
+	buffer.WriteString(parameterValueDelimiter)
+	buffer.WriteString(parameterSeparater)
 	// Public Key Secret Namespace
-	b.WriteString(pubKeySecretNamespaceParameter)
-	b.WriteString(parameterKVSeparater)
-	b.WriteString(parameterValueDelimiter)
-	b.WriteString(pubKeySecretReference.Namespace)
-	b.WriteString(parameterValueDelimiter)
-	b.WriteString(parameterSeparater)
+	buffer.WriteString(pubKeySecretNamespaceParameter)
+	buffer.WriteString(parameterKVSeparater)
+	buffer.WriteString(parameterValueDelimiter)
+	buffer.WriteString(pubKeySecretReference.Namespace)
+	buffer.WriteString(parameterValueDelimiter)
+	buffer.WriteString(parameterSeparater)
 	// Created
-	b.WriteString(createdParameter)
-	b.WriteString(parameterKVSeparater)
-	b.WriteString(strconv.FormatInt(created, 10))
-	b.WriteString(parameterSeparater)
+	buffer.WriteString(createdParameter)
+	buffer.WriteString(parameterKVSeparater)
+	buffer.WriteString(strconv.FormatInt(created, base))
+	buffer.WriteString(parameterSeparater)
 	// Signature
-	b.WriteString(signatureParameter)
-	b.WriteString(parameterKVSeparater)
-	b.WriteString(parameterValueDelimiter)
-	b.WriteString(enc)
-	b.WriteString(parameterValueDelimiter)
-	h.Add(targetHeader, b.String())
+	buffer.WriteString(signatureParameter)
+	buffer.WriteString(parameterKVSeparater)
+	buffer.WriteString(parameterValueDelimiter)
+	buffer.WriteString(enc)
+	buffer.WriteString(parameterValueDelimiter)
+	header.Add(targetHeader, buffer.String())
 }

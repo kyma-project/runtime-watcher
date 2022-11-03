@@ -2,14 +2,13 @@ package signature_test
 
 import (
 	"bytes"
-	"github.com/kyma-project/runtime-watcher/skr/pkg/signature"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
+
 )
 
 func TestAddDigest(t *testing.T) {
-
+	t.Parallel()
 	tests := []struct {
 		testName       string
 		r              func() *http.Request
@@ -35,8 +34,9 @@ func TestAddDigest(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.testName, func(t *testing.T) {
-			test := test
+			t.Parallel()
 
 			req := test.r()
 			err := signature.AddDigest(req)
@@ -48,12 +48,12 @@ func TestAddDigest(t *testing.T) {
 
 			d := req.Header.Get("Digest")
 			require.EqualValues(t, test.expectedDigest, d)
-
 		})
 	}
 }
 
 func TestVerifyDigest(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		r           func() *http.Request
@@ -87,8 +87,9 @@ func TestVerifyDigest(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
-			test := test
+			t.Parallel()
 			req := test.r()
 			err := signature.VerifyDigest(req)
 			if test.expectError {

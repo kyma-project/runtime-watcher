@@ -45,14 +45,14 @@ func (r *RSAAlgorithm) Verify(publicKey crypto.PublicKey, toHash, signature []by
 	return rsa.VerifyPKCS1v15(rsaPubKey, r.Kind, r.Sum(nil), signature)
 }
 
-func (r *RSAAlgorithm) setSignature(b []byte) error {
-	n, err := r.Write(b)
+func (r *RSAAlgorithm) setSignature(toHash []byte) error {
+	bytesWritten, err := r.Write(toHash)
 	if err != nil {
 		r.Reset()
 		return err
-	} else if n != len(b) {
+	} else if bytesWritten != len(toHash) {
 		r.Reset()
-		return fmt.Errorf("only %d of %d bytes could be written to hash", n, len(b))
+		return fmt.Errorf("only %d of %d bytes could be written to hash", bytesWritten, len(toHash))
 	}
 	return nil
 }
