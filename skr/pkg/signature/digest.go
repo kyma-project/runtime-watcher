@@ -1,6 +1,7 @@
 package signature
 
 import (
+	"bytes"
 	"crypto"
 	"encoding/base64"
 	"fmt"
@@ -10,35 +11,38 @@ import (
 )
 
 func AddDigest(r *http.Request) error {
-	bytes, err := io.ReadAll(r.Body)
+	req := r
+	data, err := io.ReadAll(req.Body)
 	if err != nil {
 		return err
 	}
-	_, set := r.Header[digestHeader]
+	r.Body = io.NopCloser(bytes.NewBuffer(data))
+	_, set := r.Header[DigestHeader]
 	if set {
 		return fmt.Errorf("digest already set in headers")
 
 	}
-	var h = crypto.SHA256.New()
-	h.Write(bytes)
+	h := crypto.SHA256.New()
+	h.Write(data)
 	sum := h.Sum(nil)
-	r.Header.Add(digestHeader,
+	r.Header.Add(DigestHeader,
 		base64.StdEncoding.EncodeToString(sum[:]))
 	return nil
 }
 
 func VerifyDigest(r *http.Request) error {
-	bytes, err := io.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
 	}
-	digest := r.Header.Get(digestHeader)
+	r.Body = io.NopCloser(bytes.NewBuffer(data))
+	digest := r.Header.Get(DigestHeader)
 	if len(digest) == 0 {
 		return fmt.Errorf("request does not contain Digest header")
 	}
 	var h hash.Hash
 	h = crypto.SHA256.New()
-	h.Write(bytes)
+	h.Write(data)
 	sum := h.Sum(nil)
 	encSum := base64.StdEncoding.EncodeToString(sum[:])
 	if encSum != digest {

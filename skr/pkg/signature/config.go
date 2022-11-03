@@ -1,7 +1,7 @@
 package signature
 
 const (
-	pubKeyKey          = "publicKey"
+	PubKeyKey          = "publicKey"
 	PvtKeyKey          = "privateKey"
 	PubKeyNamespaceKey = "publicKeyNamespace"
 	PubKeyNameKey      = "publicKeyName"
@@ -9,7 +9,7 @@ const (
 	keyBitSize = 2048
 
 	// Headers
-	digestHeader    = "Digest"
+	DigestHeader    = "Digest"
 	SignatureHeader = "Signature"
 
 	// Signature String Construction

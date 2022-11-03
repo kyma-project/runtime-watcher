@@ -2,27 +2,11 @@ package signature_test
 
 import (
 	"bytes"
-	"encoding/json"
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"github.com/kyma-project/runtime-watcher/skr/pkg/signature"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 )
-
-func createPostBody(t *testing.T) []byte {
-	watcherEvent := &listenerTypes.WatchEvent{
-		Owner:      client.ObjectKey{Namespace: "default", Name: "ownerName"},
-		Watched:    client.ObjectKey{Namespace: "default", Name: "watchedName"},
-		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind("v1", "watchedKind")),
-	}
-	postBody, err := json.Marshal(watcherEvent)
-	require.NoError(t, err)
-	return postBody
-}
 
 func TestAddDigest(t *testing.T) {
 

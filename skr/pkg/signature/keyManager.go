@@ -15,6 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	keyMissingError = "secret does not contain key '%s'"
+)
+
 // getPublicKeyReference fetches the Namespace and the Name of the Secret the Public Key is stored in the KCP.
 // Should be called in the Watcher when sending a request to the KCP.
 func getPublicKeyReference(ctx context.Context, keysSecret types.NamespacedName, k8sClient client.Client) (types.NamespacedName, error) {
@@ -25,7 +29,7 @@ func getPublicKeyReference(ctx context.Context, keysSecret types.NamespacedName,
 	}
 	encPubKeyNamespace, ok := pubKeySecret.Data[PubKeyNamespaceKey]
 	if !ok {
-		return types.NamespacedName{}, fmt.Errorf("secret does not contain key '%s'", PvtKeyKey)
+		return types.NamespacedName{}, fmt.Errorf(keyMissingError, PvtKeyKey)
 	}
 	pubKeyNamespace, err := base64.StdEncoding.DecodeString(string(encPubKeyNamespace))
 	if err != nil {
@@ -33,7 +37,7 @@ func getPublicKeyReference(ctx context.Context, keysSecret types.NamespacedName,
 	}
 	encPubKeyName, ok := pubKeySecret.Data[PubKeyNameKey]
 	if !ok {
-		return types.NamespacedName{}, fmt.Errorf("secret does not contain key '%s'", PvtKeyKey)
+		return types.NamespacedName{}, fmt.Errorf(keyMissingError, PvtKeyKey)
 	}
 	pubKeyName, err := base64.StdEncoding.DecodeString(string(encPubKeyName))
 	if err != nil {
@@ -55,9 +59,16 @@ func GetPublicKey(ctx context.Context, publicKeyReference types.NamespacedName, 
 	if err != nil {
 		return nil, err
 	}
-	pKey := pKeySecret.Data[pubKeyKey] // TODO maybe decryption is needed
+	encodedPubKey, ok := pKeySecret.Data[PubKeyKey]
+	if !ok {
+		return types.NamespacedName{}, fmt.Errorf(keyMissingError, PvtKeyKey)
+	}
+	pubKey, err := base64.StdEncoding.DecodeString(string(encodedPubKey))
+	if err != nil {
+		return types.NamespacedName{}, err
+	}
 
-	block, _ := pem.Decode(pKey)
+	block, _ := pem.Decode(pubKey)
 	if block == nil {
 		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
 	}
@@ -83,7 +94,7 @@ func GetPrivateKey(ctx context.Context, privateKeyReference types.NamespacedName
 	}
 	encodedPrvtKey, ok := pKeySecret.Data[PvtKeyKey] // TODO maybe decryption is needed
 	if !ok {
-		return nil, fmt.Errorf("secret does not contain key '%s'", PvtKeyKey)
+		return nil, fmt.Errorf(keyMissingError, PvtKeyKey)
 	}
 	prvtKey, err := base64.StdEncoding.DecodeString(string(encodedPrvtKey))
 	if err != nil {
