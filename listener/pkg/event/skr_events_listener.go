@@ -22,7 +22,7 @@ func RegisterListenerComponent(addr, componentName string,
 		Addr:           addr,
 		ComponentName:  componentName,
 		receivedEvents: eventSource,
-		verifyFunc:     verify,
+		VerifyFunc:     verify,
 	}, &source.Channel{Source: eventSource}
 }
 
@@ -31,7 +31,7 @@ type SKREventListener struct {
 	Logger         logr.Logger
 	ComponentName  string
 	receivedEvents chan event.GenericEvent
-	verifyFunc     func(r *http.Request) error
+	VerifyFunc     func(r *http.Request) error
 }
 
 func (l *SKREventListener) GetReceivedEvents() chan event.GenericEvent {
@@ -85,7 +85,7 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 		l.Logger.V(1).Info("received event from SKR")
 
 		// verify request
-		if err := l.verifyFunc(req); err != nil {
+		if err := l.VerifyFunc(req); err != nil {
 			l.Logger.Info("request could not be verified - Event will not be dispatched",
 				"error", err)
 			return

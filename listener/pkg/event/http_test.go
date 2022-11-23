@@ -26,11 +26,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-func newTestListener(addr, component string, log logr.Logger) *listenerEvent.SKREventListener {
+func newTestListener(addr, component string, log logr.Logger,
+	verify func(r *http.Request) error,
+) *listenerEvent.SKREventListener {
 	return &listenerEvent.SKREventListener{
 		Addr:          addr,
 		Logger:        log,
 		ComponentName: component,
+		VerifyFunc:    verify,
 	}
 }
 
@@ -69,7 +72,9 @@ func TestHandler(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	log := setupLogger()
-	skrEventsListener := newTestListener(":8082", "kyma", log)
+	skrEventsListener := newTestListener(":8082", "kyma", log, func(r *http.Request) error {
+		return nil
+	})
 
 	handlerUnderTest := skrEventsListener.HandleSKREvent()
 	responseRecorder := httptest.NewRecorder()
