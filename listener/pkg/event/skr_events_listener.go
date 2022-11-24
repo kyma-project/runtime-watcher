@@ -14,9 +14,7 @@ import (
 
 const paramContractVersion = "1"
 
-func RegisterListenerComponent(addr, componentName string,
-	verify func(r *http.Request) error,
-) (*SKREventListener, *source.Channel) {
+func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
 	eventSource := make(chan event.GenericEvent)
 	return &SKREventListener{
 		Addr:           addr,
