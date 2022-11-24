@@ -26,6 +26,10 @@ func RegisterListenerComponent(addr, componentName string,
 	}, &source.Channel{Source: eventSource}
 }
 
+// Verify is a function which is being called to verify an incomming request to the listener.
+// If the verification fails an error should be returned and the request will be dropped,
+// otherwise it should return nil.
+// If no verification function is needed, a function which just returns nil can be used instead.
 type Verify func(r *http.Request) error
 
 type SKREventListener struct {
