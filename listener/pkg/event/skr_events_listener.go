@@ -14,20 +14,30 @@ import (
 
 const paramContractVersion = "1"
 
-func RegisterListenerComponent(addr, componentName string) (*SKREventListener, *source.Channel) {
+func RegisterListenerComponent(addr, componentName string,
+	verify func(r *http.Request) error,
+) (*SKREventListener, *source.Channel) {
 	eventSource := make(chan event.GenericEvent)
 	return &SKREventListener{
 		Addr:           addr,
 		ComponentName:  componentName,
 		receivedEvents: eventSource,
+		VerifyFunc:     verify,
 	}, &source.Channel{Source: eventSource}
 }
+
+// Verify is a function which is being called to verify an incomming request to the listener.
+// If the verification fails an error should be returned and the request will be dropped,
+// otherwise it should return nil.
+// If no verification function is needed, a function which just returns nil can be used instead.
+type Verify func(r *http.Request) error
 
 type SKREventListener struct {
 	Addr           string
 	Logger         logr.Logger
 	ComponentName  string
 	receivedEvents chan event.GenericEvent
+	VerifyFunc     Verify
 }
 
 func (l *SKREventListener) GetReceivedEvents() chan event.GenericEvent {
@@ -80,6 +90,12 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 
 		l.Logger.V(1).Info("received event from SKR")
 
+		// verify request
+		if err := l.VerifyFunc(req); err != nil {
+			l.Logger.Info("request could not be verified - Event will not be dispatched",
+				"error", err)
+			return
+		}
 		// unmarshal received event
 		genericEvtObject, unmarshalErr := UnmarshalSKREvent(req)
 		if unmarshalErr != nil {

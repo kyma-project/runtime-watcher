@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/kyma-project/runtime-watcher/listener/pkg/event"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -16,7 +17,9 @@ func main() {
 	logf.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{
 		Development: true,
 	})))
-	skrEvent, _ := event.RegisterListenerComponent(":8089", "example-listener")
+	skrEvent, _ := event.RegisterListenerComponent(":8089", "example-listener", func(r *http.Request) error {
+		return nil
+	})
 
 	go func() {
 		for {
