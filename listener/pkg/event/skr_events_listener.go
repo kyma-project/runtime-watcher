@@ -26,12 +26,14 @@ func RegisterListenerComponent(addr, componentName string,
 	}, &source.Channel{Source: eventSource}
 }
 
+type Verify func(r *http.Request) error
+
 type SKREventListener struct {
 	Addr           string
 	Logger         logr.Logger
 	ComponentName  string
 	receivedEvents chan event.GenericEvent
-	VerifyFunc     func(r *http.Request) error
+	VerifyFunc     Verify
 }
 
 func (l *SKREventListener) GetReceivedEvents() chan event.GenericEvent {
