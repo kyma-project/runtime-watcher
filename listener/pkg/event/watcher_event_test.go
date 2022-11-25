@@ -57,17 +57,18 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
 			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt)
 			// WHEN
-			evtObject, err := listenerEvent.UnmarshalSKREvent(req)
+			watcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
 			if err != nil {
 				require.Equal(t, testCase.errMsg, err.Message)
 				require.Equal(t, testCase.httpStatus, err.HTTPErrorCode)
 				return
 			}
+			genericEvtObject := listenerEvent.GenericEvent(watcherEvent)
 			require.Equal(t, testCase.errMsg, "")
 			require.Equal(t, testCase.httpStatus, http.StatusOK)
 			testcasePayloadContent := listenerEvent.UnstructuredContent(testCase.payload)
-			require.Equal(t, testcasePayloadContent, evtObject.Object)
+			require.Equal(t, testcasePayloadContent, genericEvtObject.Object)
 		})
 	}
 }

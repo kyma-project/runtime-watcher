@@ -19,7 +19,7 @@ type UnmarshalError struct {
 	HTTPErrorCode int
 }
 
-func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *UnmarshalError) {
+func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	pathVariables := strings.Split(req.URL.Path, "/")
 
 	var contractVersion string
@@ -45,13 +45,17 @@ func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *Unmarsha
 		return nil, &UnmarshalError{"could not unmarshal watcher event", http.StatusInternalServerError}
 	}
 
+	return watcherEvent, nil
+}
+
+func GenericEvent(watcherEvent *types.WatchEvent) *unstructured.Unstructured {
 	genericEvtObject := &unstructured.Unstructured{}
 	content := UnstructuredContent(watcherEvent)
 	genericEvtObject.SetUnstructuredContent(content)
 	genericEvtObject.SetName(watcherEvent.Owner.Name)
 	genericEvtObject.SetNamespace(watcherEvent.Owner.Namespace)
 
-	return genericEvtObject, nil
+	return genericEvtObject
 }
 
 func UnstructuredContent(watcherEvt *types.WatchEvent) map[string]interface{} {
