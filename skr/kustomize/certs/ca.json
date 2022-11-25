@@ -1,0 +1,16 @@
+{
+  "CN": "control-plane.kyma-project.io",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+    "C": "DE",
+    "L": "Munich",
+    "O": "SAP SE",
+    "OU": "Kyma Project",
+    "ST": "Bavaria"
+    }
+  ]
+}

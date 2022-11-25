@@ -3,14 +3,13 @@ package internal_test
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal"
-	util "github.com/kyma-project/runtime-watcher/skr/internal/test_util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -66,18 +65,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	kcpTestHandler := util.BootStrapKcpMockHandlers(moduleName)
+	kcpTestHandler := BootStrapKcpMockHandlers(moduleName)
 	kcpRecorder = kcpTestHandler.Recorder
 
 	// start listener server
 	kcpMockServer = httptest.NewServer(kcpTestHandler)
-	_, port, err := net.SplitHostPort(kcpMockServer.Listener.Addr().String())
-	Expect(err).ShouldNot(HaveOccurred())
 
 	// set KCP env vars
-	err = os.Setenv("KCP_IP", "localhost")
-	Expect(err).ShouldNot(HaveOccurred())
-	err = os.Setenv("KCP_PORT", port)
+	err = os.Setenv("KCP_ADDR", kcpMockServer.Listener.Addr().String())
 	Expect(err).ShouldNot(HaveOccurred())
 	err = os.Setenv("KCP_CONTRACT", "v1")
 	Expect(err).ShouldNot(HaveOccurred())

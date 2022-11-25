@@ -2,35 +2,52 @@ package internal
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/go-logr/logr"
 
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 )
 
-const EventEndpoint = "event"
+const (
+	HTTPClientTimeout = time.Minute * 3
+	EventEndpoint     = "event"
+)
 
 type Handler struct {
-	Client client.Client
-	Logger logr.Logger
+	Client     client.Client
+	Logger     logr.Logger
+	Parameters ServerParameters
+}
+
+type ServerParameters struct {
+	Port        int    // webhook server port
+	CACert      string // CA key used to sign the certificate
+	TLSCert     string // path to TLS certificate for https
+	TLSKey      string // path to TLS key matching for certificate
+	TLSServer   bool   // indicates if an HTTPS server should be created
+	TLSCallback bool   // indicates if KCP accepts HTTP or HTTPS requests
 }
 
 type admissionResponseInfo struct {
@@ -99,18 +116,16 @@ func getModuleName(urlPath string) (string, error) {
 }
 
 func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
+	defer req.Body.Close()
 	moduleName, err := getModuleName(req.URL.Path)
 	if err != nil {
 		h.Logger.Error(err, "failed to get module name")
 		return
 	}
-
 	// read incoming request to bytes
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		if !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
-			h.Logger.Error(fmt.Errorf("%s%s %w", admissionError, errorSeparator, err), "")
-		}
+		h.Logger.Error(err, admissionError)
 		return
 	}
 
@@ -124,21 +139,22 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()),
 	)
 
-	admissionResponseInfo := h.validateResources(admissionReview, moduleName)
+	validation := h.validateResources(admissionReview, moduleName)
 
 	// log admission response message
-	h.Logger.Info(admissionResponseInfo.message)
+	h.Logger.Info(validation.message)
 
 	// store incoming request
 	h.storeIncomingRequest(body)
 
 	// prepare response
-	responseBytes := h.prepareResponse(admissionReview, admissionResponseInfo)
+	responseBytes := h.prepareResponse(admissionReview, validation)
 	if responseBytes == nil {
+		h.Logger.Info("empty response from incoming admission review")
 		return
 	}
 	if _, err = writer.Write(responseBytes); err != nil {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, admissionError)
 		return
 	}
 }
@@ -151,7 +167,7 @@ func (h *Handler) storeIncomingRequest(body []byte) {
 	if enableSideCarStr != "" {
 		sideCarEnabled, err = strconv.ParseBool(enableSideCarStr)
 		if err != nil {
-			h.Logger.Error(fmt.Errorf("cannot parse sidecar enable env variable %w", err), "")
+			h.Logger.Error(err, "cannot parse sidecar enable env variable ")
 			return
 		}
 	}
@@ -197,7 +213,7 @@ func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 
 	admissionReviewBytes, err := json.Marshal(&finalizedAdmissionReview)
 	if err != nil {
-		h.Logger.Error(fmt.Errorf("%s%s %w", admissionError, errorSeparator, err), "")
+		h.Logger.Error(err, admissionError)
 		return nil
 	}
 	return admissionReviewBytes
@@ -292,7 +308,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	ownerKey, err := getKcpResourceName(watched)
 	if err != nil {
 		h.Logger.Error(err, "resource owner name could not be determined")
-		return ""
+		return "resource owner name could not be determined"
 	}
 
 	ownerParts := strings.Split(ownerKey, "__")
@@ -311,32 +327,35 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	}
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, KcpReqFailedMsg)
 		return KcpReqFailedMsg
 	}
 
-	responseBody := bytes.NewBuffer(postBody)
+	requestPayload := bytes.NewBuffer(postBody)
 
-	kcpIP := os.Getenv("KCP_IP")
-	kcpPort := os.Getenv("KCP_PORT")
+	kcpAddr := os.Getenv("KCP_ADDR")
 	contract := os.Getenv("KCP_CONTRACT")
 
-	if kcpIP == "" || kcpPort == "" || contract == "" {
+	if kcpAddr == "" || contract == "" {
 		return KcpReqFailedMsg
 	}
 
-	url := fmt.Sprintf("http://%s/%s/%s/%s", net.JoinHostPort(kcpIP, kcpPort),
-		contract, moduleName, EventEndpoint)
-
-	h.Logger.V(1).Info("KCP", "url", url)
-	//nolint:gosec
-	resp, err := http.Post(url, "application/json", responseBody)
+	uri := fmt.Sprintf("%s/%s/%s/%s", kcpAddr, contract, moduleName, EventEndpoint)
+	httpClient, url, err := h.getHTTPClientAndURL(uri)
 	if err != nil {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, KcpReqFailedMsg)
+		return err.Error()
+	}
+
+	resp, err := httpClient.Post(url, "application/json", requestPayload)
+	if err != nil {
+		h.Logger.Error(err, KcpReqFailedMsg)
 		return KcpReqFailedMsg
 	}
+	defer resp.Body.Close()
+	responseBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		h.Logger.Error(err, "")
+		h.Logger.Error(err, fmt.Sprintf("responseBody: %s with StatusCode: %d", responseBody, resp.StatusCode))
 		return KcpReqFailedMsg
 	}
 
@@ -381,4 +400,47 @@ func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo 
 		message: message,
 		status:  metav1.StatusSuccess,
 	}
+}
+
+func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
+	httpClient := http.Client{}
+	protocol := "http"
+
+	if h.Parameters.TLSCallback {
+		h.Logger.Info("will attempt to send an https request")
+		protocol = "https"
+
+		certificate, err := tls.LoadX509KeyPair(h.Parameters.TLSCert, h.Parameters.TLSKey)
+		if err != nil {
+			msg := "could not load tls certificate"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+
+		caCertBytes, err := os.ReadFile(h.Parameters.CACert)
+		if err != nil {
+			msg := "could not load CA certificate"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+		publicPemBlock, _ := pem.Decode(caCertBytes)
+		rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
+		if errParse != nil {
+			msg := "failed to parse public key"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+		rootCertpool := x509.NewCertPool()
+		rootCertpool.AddCert(rootPubCrt)
+
+		httpClient.Timeout = HTTPClientTimeout
+		//nolint:gosec
+		httpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:      rootCertpool,
+				Certificates: []tls.Certificate{certificate},
+			},
+		}
+	}
+
+	url := fmt.Sprintf("%s://%s", protocol, uri)
+	h.Logger.Info("KCP", "url", url)
+	return httpClient, url, nil
 }
