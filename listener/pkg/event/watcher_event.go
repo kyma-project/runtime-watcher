@@ -1,6 +1,7 @@
 package event
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const contentMapCapacity = 3
+const (
+	contentMapCapacity = 3
+	requestSizeLimit   = 16000 //limits request to 16 KB request body size
+)
 
 type UnmarshalError struct {
 	Message       string
@@ -33,11 +37,14 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 		return nil, &UnmarshalError{"contract version cannot be empty", http.StatusBadRequest}
 	}
 
-	body, err := io.ReadAll(req.Body)
+	limitedReader := &io.LimitedReader{R: req.Body, N: requestSizeLimit}
+	body, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return nil, &UnmarshalError{"could not read request body", http.StatusInternalServerError}
 	}
+
 	defer req.Body.Close()
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	watcherEvent := &types.WatchEvent{}
 	err = json.Unmarshal(body, watcherEvent)
