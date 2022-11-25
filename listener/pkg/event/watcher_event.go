@@ -15,7 +15,7 @@ import (
 
 const (
 	contentMapCapacity = 3
-	requestSizeLimit   = 16000 //limits request to 16 KB request body size
+	requestSizeLimit   = 16000
 )
 
 type UnmarshalError struct {

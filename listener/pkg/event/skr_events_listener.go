@@ -3,9 +3,10 @@ package event
 import (
 	"context"
 	"fmt"
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"net/http"
 	"time"
+
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/event"

@@ -27,7 +27,7 @@ import (
 )
 
 func newTestListener(addr, component string, log logr.Logger,
-	verify func(r *http.Request) error,
+	verify listenerEvent.Verify,
 ) *listenerEvent.SKREventListener {
 	return &listenerEvent.SKREventListener{
 		Addr:          addr,
@@ -72,9 +72,10 @@ func TestHandler(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	log := setupLogger()
-	skrEventsListener := newTestListener(":8082", "kyma", log, func(r *http.Request) error {
-		return nil
-	})
+	skrEventsListener := newTestListener(":8082", "kyma", log,
+		func(r *http.Request, watcherEvtObject *types.WatchEvent) error {
+			return nil
+		})
 
 	handlerUnderTest := skrEventsListener.HandleSKREvent()
 	responseRecorder := httptest.NewRecorder()
