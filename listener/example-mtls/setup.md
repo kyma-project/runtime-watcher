@@ -2,7 +2,7 @@
 | ------------ | ------------ | ------------ | ------------ |
 | Listener mTLS setup  | Enable mTLS between KCP and SKR using gardner cert management extention.   |  runtime-watcher,istio,kcp-listener | kyma-project.io/jellyfish   |
 
-# Description
+## Description
 This document outlines the basic steps required to get an end-to-end setup running using mTLS, involving one KCP and one SKR cluster.
 In the example below a Gardener shoot is used as the KCP cluster and a cluster of your choice can be used as the SKR cluster (e.g. k3d).
 There are two types of listener endpoints mentioned: `http-bin` (expects `GET` calls) and `example-listener` (expects `POST` calls).
@@ -77,10 +77,15 @@ There are two types of listener endpoints mentioned: `http-bin` (expects `GET` c
    kubectl get secret skr-tls -n istio-system -oyaml > skr-tls.yaml
    ```
 
-# Steps for SKR 
+## Steps for SKR 
 
-1. Checkout the [SKR Watcher chart](https://github.com/kyma-project/lifecycle-manager/tree/main/skr-webhook).
-2. Modify `Values.yaml` to accommodate the example-listener endpoints.
+1. Install the secret from the last step in the [section](#steps-for-kcp) above.
+   ```sh
+   kubectl apply -f skr-tls.yaml
+   ```
+
+2. Checkout the [SKR Watcher chart](https://github.com/kyma-project/lifecycle-manager/tree/main/skr-webhook).
+3. Modify `Values.yaml` to accommodate the example-listener endpoints.
    ```
    modules: |-
      example-listener:
@@ -89,24 +94,24 @@ There are two types of listener endpoints mentioned: `http-bin` (expects `GET` c
          app: "watched-by-example-listener"
    ```
 
-3. Add KCP endpoints, based on your shoot domain to `Values.yaml`
+4. Add KCP endpoints, based on your shoot domain to `Values.yaml`
 
-4. Make sure Helm certificate generation is not used for `Secret` generation.
+5. Make sure Helm certificate generation is not used for `Secret` generation.
    Instead, reference the `Secret` generated from [Steps for KCP](#steps-for-kcp) Step 7. Also, copy this `CACert` over to the `caBundle` of `ValidationWebhookConfiguration`.
     
-5. Install SKR watcher
+6. Install SKR watcher
    ```sh
    helm upgrade --install --namespace=default watcher ./skr-webhook
    ```  
 
-6. Install a custom resource with the labels mentioned in Step 2.
+7. Install a custom resource with the labels mentioned in Step 2.
    ```
    kubectl apply -f ./skr/
    ```
    
-7. Based on the `ValidationWebhookConfiguration` SKR will send events to KCP
+8. Based on the `ValidationWebhookConfiguration` SKR will send events to KCP
 
-# Steps for debugging SKR certificate and request generation
+## Steps for debugging SKR certificate and request generation
 
 This step can be used to debug requests to both http-bin and example-listener endpoints specified in [Steps for KCP](#steps-for-kcp).
 
@@ -116,7 +121,7 @@ This step can be used to debug requests to both http-bin and example-listener en
 
 3. Request will be sent sequentially to `http-bin` and `example-listener` endpoints.
 
-# Result
+## Result
 
 1. Check logs of SKR webhook pod that the request was sent correctly to the desired endpoint.
 2. Check logs of `http-bin` and `example-listener` pods to check if requests were received correctly.
