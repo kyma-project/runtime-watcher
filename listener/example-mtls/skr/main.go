@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -22,6 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const timeout = time.Second * 3
+
+//nolint:funlen
 func main() {
 	os.Setenv("KUBECONFIG", "/Users/D063994/SAPDevelop/go/kubeconfigs/kcp.yaml")
 	os.Setenv("KUBECONFIG", "/Users/d063994/.kube/config")
@@ -37,7 +39,10 @@ func main() {
 
 	secret := v1.Secret{}
 
-	err = restClient.Get(context.Background(), client.ObjectKey{Name: "watcher-webhook-tls", Namespace: "default"}, &secret)
+	err = restClient.Get(context.Background(), client.ObjectKey{
+		Name:      "watcher-webhook-tls",
+		Namespace: "default",
+	}, &secret)
 	if err != nil {
 		return
 	}
@@ -56,8 +61,9 @@ func main() {
 	rootCertpool.AddCert(rootPubCrt)
 
 	httpClient := http.Client{
-		Timeout: time.Minute * 3,
+		Timeout: timeout,
 		Transport: &http.Transport{
+			//nolint:gosec
 			TLSClientConfig: &tls.Config{
 				RootCAs:      rootCertpool,
 				Certificates: []tls.Certificate{certificate},
@@ -71,6 +77,7 @@ func main() {
 		log.Fatalf("%v", err)
 		return
 	}
+	log.Println(response.Status)
 
 	event := types.WatchEvent{
 		Owner:      client.ObjectKey{Name: "example-owner", Namespace: "example-owner-ns"},
@@ -84,10 +91,13 @@ func main() {
 	}
 
 	// example listener
-	response, err = httpClient.Post("https://wat.j2fmn4e1n7.jellyfish.shoot.canary.k8s-hana.ondemand.com/v1/example-listener/event", "application/json", bytes.NewBuffer(eventBytes))
+	response, err = httpClient.Post(
+		"https://wat.j2fmn4e1n7.jellyfish.shoot.canary.k8s-hana.ondemand.com/v1/example-listener/event",
+		"application/json",
+		bytes.NewBuffer(eventBytes))
 	if err != nil {
 		log.Fatalf("%v", err)
 		return
 	}
-	fmt.Println(response.Status)
+	log.Println(response.Status)
 }
