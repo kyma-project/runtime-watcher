@@ -1,8 +1,10 @@
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.24.1
+# Image URL to use all building/pushing image targets
+APP_NAME = sample-listener
+IMG_REPO := $(DOCKER_PUSH_REPOSITORY)$(DOCKER_PUSH_DIRECTORY)
+IMG_NAME := $(IMG_REPO)/$(APP_NAME)
+IMG := $(IMG_NAME):$(DOCKER_TAG)
 
 ## Tool Binaries
-ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
@@ -34,18 +36,13 @@ vet: ## Run go vet against code.
 ##@ Testing
 
 .PHONY: test
-test: fmt vet envtest ## Run tests.
-	ACK_GINKGO_DEPRECATIONS=1.16.5 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+test: fmt vet ## Run tests.
+	go test ./... -coverprofile cover.out
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
-
-.PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -55,3 +52,11 @@ fmt: ## Run go fmt against code.
 lint: ## Run golangci-lint against code.
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run
+
+.PHONY: docker-build
+docker-build: ## Build docker image for sample-listener.
+	docker build -t $(IMG) .
+
+.PHONY: docker-push
+docker-push: ## Push docker image for sample-listener.
+	docker push $(IMG)
