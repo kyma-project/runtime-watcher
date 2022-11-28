@@ -13,15 +13,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func main() {
+	os.Setenv("KUBECONFIG", "/Users/D063994/SAPDevelop/go/kubeconfigs/kcp.yaml")
 	os.Setenv("KUBECONFIG", "/Users/d063994/.kube/config")
 	restConfig, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
@@ -39,9 +41,6 @@ func main() {
 	if err != nil {
 		return
 	}
-
-	// caCertPool := x509.NewCertPool()
-	// caCertPool.AppendCertsFromPEM(secret.Data["ca.crt"])
 
 	certificate, err := tls.X509KeyPair(secret.Data["tls.crt"], secret.Data["tls.key"])
 	if err != nil {
@@ -66,7 +65,8 @@ func main() {
 		},
 	}
 
-	response, err := httpClient.Get("https://a.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com/misc")
+	// http bin
+	response, err := httpClient.Get("https://wat.j2fmn4e1n7.jellyfish.shoot.canary.k8s-hana.ondemand.com/v1/httpbin")
 	if err != nil {
 		log.Fatalf("%v", err)
 		return
@@ -82,7 +82,9 @@ func main() {
 		log.Fatalf("%v", err)
 		return
 	}
-	response, err = httpClient.Post("https://a.ab-test1.jellyfish.shoot.canary.k8s-hana.ondemand.com/v1/example-listener/event", "application/json", bytes.NewBuffer(eventBytes))
+
+	// example listener
+	response, err = httpClient.Post("https://wat.j2fmn4e1n7.jellyfish.shoot.canary.k8s-hana.ondemand.com/v1/example-listener/event", "application/json", bytes.NewBuffer(eventBytes))
 	if err != nil {
 		log.Fatalf("%v", err)
 		return

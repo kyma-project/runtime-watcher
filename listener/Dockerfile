@@ -9,7 +9,7 @@ COPY go.sum go.sum
 RUN go mod download
 
 COPY pkg/ pkg/
-COPY example/main.go main.go
+COPY example-mtls/kcp/listener/main.go main.go
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o listener main.go
 
