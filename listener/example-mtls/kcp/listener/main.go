@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/kyma-project/runtime-watcher/listener/pkg/event"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/kyma-project/runtime-watcher/listener/pkg/event"
 )
 
 func main() {
@@ -18,9 +18,10 @@ func main() {
 	logf.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{
 		Development: true,
 	})))
-	skrEvent, _ := event.RegisterListenerComponent(":8089", "example-listener", func(r *http.Request) error {
-		return nil
-	})
+	skrEvent, _ := event.RegisterListenerComponent(":8089", "example-listener",
+		func(r *http.Request, watcherEvtObject *types.WatchEvent) error {
+			return nil
+		})
 
 	go func() {
 		for {

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -14,9 +16,7 @@ import (
 
 const paramContractVersion = "1"
 
-func RegisterListenerComponent(addr, componentName string,
-	verify func(r *http.Request) error,
-) (*SKREventListener, *source.Channel) {
+func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
 	eventSource := make(chan event.GenericEvent)
 	return &SKREventListener{
 		Addr:           addr,
@@ -30,7 +30,7 @@ func RegisterListenerComponent(addr, componentName string,
 // If the verification fails an error should be returned and the request will be dropped,
 // otherwise it should return nil.
 // If no verification function is needed, a function which just returns nil can be used instead.
-type Verify func(r *http.Request) error
+type Verify func(r *http.Request, watcherEvtObject *types.WatchEvent) error
 
 type SKREventListener struct {
 	Addr           string
@@ -90,20 +90,22 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 
 		l.Logger.V(1).Info("received event from SKR")
 
-		// verify request
-		if err := l.VerifyFunc(req); err != nil {
-			l.Logger.Info("request could not be verified - Event will not be dispatched",
-				"error", err)
-			return
-		}
 		// unmarshal received event
-		genericEvtObject, unmarshalErr := UnmarshalSKREvent(req)
+		watcherEvent, unmarshalErr := UnmarshalSKREvent(req)
 		if unmarshalErr != nil {
 			l.Logger.Error(nil, unmarshalErr.Message)
 			http.Error(writer, unmarshalErr.Message, unmarshalErr.HTTPErrorCode)
 			return
 		}
 
+		// verify request
+		if err := l.VerifyFunc(req, watcherEvent); err != nil {
+			l.Logger.Info("request could not be verified - Event will not be dispatched",
+				"error", err)
+			return
+		}
+
+		genericEvtObject := GenericEvent(watcherEvent)
 		// add event to the channel
 		l.receivedEvents <- event.GenericEvent{Object: genericEvtObject}
 		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())

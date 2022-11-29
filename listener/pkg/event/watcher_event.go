@@ -1,6 +1,7 @@
 package event
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,14 +13,17 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const contentMapCapacity = 3
+const (
+	contentMapCapacity = 3
+	requestSizeLimit   = 16000
+)
 
 type UnmarshalError struct {
 	Message       string
 	HTTPErrorCode int
 }
 
-func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *UnmarshalError) {
+func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	pathVariables := strings.Split(req.URL.Path, "/")
 
 	var contractVersion string
@@ -33,11 +37,14 @@ func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *Unmarsha
 		return nil, &UnmarshalError{"contract version cannot be empty", http.StatusBadRequest}
 	}
 
-	body, err := io.ReadAll(req.Body)
+	limitedReader := &io.LimitedReader{R: req.Body, N: requestSizeLimit}
+	body, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return nil, &UnmarshalError{"could not read request body", http.StatusInternalServerError}
 	}
+
 	defer req.Body.Close()
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	watcherEvent := &types.WatchEvent{}
 	err = json.Unmarshal(body, watcherEvent)
@@ -45,13 +52,17 @@ func UnmarshalSKREvent(req *http.Request) (*unstructured.Unstructured, *Unmarsha
 		return nil, &UnmarshalError{"could not unmarshal watcher event", http.StatusInternalServerError}
 	}
 
+	return watcherEvent, nil
+}
+
+func GenericEvent(watcherEvent *types.WatchEvent) *unstructured.Unstructured {
 	genericEvtObject := &unstructured.Unstructured{}
 	content := UnstructuredContent(watcherEvent)
 	genericEvtObject.SetUnstructuredContent(content)
 	genericEvtObject.SetName(watcherEvent.Owner.Name)
 	genericEvtObject.SetNamespace(watcherEvent.Owner.Namespace)
 
-	return genericEvtObject, nil
+	return genericEvtObject
 }
 
 func UnstructuredContent(watcherEvt *types.WatchEvent) map[string]interface{} {
