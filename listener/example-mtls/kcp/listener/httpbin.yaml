@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: watcher
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kcp-watcher-service
+  namespace: watcher
+  labels:
+    app: httpbin
+spec:
+  ports:
+    - name: http
+      port: 8089
+      targetPort: 80
+  selector:
+    app: httpbin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  namespace: watcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+  template:
+    metadata:
+      labels:
+        app: httpbin
+    spec:
+      containers:
+        - image: docker.io/kennethreitz/httpbin
+          imagePullPolicy: IfNotPresent
+          name: httpbin
+          ports:
+            - containerPort: 80
+---

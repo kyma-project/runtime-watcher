@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
-
 	"github.com/kyma-project/runtime-watcher/listener/pkg/event"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
