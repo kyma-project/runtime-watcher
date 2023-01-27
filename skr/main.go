@@ -68,7 +68,7 @@ func serverParams(logger logr.Logger) (internal.ServerParameters, error) {
 		parameters.TLSCallback = defaultTLSEnabledMode
 	}
 
-	if parameters.TLSServer {
+	if parameters.TLSServer || parameters.TLSCallback {
 		// CA cert
 		parameters.CACert = os.Getenv("CA_CERT")
 		if parameters.CACert == "" {
