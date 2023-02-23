@@ -84,9 +84,9 @@ func BootStrapKcpMockHandlers(moduleName string) *CustomRouter {
 }
 
 func GetAdmissionHTTPRequest(operation admissionv1.Operation, watchedName, moduleName string,
-	labels map[string]string, subResource ChangeObj,
+	labels, annotations map[string]string, subResource ChangeObj,
 ) (*http.Request, error) {
-	admissionReview, err := createAdmissionRequest(operation, watchedName, labels, subResource)
+	admissionReview, err := createAdmissionRequest(operation, watchedName, labels, annotations, subResource)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func GetAdmissionHTTPRequest(operation admissionv1.Operation, watchedName, modul
 }
 
 func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
-	labels map[string]string, changeObj ChangeObj,
+	labels, annotations map[string]string, changeObj ChangeObj,
 ) (*admissionv1.AdmissionReview, error) {
 	admissionReview := &admissionv1.AdmissionReview{
 		Request: &admissionv1.AdmissionRequest{
@@ -116,7 +116,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 	}
 
 	if operation == admissionv1.Delete || operation == admissionv1.Update {
-		oldRawObject, err := generateAdmissionRequestRawObject(watchedName, labels,
+		oldRawObject, err := generateAdmissionRequestRawObject(watchedName, labels, annotations,
 			"oldValue", changeObj)
 		if err != nil {
 			return nil, err
@@ -124,7 +124,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 		admissionReview.Request.OldObject.Raw = oldRawObject
 	}
 	if operation != admissionv1.Delete {
-		rawObject, err := generateAdmissionRequestRawObject(watchedName, labels,
+		rawObject, err := generateAdmissionRequestRawObject(watchedName, labels, annotations,
 			"newValue", changeObj)
 		if err != nil {
 			return nil, err
@@ -135,14 +135,15 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 	return admissionReview, nil
 }
 
-func generateAdmissionRequestRawObject(objectName string, labels map[string]string, specOrStatusValue string,
+func generateAdmissionRequestRawObject(objectName string, labels, annotations map[string]string, specOrStatusValue string,
 	changeObj ChangeObj,
 ) ([]byte, error) {
 	objectWatched := &internal.ObjectWatched{
 		Metadata: internal.Metadata{
-			Name:      objectName,
-			Namespace: metav1.NamespaceDefault,
-			Labels:    labels,
+			Name:        objectName,
+			Namespace:   metav1.NamespaceDefault,
+			Labels:      labels,
+			Annotations: annotations,
 		},
 		Spec:       map[string]interface{}{},
 		Status:     map[string]interface{}{},

@@ -87,7 +87,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Logger: ctrl.Log.WithName("skr-watcher-test"),
 		}
 		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
-			testCase.params.moduleName, ownerLabels, testCase.params.changeObjType)
+			testCase.params.moduleName, managedbyLabel, ownedbyAnnotation, testCase.params.changeObjType)
 		Expect(err).ShouldNot(HaveOccurred())
 		skrRecorder := httptest.NewRecorder()
 		handler.Handle(skrRecorder, request)
