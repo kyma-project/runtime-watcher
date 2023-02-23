@@ -108,7 +108,6 @@ func TestHandler(t *testing.T) {
 		assert.Equal(t, value, testEvt.evt.Object.(*unstructured.Unstructured).Object[key])
 	}
 }
-
 func TestMiddleware(t *testing.T) {
 	t.Parallel()
 	// SETUP
@@ -119,36 +118,31 @@ func TestMiddleware(t *testing.T) {
 		})
 
 	const successfulResponseString = "SUCCESS"
-	const requestSizeLimitInBytes = 16384 // 16KB
-	handlerUnderTest := http.MaxBytesHandler(skrEventsListener.RequestSizeLimitingMiddleware(
+	handlerUnderTest := skrEventsListener.Middleware(
 		func(writer http.ResponseWriter, request *http.Request) {
-			_, err := writer.Write([]byte(successfulResponseString))
-			if err != nil {
-				http.Error(writer, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}), requestSizeLimitInBytes)
+			writer.Write([]byte(successfulResponseString))
+		})
 	goodResponseRecorder := httptest.NewRecorder()
 	badResponseRecorder := httptest.NewRecorder()
 
 	// GIVEN
 	// 200 bytes
-	smallJSONFile, err := os.ReadFile("test_resources/small_size.json")
+	smallJsonFile, err := os.ReadFile("test_resources/small_size.json")
 	if err != nil {
 		t.Error(err)
 	}
 	// 32 KBs
-	largeJSONFile, err := os.ReadFile("test_resources/large_size.json")
+	largeJsonFile, err := os.ReadFile("test_resources/large_size.json")
 	if err != nil {
 		t.Error(err)
 	}
 
-	goodHTTPRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(smallJSONFile))
-	badHTTPRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(largeJSONFile))
+	goodHttpRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(smallJsonFile))
+	badHttpRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(largeJsonFile))
 
 	// WHEN
-	handlerUnderTest.ServeHTTP(goodResponseRecorder, goodHTTPRequest)
-	handlerUnderTest.ServeHTTP(badResponseRecorder, badHTTPRequest)
+	handlerUnderTest(goodResponseRecorder, goodHttpRequest)
+	handlerUnderTest(badResponseRecorder, badHttpRequest)
 
 	// THEN
 	resp := goodResponseRecorder.Result()
