@@ -66,9 +66,10 @@ type Resource struct {
 }
 
 type Metadata struct {
-	Name      string            `json:"name"`
-	Namespace string            `json:"namespace"`
-	Labels    map[string]string `json:"labels"`
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Annotations map[string]string `json:"annotations"`
+	Labels      map[string]string `json:"labels"`
 }
 
 func (m Metadata) isEmpty() bool {
@@ -84,16 +85,22 @@ type ObjectWatched struct {
 }
 
 const (
-	admissionError           = "admission error"
-	errorSeparator           = ":"
-	invalidationMessage      = "invalidated from webhook"
-	validationMessage        = "validated from webhook"
-	requestStorePath         = "/tmp/request"
-	urlPathPattern           = "/validate/%s"
-	KcpReqFailedMsg          = "kcp request failed"
-	KcpReqSucceededMsg       = "kcp request succeeded"
-	ManagedByLabel           = "operator.kyma-project.io/managed-by"
-	OwnedByLabel             = "operator.kyma-project.io/owned-by"
+	admissionError      = "admission error"
+	errorSeparator      = ":"
+	invalidationMessage = "invalidated from webhook"
+	validationMessage   = "validated from webhook"
+	KcpReqFailedMsg     = "kcp request failed"
+	KcpReqSucceededMsg  = "kcp request succeeded"
+
+	requestStorePath = "/tmp/request"
+	urlPathPattern   = "/validate/%s"
+
+	OperatorPrefix    = "operator.kyma-project.io"
+	Separator         = "/"
+	OwnedByAnnotation = OperatorPrefix + Separator + "owned-by"
+	OwnedBySeperator  = "/"
+	ManagedByLabel    = "operator.kyma-project.io/managed-by"
+
 	StatusSubResource        = "status"
 	namespaceNameEntityCount = 2
 )
@@ -311,10 +318,10 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 		return "resource owner name could not be determined"
 	}
 
-	ownerParts := strings.Split(ownerKey, "__")
+	ownerParts := strings.Split(ownerKey, OwnedBySeperator)
 	if len(ownerParts) != namespaceNameEntityCount {
-		return fmt.Sprintf("label %s not set correctly on resource %s/%s: %s", OwnedByLabel,
-			watched.Namespace, watched.Name, err.Error())
+		return fmt.Sprintf("annotation %s not set correctly on resource %s/%s: %s", OwnedByAnnotation,
+			watched.Namespace, watched.Name, ownerKey)
 	}
 	ownerNs := ownerParts[0]
 	ownerName := ownerParts[1]
@@ -365,10 +372,10 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 }
 
 func getKcpResourceName(watched ObjectWatched) (string, error) {
-	if watched.Labels == nil || watched.Labels[OwnedByLabel] == "" {
-		return "", fmt.Errorf("no labels found for watched resource %s/%s", watched.Namespace, watched.Name)
+	if watched.Annotations == nil || watched.Annotations[OwnedByAnnotation] == "" {
+		return "", fmt.Errorf("no `ownedBy` annotation found for watched resource %s/%s", watched.Namespace, watched.Name)
 	}
-	return watched.Labels[OwnedByLabel], nil
+	return watched.Annotations[OwnedByAnnotation], nil
 }
 
 func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,

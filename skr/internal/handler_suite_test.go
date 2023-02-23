@@ -31,9 +31,11 @@ var (
 	kcpRecorder   *httptest.ResponseRecorder //nolint:gochecknoglobals
 	kcpMockServer *httptest.Server           //nolint:gochecknoglobals
 
-	ownerLabels = map[string]string{ //nolint:gochecknoglobals
+	managedbyLabel = map[string]string{ //nolint:gochecknoglobals
 		internal.ManagedByLabel: "lifecycle-manager",
-		internal.OwnedByLabel:   fmt.Sprintf("%s__%s", metav1.NamespaceDefault, ownerName),
+	}
+	ownedbyAnnotation = map[string]string{ //nolint:gochecknoglobals
+		internal.OwnedByAnnotation: fmt.Sprintf("%s/%s", metav1.NamespaceDefault, ownerName),
 	}
 	testEnv   *envtest.Environment //nolint:gochecknoglobals
 	k8sClient client.Client        //nolint:gochecknoglobals

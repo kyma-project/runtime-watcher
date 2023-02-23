@@ -87,7 +87,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Logger: ctrl.Log.WithName("skr-watcher-test"),
 		}
 		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
-			testCase.params.moduleName, ownerLabels, testCase.params.changeObjType)
+			testCase.params.moduleName, managedbyLabel, ownedbyAnnotation, testCase.params.changeObjType)
 		Expect(err).ShouldNot(HaveOccurred())
 		skrRecorder := httptest.NewRecorder()
 		handler.Handle(skrRecorder, request)
@@ -109,7 +109,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 			testCase.params.operation == admissionv1.Connect {
 			Expect(kcpRecorder.Code).To(BeEquivalentTo(http.StatusOK))
 			// no request was sent to KCP
-			Expect(len(kcpPayload)).To(Equal(0))
+			Expect(kcpPayload).To(BeEmpty())
 		} else {
 			Expect(err).ShouldNot(HaveOccurred())
 			watcherEvt := &listenerTypes.WatchEvent{}

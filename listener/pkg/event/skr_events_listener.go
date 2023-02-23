@@ -3,6 +3,7 @@ package event
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 )
 
 const paramContractVersion = "1"
+const requestSizeLimitInBytes = 16384 // 16KB
 
 func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
 	eventSource := make(chan event.GenericEvent)
@@ -54,7 +56,7 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 
 	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.ComponentName)
 
-	router.HandleFunc(listenerPattern, l.HandleSKREvent())
+	router.HandleFunc(listenerPattern, l.Middleware(l.HandleSKREvent()))
 
 	// start web server
 	const defaultTimeout = time.Second * 60
@@ -76,6 +78,22 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 	<-ctx.Done()
 	l.Logger.Info("SKR events listener is shutting down: context got closed")
 	return server.Shutdown(ctx)
+}
+
+func (l *SKREventListener) Middleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		request.Body = http.MaxBytesReader(writer, request.Body, requestSizeLimitInBytes)
+		_, err := io.ReadAll(request.Body)
+
+		if request.ContentLength > requestSizeLimitInBytes || err != nil {
+			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
+			l.Logger.Error(err, errorMessage)
+			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)
+			return
+		}
+
+		next.ServeHTTP(writer, request)
+	}
 }
 
 func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {

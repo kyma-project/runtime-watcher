@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
 
@@ -110,4 +111,55 @@ func TestHandler(t *testing.T) {
 		assert.Contains(t, testEvt.evt.Object.(*unstructured.Unstructured).Object, key)
 		assert.Equal(t, value, testEvt.evt.Object.(*unstructured.Unstructured).Object[key])
 	}
+}
+func TestMiddleware(t *testing.T) {
+	t.Parallel()
+	// SETUP
+	log := setupLogger()
+	skrEventsListener := newTestListener(":8082", "kyma", log,
+		func(r *http.Request, watcherEvtObject *types.WatchEvent) error {
+			return nil
+		})
+
+	const successfulResponseString = "SUCCESS"
+	handlerUnderTest := skrEventsListener.Middleware(
+		func(writer http.ResponseWriter, request *http.Request) {
+			writer.Write([]byte(successfulResponseString))
+		})
+	goodResponseRecorder := httptest.NewRecorder()
+	badResponseRecorder := httptest.NewRecorder()
+
+	// GIVEN
+	// 200 bytes
+	smallJsonFile, err := os.ReadFile("test_resources/small_size.json")
+	if err != nil {
+		t.Error(err)
+	}
+	// 32 KBs
+	largeJsonFile, err := os.ReadFile("test_resources/large_size.json")
+	if err != nil {
+		t.Error(err)
+	}
+
+	goodHttpRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(smallJsonFile))
+	badHttpRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(largeJsonFile))
+
+	// WHEN
+	handlerUnderTest(goodResponseRecorder, goodHttpRequest)
+	handlerUnderTest(badResponseRecorder, badHttpRequest)
+
+	// THEN
+	resp := goodResponseRecorder.Result()
+	assert.Equal(t, http.StatusOK, resp.StatusCode,
+		"mismatching status code: expected %d, got %d", http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	assert.Equal(t, successfulResponseString, string(body),
+		"mismatching body: expected %s, got %s", successfulResponseString, string(body))
+
+	resp = badResponseRecorder.Result()
+	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode,
+		"mismatching status code: expected %d, got %d", http.StatusRequestEntityTooLarge, resp.StatusCode)
+	body, _ = io.ReadAll(resp.Body)
+	assert.NotEqual(t, successfulResponseString, string(body),
+		"mismatching body: expected NOT %s, got %s", successfulResponseString, string(body))
 }
