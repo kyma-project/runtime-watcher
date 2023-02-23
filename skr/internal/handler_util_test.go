@@ -135,8 +135,8 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 	return admissionReview, nil
 }
 
-func generateAdmissionRequestRawObject(objectName string, labels, annotations map[string]string, specOrStatusValue string,
-	changeObj ChangeObj,
+func generateAdmissionRequestRawObject(objectName string, labels, annotations map[string]string,
+	specOrStatusValue string, changeObj ChangeObj,
 ) ([]byte, error) {
 	objectWatched := &internal.ObjectWatched{
 		Metadata: internal.Metadata{

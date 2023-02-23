@@ -109,7 +109,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 			testCase.params.operation == admissionv1.Connect {
 			Expect(kcpRecorder.Code).To(BeEquivalentTo(http.StatusOK))
 			// no request was sent to KCP
-			Expect(len(kcpPayload)).To(Equal(0))
+			Expect(kcpPayload).To(BeEmpty())
 		} else {
 			Expect(err).ShouldNot(HaveOccurred())
 			watcherEvt := &listenerTypes.WatchEvent{}
