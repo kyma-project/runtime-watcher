@@ -124,29 +124,33 @@ func TestMiddleware(t *testing.T) {
 	const successfulResponseString = "SUCCESS"
 	handlerUnderTest := skrEventsListener.Middleware(
 		func(writer http.ResponseWriter, request *http.Request) {
-			writer.Write([]byte(successfulResponseString))
+			_, err := writer.Write([]byte(successfulResponseString))
+			if err != nil {
+				http.Error(writer, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		})
 	goodResponseRecorder := httptest.NewRecorder()
 	badResponseRecorder := httptest.NewRecorder()
 
 	// GIVEN
 	// 200 bytes
-	smallJsonFile, err := os.ReadFile("test_resources/small_size.json")
+	smallJSONFile, err := os.ReadFile("test_resources/small_size.json")
 	if err != nil {
 		t.Error(err)
 	}
 	// 32 KBs
-	largeJsonFile, err := os.ReadFile("test_resources/large_size.json")
+	largeJSONFile, err := os.ReadFile("test_resources/large_size.json")
 	if err != nil {
 		t.Error(err)
 	}
 
-	goodHttpRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(smallJsonFile))
-	badHttpRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(largeJsonFile))
+	goodHTTPRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(smallJSONFile))
+	badHTTPRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(largeJSONFile))
 
 	// WHEN
-	handlerUnderTest(goodResponseRecorder, goodHttpRequest)
-	handlerUnderTest(badResponseRecorder, badHttpRequest)
+	handlerUnderTest(goodResponseRecorder, goodHTTPRequest)
+	handlerUnderTest(badResponseRecorder, badHTTPRequest)
 
 	// THEN
 	resp := goodResponseRecorder.Result()
