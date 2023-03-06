@@ -25,6 +25,7 @@ linters:
     - unparam
     - wastedassign
     - exhaustruct
+    - musttag
 linters-settings:
   gci:
     sections:

@@ -50,9 +50,10 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			http.StatusBadRequest,
 		},
 	}
-	for _, testCase := range testCases { //nolint:paralleltest
-		t.Run(testCase.name, func(t *testing.T) {
+	for idx := range testCases { //nolint:paralleltest
+		t.Run(testCases[idx].name, func(t *testing.T) {
 			t.Parallel()
+			testCase := testCases[idx]
 			// GIVEN
 			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
 			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt)

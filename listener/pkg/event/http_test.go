@@ -112,6 +112,7 @@ func TestHandler(t *testing.T) {
 		assert.Equal(t, value, testEvt.evt.Object.(*unstructured.Unstructured).Object[key])
 	}
 }
+
 func TestMiddleware(t *testing.T) {
 	t.Parallel()
 	// SETUP
