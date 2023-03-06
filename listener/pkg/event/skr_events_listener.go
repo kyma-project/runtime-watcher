@@ -15,8 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const paramContractVersion = "1"
-const requestSizeLimitInBytes = 16384 // 16KB
+const (
+	paramContractVersion    = "1"
+	requestSizeLimitInBytes = 16384 // 16KB
+)
 
 func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
 	listener := NewSKREventListener(addr, componentName, verify)
