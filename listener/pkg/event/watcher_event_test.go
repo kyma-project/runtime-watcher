@@ -50,25 +50,24 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			http.StatusBadRequest,
 		},
 	}
-	for idx := range testCases { //nolint:paralleltest
-		t.Run(testCases[idx].name, func(t *testing.T) { //nolint:govet
+	for _, testCase := range testCases { //nolint:paralleltest
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			testCase := testCases[idx]
 			// GIVEN
-			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
+			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath) //nolint:govet
 			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt)
 			// WHEN
 			watcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
 			if err != nil {
-				require.Equal(t, testCase.errMsg, err.Message)
-				require.Equal(t, testCase.httpStatus, err.HTTPErrorCode)
+				require.Equal(t, testCase.errMsg, err.Message)           //nolint:govet
+				require.Equal(t, testCase.httpStatus, err.HTTPErrorCode) //nolint:govet
 				return
 			}
 			genericEvtObject := listenerEvent.GenericEvent(watcherEvent)
-			require.Equal(t, testCase.errMsg, "")
-			require.Equal(t, testCase.httpStatus, http.StatusOK)
-			testcasePayloadContent := listenerEvent.UnstructuredContent(testCase.payload)
+			require.Equal(t, testCase.errMsg, "")                                         //nolint:govet
+			require.Equal(t, testCase.httpStatus, http.StatusOK)                          //nolint:govet
+			testcasePayloadContent := listenerEvent.UnstructuredContent(testCase.payload) //nolint:govet
 			require.Equal(t, testcasePayloadContent, genericEvtObject.Object)
 		})
 	}
