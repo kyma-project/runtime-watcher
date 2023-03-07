@@ -51,7 +51,7 @@ func TestUnmarshalSKREvent(t *testing.T) {
 		},
 	}
 	for idx := range testCases { //nolint:paralleltest
-		t.Run(testCases[idx].name, func(t *testing.T) {
+		t.Run(testCases[idx].name, func(t *testing.T) { //nolint:govet
 			t.Parallel()
 			testCase := testCases[idx]
 			// GIVEN
