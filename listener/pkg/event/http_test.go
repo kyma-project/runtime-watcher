@@ -30,12 +30,9 @@ import (
 func newTestListener(addr, component string, log logr.Logger,
 	verify listenerEvent.Verify,
 ) *listenerEvent.SKREventListener {
-	return &listenerEvent.SKREventListener{
-		Addr:          addr,
-		Logger:        log,
-		ComponentName: component,
-		VerifyFunc:    verify,
-	}
+	listener := listenerEvent.NewSKREventListener(addr, component, verify)
+	listener.Logger = log
+	return listener
 }
 
 func setupLogger() logr.Logger {
@@ -48,7 +45,6 @@ func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.Wa
 	t.Helper()
 
 	var body io.Reader
-
 	if watcherEvent != nil {
 		jsonBody, err := json.Marshal(watcherEvent)
 		if err != nil {
@@ -92,7 +88,7 @@ func TestHandler(t *testing.T) {
 	go func() {
 		testEvt.mu.Lock()
 		defer testEvt.mu.Unlock()
-		testEvt.evt = <-skrEventsListener.GetReceivedEvents()
+		testEvt.evt = <-skrEventsListener.ReceivedEvents
 	}()
 
 	// WHEN

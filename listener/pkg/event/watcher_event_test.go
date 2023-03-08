@@ -18,11 +18,11 @@ import (
 const hostname = "http://localhost:8082"
 
 type unmarshalTestCase struct {
-	name       string
-	urlPath    string
-	payload    *types.WatchEvent
-	errMsg     string
-	httpStatus int
+	name          string
+	urlPath       string
+	expectedEvent *types.WatchEvent
+	errMsg        string
+	httpStatus    int
 }
 
 func TestUnmarshalSKREvent(t *testing.T) {
@@ -50,25 +50,25 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			http.StatusBadRequest,
 		},
 	}
-	for _, testCase := range testCases { //nolint:paralleltest
+	for idx := range testCases {
+		testCase := testCases[idx]
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
+			t.Logf("Testing %q for %q", testCase.name, testCase.urlPath)
 			// GIVEN
-			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath) //nolint:govet
+			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
 			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt)
 			// WHEN
-			watcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
+			currentWatcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
 			if err != nil {
-				require.Equal(t, testCase.errMsg, err.Message)           //nolint:govet
-				require.Equal(t, testCase.httpStatus, err.HTTPErrorCode) //nolint:govet
+				require.Equal(t, testCase.errMsg, err.Message)
+				require.Equal(t, testCase.httpStatus, err.HTTPErrorCode)
 				return
 			}
-			genericEvtObject := listenerEvent.GenericEvent(watcherEvent)
-			require.Equal(t, testCase.errMsg, "")                                         //nolint:govet
-			require.Equal(t, testCase.httpStatus, http.StatusOK)                          //nolint:govet
-			testcasePayloadContent := listenerEvent.UnstructuredContent(testCase.payload) //nolint:govet
-			require.Equal(t, testcasePayloadContent, genericEvtObject.Object)
+			require.Equal(t, testCase.errMsg, "")
+			require.Equal(t, testCase.httpStatus, http.StatusOK)
+			require.Equal(t, testCase.expectedEvent, currentWatcherEvent)
 		})
 	}
 }
