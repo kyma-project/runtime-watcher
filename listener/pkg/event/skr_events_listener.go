@@ -17,8 +17,8 @@ import (
 const paramContractVersion = "1"
 
 func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
-	eventSource := make(chan event.GenericEvent)
-	return NewSKREventListener(addr, componentName, verify, eventSource), &source.Channel{Source: eventSource}
+	listener := NewSKREventListener(addr, componentName, verify)
+	return listener, &source.Channel{Source: listener.ReceivedEvents}
 }
 
 // Verify is a function which is being called to verify an incomming request to the listener.
@@ -36,12 +36,11 @@ type SKREventListener struct {
 }
 
 func NewSKREventListener(addr, componentName string, verify Verify,
-	eventSource chan event.GenericEvent,
 ) *SKREventListener {
 	return &SKREventListener{
 		Addr:           addr,
 		ComponentName:  componentName,
-		ReceivedEvents: eventSource,
+		ReceivedEvents: make(chan event.GenericEvent),
 		VerifyFunc:     verify,
 	}
 }

@@ -29,8 +29,7 @@ import (
 func newTestListener(addr, component string, log logr.Logger,
 	verify listenerEvent.Verify,
 ) *listenerEvent.SKREventListener {
-	eventSource := make(chan event.GenericEvent)
-	listener := listenerEvent.NewSKREventListener(addr, component, verify, eventSource)
+	listener := listenerEvent.NewSKREventListener(addr, component, verify)
 	listener.Logger = log
 	return listener
 }
