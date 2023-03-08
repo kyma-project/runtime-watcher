@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,7 +31,7 @@ func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKRE
 	}, &source.Channel{Source: eventSource}
 }
 
-// Verify is a function which is being called to verify an incomming request to the listener.
+// Verify is a function which is being called to verify an incoming request to the listener.
 // If the verification fails an error should be returned and the request will be dropped,
 // otherwise it should return nil.
 // If no verification function is needed, a function which just returns nil can be used instead.
@@ -57,13 +58,12 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 	router := http.NewServeMux()
 
 	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.ComponentName)
-
-	router.HandleFunc(listenerPattern, l.Middleware(l.HandleSKREvent()))
+	router.HandleFunc(listenerPattern, l.RequestSizeLimitingMiddleware(l.HandleSKREvent()))
 
 	// start web server
 	const defaultTimeout = time.Second * 60
 	server := &http.Server{
-		Addr: l.Addr, Handler: router,
+		Addr: l.Addr, Handler: http.MaxBytesHandler(router, requestSizeLimitInBytes),
 		ReadHeaderTimeout: defaultTimeout, ReadTimeout: defaultTimeout,
 		WriteTimeout: defaultTimeout,
 	}
@@ -82,12 +82,12 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 	return server.Shutdown(ctx)
 }
 
-func (l *SKREventListener) Middleware(next http.HandlerFunc) http.HandlerFunc {
+func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		request.Body = http.MaxBytesReader(writer, request.Body, requestSizeLimitInBytes)
 		_, err := io.ReadAll(request.Body)
 
-		if request.ContentLength > requestSizeLimitInBytes || err != nil {
+		if request.ContentLength > requestSizeLimitInBytes ||
+			errors.Is(err, &http.MaxBytesError{Limit: requestSizeLimitInBytes}) {
 			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
 			l.Logger.Error(err, errorMessage)
 			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)

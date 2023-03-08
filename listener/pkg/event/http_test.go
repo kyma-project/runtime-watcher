@@ -123,14 +123,15 @@ func TestMiddleware(t *testing.T) {
 		})
 
 	const successfulResponseString = "SUCCESS"
-	handlerUnderTest := skrEventsListener.Middleware(
+	const requestSizeLimitInBytes = 16384 // 16KB
+	handlerUnderTest := http.MaxBytesHandler(skrEventsListener.RequestSizeLimitingMiddleware(
 		func(writer http.ResponseWriter, request *http.Request) {
 			_, err := writer.Write([]byte(successfulResponseString))
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 				return
 			}
-		})
+		}), requestSizeLimitInBytes)
 	goodResponseRecorder := httptest.NewRecorder()
 	badResponseRecorder := httptest.NewRecorder()
 
@@ -150,8 +151,8 @@ func TestMiddleware(t *testing.T) {
 	badHTTPRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(largeJSONFile))
 
 	// WHEN
-	handlerUnderTest(goodResponseRecorder, goodHTTPRequest)
-	handlerUnderTest(badResponseRecorder, badHTTPRequest)
+	handlerUnderTest.ServeHTTP(goodResponseRecorder, goodHTTPRequest)
+	handlerUnderTest.ServeHTTP(badResponseRecorder, badHTTPRequest)
 
 	// THEN
 	resp := goodResponseRecorder.Result()
