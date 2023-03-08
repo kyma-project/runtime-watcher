@@ -18,12 +18,7 @@ const paramContractVersion = "1"
 
 func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
 	eventSource := make(chan event.GenericEvent)
-	return &SKREventListener{
-		Addr:           addr,
-		ComponentName:  componentName,
-		receivedEvents: eventSource,
-		VerifyFunc:     verify,
-	}, &source.Channel{Source: eventSource}
+	return NewSKREventListener(addr, componentName, verify, eventSource), &source.Channel{Source: eventSource}
 }
 
 // Verify is a function which is being called to verify an incomming request to the listener.
@@ -36,15 +31,19 @@ type SKREventListener struct {
 	Addr           string
 	Logger         logr.Logger
 	ComponentName  string
-	receivedEvents chan event.GenericEvent
+	ReceivedEvents chan event.GenericEvent
 	VerifyFunc     Verify
 }
 
-func (l *SKREventListener) GetReceivedEvents() chan event.GenericEvent {
-	if l.receivedEvents == nil {
-		l.receivedEvents = make(chan event.GenericEvent)
+func NewSKREventListener(addr, componentName string, verify Verify,
+	eventSource chan event.GenericEvent,
+) *SKREventListener {
+	return &SKREventListener{
+		Addr:           addr,
+		ComponentName:  componentName,
+		ReceivedEvents: eventSource,
+		VerifyFunc:     verify,
 	}
-	return l.receivedEvents
 }
 
 func (l *SKREventListener) Start(ctx context.Context) error {
@@ -107,7 +106,7 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 
 		genericEvtObject := GenericEvent(watcherEvent)
 		// add event to the channel
-		l.receivedEvents <- event.GenericEvent{Object: genericEvtObject}
+		l.ReceivedEvents <- event.GenericEvent{Object: genericEvtObject}
 		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
 		writer.WriteHeader(http.StatusOK)
 	}

@@ -18,7 +18,7 @@ func main() {
 	logf.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{
 		Development: true,
 	})))
-	skrEvent, _ := event.RegisterListenerComponent(":8089", "example-listener",
+	skrListener, _ := event.RegisterListenerComponent(":8089", "example-listener",
 		func(r *http.Request, watcherEvtObject *types.WatchEvent) error {
 			return nil
 		})
@@ -26,7 +26,7 @@ func main() {
 	go func() {
 		for {
 			select {
-			case response := <-skrEvent.GetReceivedEvents():
+			case response := <-skrListener.ReceivedEvents:
 				logger.Info("watcher event received....")
 				logger.Info(fmt.Sprintf("%v", response.Object))
 			case <-ctx.Done():
@@ -36,7 +36,7 @@ func main() {
 		}
 	}()
 
-	if err := skrEvent.Start(ctx); err != nil {
+	if err := skrListener.Start(ctx); err != nil {
 		logger.Error(err, "cannot start listener")
 	}
 }
