@@ -1,7 +1,6 @@
 package event
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,7 +14,6 @@ import (
 
 const (
 	contentMapCapacity = 3
-	requestSizeLimit   = 16000
 )
 
 type UnmarshalError struct {
@@ -37,14 +35,11 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 		return nil, &UnmarshalError{"contract version cannot be empty", http.StatusBadRequest}
 	}
 
-	limitedReader := &io.LimitedReader{R: req.Body, N: requestSizeLimit}
-	body, err := io.ReadAll(limitedReader)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, &UnmarshalError{"could not read request body", http.StatusInternalServerError}
 	}
-
 	defer req.Body.Close()
-	req.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	watcherEvent := &types.WatchEvent{}
 	err = json.Unmarshal(body, watcherEvent)
