@@ -1,3 +1,4 @@
+//nolint:bodyclose
 package event_test
 
 import (
@@ -10,21 +11,18 @@ import (
 	"sync"
 	"testing"
 
-	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
-
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 )
 
 func newTestListener(addr, component string, log logr.Logger,

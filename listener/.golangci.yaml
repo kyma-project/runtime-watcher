@@ -1,38 +1,45 @@
 linters:
   enable-all: true
   disable:
-    - musttag
-    - exhaustivestruct
-    - golint
-    - interfacer
-    - maligned
-    - scopelint
-    - forcetypeassert
-    - godox
-    - wsl
-    - nlreturn
-    - exhaustruct
-    - gci # disable because autofix is not supported https://github.com/golangci/golangci-lint/issues/2591
-    - wrapcheck
-    - goerr113
-    - bodyclose
-    - contextcheck
-    - nilerr
-    - noctx
-    - rowserrcheck
-    - sqlclosecheck
-    - structcheck
-    - tparallel
-    - unparam
-    - wastedassign
-    - exhaustruct
-    - musttag
+    - contextcheck # too many false positives
+    - deadcode # deprecated (since v1.49.0) and replaced by 'unused'
+    - exhaustivestruct # deprecated (since v1.46.0) and replaced by 'exhaustruct'
+    - exhaustruct # TODO enable and fix, use regex to exclude certain cases
+    - forcetypeassert # TODO enable and fix
+    - gci # keep disabled for now since it will autofix all imports and result in a git dirty state
+    - godox # TODO enable and fix
+    - goerr113 # too strict
+    - golint # deprecated (since v1.41.0) and replaced by 'revive'
+    - ifshort # deprecated (since v1.48.0)
+    - interfacer # deprecated (since v1.38.0)
+    - ireturn # TODO enable and fix
+    - maligned # deprecated (since v1.38.0)
+    - nlreturn # too strict and mostly code is not more readable
+    - noctx # TODO enable and fix
+    - nosnakecase  # deprecated (since v1.48.1) and replaced by 'revive'
+    - scopelint # deprecated (since v1.39.0) and replaced by 'exportloopref'
+    - structcheck # deprecated (since v1.49.0) and replaced by 'unused'
+    - sqlclosecheck # not needed for this project
+    - varcheck # deprecated (since v1.49.0) and replaced by 'unused'
+    - wsl # too strict and mostly code is not more readable
+    - wrapcheck # TODO enable and fix
 linters-settings:
   gci:
     sections:
-      - standard # Captures all standard packages if they do not match another section.
-      - default # Contains all imports that could not be matched to another section type.
+      - standard
+      - default
       - prefix(github.com/kyma-project)
+  cyclop:
+    max-complexity: 15
+  ireturn:
+    allow:
+      - anon
+      - error
+      - empty
+      - stdlib
+      - Client
+      - record.EventRecorder
+      - client.Object
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
@@ -41,6 +48,6 @@ output:
   sort-results: true
 run:
   concurrency: 8
-  timeout: 5m
+  timeout: 3m
   skip-files:
     - zz_generated.deepcopy.go

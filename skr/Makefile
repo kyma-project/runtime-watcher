@@ -97,7 +97,7 @@ GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
-GOLANG_CI_LINT_VERSION ?= v1.51.2
+GOLANG_CI_LINT_VERSION ?= v1.52.2
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
@@ -107,4 +107,4 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: lint
 lint: ## Run golangci-lint against code.
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
-	$(LOCALBIN)/golangci-lint run
+	$(LOCALBIN)/golangci-lint -v run --timeout=10m

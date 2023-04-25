@@ -15,10 +15,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const timeout = time.Second * 3
@@ -78,6 +77,7 @@ func main() {
 		return
 	}
 	log.Println(response.Status)
+	_ = response.Body.Close()
 
 	event := types.WatchEvent{
 		Owner:      client.ObjectKey{Name: "example-owner", Namespace: "example-owner-ns"},
@@ -91,7 +91,7 @@ func main() {
 	}
 
 	// example listener
-	response, err = httpClient.Post(
+	resp, err := httpClient.Post(
 		"https://wat.j2fmn4e1n7.jellyfish.shoot.canary.k8s-hana.ondemand.com/v1/example-listener/event",
 		"application/json",
 		bytes.NewBuffer(eventBytes))
@@ -99,5 +99,6 @@ func main() {
 		log.Fatalf("%v", err)
 		return
 	}
+	defer resp.Body.Close()
 	log.Println(response.Status)
 }

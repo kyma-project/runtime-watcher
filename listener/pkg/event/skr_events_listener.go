@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
-
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 )
 
 const (

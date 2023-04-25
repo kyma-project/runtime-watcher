@@ -5,14 +5,12 @@ import (
 	"net/http"
 	"testing"
 
-	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
-
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/stretchr/testify/require"
+	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 )
 
 const hostname = "http://localhost:8082"
