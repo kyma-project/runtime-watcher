@@ -8,16 +8,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal"
-
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/google/uuid"
-
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	"github.com/kyma-project/runtime-watcher/skr/internal"
 )
 
 type ChangeObj string
