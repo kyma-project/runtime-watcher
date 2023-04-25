@@ -295,7 +295,12 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 	switch watchedSubResource {
 	// means watched on spec
 	case "":
-		registerChange = !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec)
+		if oldObjectWatched.Spec != nil && objectWatched.Spec != nil {
+			registerChange = !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec)
+		}
+		// object watched doesn't have spec field
+		// send request to kcp for all UPDATE events
+		registerChange = true
 	case StatusSubResource:
 		registerChange = !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
 	default:
@@ -356,7 +361,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 
 	resp, err := httpClient.Post(url, "application/json", requestPayload)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg)
+		h.Logger.Error(err, KcpReqFailedMsg, "payload", requestPayload)
 		return KcpReqFailedMsg
 	}
 	defer resp.Body.Close()
