@@ -112,6 +112,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Expect(kcpPayload).To(BeEmpty())
 		} else {
 			Expect(err).ShouldNot(HaveOccurred())
+			Expect(kcpPayload).NotTo(BeEmpty())
 			watcherEvt := &listenerTypes.WatchEvent{}
 			Expect(json.Unmarshal(kcpPayload, watcherEvt)).To(Succeed())
 			Expect(watcherEvt).To(Equal(

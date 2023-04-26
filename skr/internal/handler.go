@@ -297,10 +297,11 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 	case "":
 		if oldObjectWatched.Spec != nil && objectWatched.Spec != nil {
 			registerChange = !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec)
+		} else {
+			// object watched doesn't have spec field
+			// send request to kcp for all UPDATE events
+			registerChange = true
 		}
-		// object watched doesn't have spec field
-		// send request to kcp for all UPDATE events
-		registerChange = true
 	case StatusSubResource:
 		registerChange = !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
 	default:
