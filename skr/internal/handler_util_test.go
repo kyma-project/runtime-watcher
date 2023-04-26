@@ -40,11 +40,11 @@ var (
 		admissionv1.Update,
 		admissionv1.Create, admissionv1.Delete,
 	}
-	ChangeObjTypes = []ChangeObj{
+	ChangeObjTypes = []ChangeObj{ //nolint:gochecknoglobals
 		NoChange,
 		SpecChange,
 		StatusChange, NoSpecField,
-	} //nolint:gochecknoglobals
+	}
 )
 
 type CustomRouter struct {
@@ -159,10 +159,25 @@ func generateAdmissionRequestRawObject(objectName string, labels, annotations ma
 		Kind:       WatchedResourceKind,
 		APIVersion: WatchedResourceAPIVersion,
 	}
+
+	configuredObjectWatched := configureObjectWatched(objectWatched, isOldObject, changeObj)
+
+	rawObject, err := json.Marshal(configuredObjectWatched)
+	if err != nil {
+		return nil, err
+	}
+	return rawObject, nil
+}
+
+func configureObjectWatched(objectWatched *internal.ObjectWatched,
+	isOldObject bool, changeObj ChangeObj,
+) *internal.ObjectWatched {
 	if isOldObject {
 		switch changeObj {
 		case NoSpecField:
 			objectWatched.Spec = nil
+		case NoChange, SpecChange, StatusChange:
+			fallthrough
 		default:
 			objectWatched.Status[specOrStatusKey] = specOrStatusOldValue
 			objectWatched.Spec[specOrStatusKey] = specOrStatusOldValue
@@ -175,15 +190,12 @@ func generateAdmissionRequestRawObject(objectName string, labels, annotations ma
 			objectWatched.Status[specOrStatusKey] = specOrStatusNewValue
 		case NoSpecField:
 			objectWatched.Spec = nil
+		case NoChange:
+			fallthrough
 		default:
 			objectWatched.Status[specOrStatusKey] = specOrStatusOldValue
 			objectWatched.Spec[specOrStatusKey] = specOrStatusOldValue
 		}
 	}
-
-	rawObject, err := json.Marshal(objectWatched)
-	if err != nil {
-		return nil, err
-	}
-	return rawObject, nil
+	return objectWatched
 }
