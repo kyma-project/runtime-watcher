@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 )
 
 const (

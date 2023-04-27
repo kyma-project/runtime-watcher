@@ -7,16 +7,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
-	"github.com/kyma-project/runtime-watcher/skr/internal"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	"github.com/kyma-project/runtime-watcher/skr/internal"
 )
 
 type testCase struct {
