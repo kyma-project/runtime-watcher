@@ -55,9 +55,8 @@ func GenericEvent(watcherEvent *types.WatchEvent) *unstructured.Unstructured {
 	genericEvtObject := &unstructured.Unstructured{}
 	content := UnstructuredContent(watcherEvent)
 	genericEvtObject.SetUnstructuredContent(content)
-	genericEvtObject.SetName(watcherEvent.Owner.Name)
-	genericEvtObject.SetNamespace(watcherEvent.Owner.Namespace)
-
+	genericEvtObject.SetName(watcherEvent.Watched.Name)
+	genericEvtObject.SetNamespace(watcherEvent.Watched.Namespace)
 	return genericEvtObject
 }
 

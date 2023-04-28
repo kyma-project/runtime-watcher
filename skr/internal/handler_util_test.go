@@ -26,14 +26,23 @@ const (
 	SpecChange                ChangeObj = "spec"
 	StatusChange              ChangeObj = "status subresource"
 	NoChange                  ChangeObj = "no"
+	NoSpecField               ChangeObj = "spec field is empty"
+	specOrStatusKey                     = "key"
+	specOrStatusOldValue                = "oldValue"
+	specOrStatusNewValue                = "newValue"
 )
 
 var (
 	OperationsToTest = []admissionv1.Operation{ //nolint:gochecknoglobals
-		admissionv1.Connect, admissionv1.Update,
+		admissionv1.Connect,
+		admissionv1.Update,
 		admissionv1.Create, admissionv1.Delete,
 	}
-	ChangeObjTypes = []ChangeObj{NoChange, SpecChange, StatusChange} //nolint:gochecknoglobals
+	ChangeObjTypes = []ChangeObj{ //nolint:gochecknoglobals
+		NoChange,
+		SpecChange,
+		StatusChange, NoSpecField,
+	}
 )
 
 type CustomRouter struct {
@@ -115,7 +124,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 
 	if operation == admissionv1.Delete || operation == admissionv1.Update {
 		oldRawObject, err := generateAdmissionRequestRawObject(watchedName, labels, annotations,
-			"oldValue", changeObj)
+			true, changeObj)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +132,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 	}
 	if operation != admissionv1.Delete {
 		rawObject, err := generateAdmissionRequestRawObject(watchedName, labels, annotations,
-			"newValue", changeObj)
+			false, changeObj)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +143,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 }
 
 func generateAdmissionRequestRawObject(objectName string, labels, annotations map[string]string,
-	specOrStatusValue string, changeObj ChangeObj,
+	isOldObject bool, changeObj ChangeObj,
 ) ([]byte, error) {
 	objectWatched := &internal.ObjectWatched{
 		Metadata: internal.Metadata{
@@ -149,18 +158,42 @@ func generateAdmissionRequestRawObject(objectName string, labels, annotations ma
 		APIVersion: WatchedResourceAPIVersion,
 	}
 
-	switch changeObj {
-	case SpecChange:
-		objectWatched.Spec["someKey"] = specOrStatusValue
-	case StatusChange:
-		objectWatched.Status["someKey"] = specOrStatusValue
-	case NoChange:
-	}
+	configuredObjectWatched := configureObjectWatched(objectWatched, isOldObject, changeObj)
 
-	rawObject, err := json.Marshal(objectWatched)
+	rawObject, err := json.Marshal(configuredObjectWatched)
 	if err != nil {
 		return nil, err
 	}
-
 	return rawObject, nil
+}
+
+func configureObjectWatched(objectWatched *internal.ObjectWatched,
+	isOldObject bool, changeObj ChangeObj,
+) *internal.ObjectWatched {
+	if isOldObject {
+		switch changeObj {
+		case NoSpecField:
+			objectWatched.Spec = nil
+		case NoChange, SpecChange, StatusChange:
+			fallthrough
+		default:
+			objectWatched.Status[specOrStatusKey] = specOrStatusOldValue
+			objectWatched.Spec[specOrStatusKey] = specOrStatusOldValue
+		}
+	} else {
+		switch changeObj {
+		case SpecChange:
+			objectWatched.Spec[specOrStatusKey] = specOrStatusNewValue
+		case StatusChange:
+			objectWatched.Status[specOrStatusKey] = specOrStatusNewValue
+		case NoSpecField:
+			objectWatched.Spec = nil
+		case NoChange:
+			fallthrough
+		default:
+			objectWatched.Status[specOrStatusKey] = specOrStatusOldValue
+			objectWatched.Spec[specOrStatusKey] = specOrStatusOldValue
+		}
+	}
+	return objectWatched
 }
