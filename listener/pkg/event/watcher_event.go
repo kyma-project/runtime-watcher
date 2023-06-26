@@ -45,7 +45,7 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	watcherEvent := &types.WatchEvent{}
 	err = json.Unmarshal(body, watcherEvent)
 	if err != nil {
-		return nil, &UnmarshalError{"could not unmarshal watcher event", http.StatusInternalServerError}
+		return nil, &UnmarshalError{fmt.Sprintf("could not unmarshal watcher event: Body %s", body), http.StatusInternalServerError}
 	}
 
 	return watcherEvent, nil
