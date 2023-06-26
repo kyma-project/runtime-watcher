@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.3.0
-	github.com/kyma-project/runtime-watcher/listener v0.0.0-20230131092109-31657012720d
+	github.com/kyma-project/runtime-watcher/listener v0.0.0-20230619090337-a68fd69e7295
 	github.com/onsi/ginkgo/v2 v2.8.3
 	github.com/onsi/gomega v1.27.1
 	k8s.io/api v0.26.1
