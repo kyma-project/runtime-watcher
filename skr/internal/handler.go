@@ -360,12 +360,13 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 
 	resp, err := httpClient.Post(url, "application/json", requestPayload)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg, "payload", requestPayload)
+		h.Logger.Error(err, KcpReqFailedMsg, "postBody", postBody)
 		return KcpReqFailedMsg
 	}
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
+		h.Logger.Error(err, KcpReqFailedMsg, "postBody", postBody)
 		h.Logger.Error(err, fmt.Sprintf("responseBody: %s with StatusCode: %d", responseBody, resp.StatusCode))
 		return KcpReqFailedMsg
 	}
@@ -452,6 +453,6 @@ func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 	}
 
 	url := fmt.Sprintf("%s://%s", protocol, uri)
-	h.Logger.Info("KCP", "url", url)
+	h.Logger.Info("KCP Address", "url", url)
 	return httpClient, url, nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -82,12 +81,10 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 
 func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		_, err := io.ReadAll(request.Body)
 
-		if request.ContentLength > requestSizeLimitInBytes ||
-			errors.Is(err, &http.MaxBytesError{Limit: requestSizeLimitInBytes}) {
+		if request.ContentLength > requestSizeLimitInBytes {
 			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
-			l.Logger.Error(err, errorMessage)
+			l.Logger.Error(errors.New("requestSizeExceeded"), errorMessage)
 			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)
 			return
 		}
