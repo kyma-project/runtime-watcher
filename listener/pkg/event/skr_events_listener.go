@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -83,6 +84,7 @@ func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) 
 
 		if request.ContentLength > requestSizeLimitInBytes {
 			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
+			l.Logger.Error(errors.New("requestSizeExceeded"), errorMessage)
 			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)
 			return
 		}
