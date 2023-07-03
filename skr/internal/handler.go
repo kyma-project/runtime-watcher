@@ -360,19 +360,19 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 
 	resp, err := httpClient.Post(url, "application/json", requestPayload)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg, "postBody", postBody)
+		h.Logger.Error(err, KcpReqFailedMsg, "postBody", watcherEvent)
 		return KcpReqFailedMsg
 	}
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		h.Logger.Error(err, KcpReqFailedMsg, "postBody", postBody)
+		h.Logger.Error(err, KcpReqFailedMsg, "postBody", watcherEvent)
 		h.Logger.Error(err, fmt.Sprintf("responseBody: %s with StatusCode: %d", responseBody, resp.StatusCode))
 		return KcpReqFailedMsg
 	}
 
 	h.Logger.Info(fmt.Sprintf("sent request to KCP successfully for resource %s/%s",
-		watched.Namespace, watched.Name), "postBody", postBody)
+		watched.Namespace, watched.Name), "postBody", watcherEvent)
 	return KcpReqSucceededMsg
 }
 
