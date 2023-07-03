@@ -372,7 +372,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	}
 
 	h.Logger.Info(fmt.Sprintf("sent request to KCP successfully for resource %s/%s",
-		watched.Namespace, watched.Name))
+		watched.Namespace, watched.Name), "postBody", postBody)
 	return KcpReqSucceededMsg
 }
 
