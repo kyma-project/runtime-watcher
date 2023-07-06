@@ -1,0 +1,8 @@
+module-name: runtime-watcher
+protecode:
+  - europe-docker.pkg.dev/kyma-project/prod/runtime-watcher-skr:latest
+whitesource:
+  language: golang-mod
+  exclude:
+    - "**/*_test.go"
+  subprojects: false
