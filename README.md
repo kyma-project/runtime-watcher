@@ -1,22 +1,8 @@
 
-# Runtime-Watcher (PoC)
+# Runtime Watcher
 
-## Components
+## Overview
 
-* [kcp-watcher](https://github.com/kyma-project/lifecycle-manager/blob/main/operator/api/v1alpha1/watcher_types.go)
-  
-    Responsible for reconciling _WatcherCRs_. Based on this reconciliation resources of [skr-watcher](./skr) are configured for all available SKRs.
+Runtime Watcher is ... deployed by [Lifecycle Manager](https://github.com/kyma-project/lifecycle-manager). Runtime Watcher runs on a Kyma clutser and observes changes in the Module Catalog and Component Manager. Runtime Wtahcer uses certificates for communication with...
 
-
-* [skr-watcher](./skr)
-  
-    Watches configured resources by labels mentioned as part of _ValidatingWebhookConfiguration_. There is one configuration for each _WatcherCR_ present in KCP.
-
-
-* [listener](./listener)
-
-    Utility for KCP operators to start a listener on the provided port and listen on the returned channel.
-    
-
-<img src="./docs/assets/runtime-watcher.svg" width="1000">
-
+For further details on Runtime's Watcher architecture. see the [Architecture](./docs/01-architecture.md) document.
