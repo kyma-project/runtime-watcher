@@ -7,5 +7,8 @@
 # These are the default owners for the whole content of the `runtime-watcher` repository. The default owners are automatically added as reviewers when you open a pull request unless different owners are specified in the file.
 * @kyma-project/jellyfish
 
+# All files and subdirectories in /docs
+/docs @kyma-project/technical-writers
+
 # Owners of all .md files in the repository
 *.md @kyma-project/technical-writers
