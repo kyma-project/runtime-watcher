@@ -1,3 +1,4 @@
+//nolint:gochecknoglobals
 package internal_test
 
 import (
@@ -36,7 +37,8 @@ type testCaseParams struct {
 	changeObjType ChangeObj
 }
 
-//nolint:gochecknoglobals
+const ownerName = "ownerName"
+
 var baseTestCase = testCase{
 	params: testCaseParams{
 		operation:   admissionv1.Create,
@@ -45,7 +47,7 @@ var baseTestCase = testCase{
 		ownerName:   ownerName,
 	},
 	results: testCaseResults{
-		resultMsg:    internal.KcpReqSucceededMsg,
+		resultMsg:    internal.kcpReqSucceededMsg,
 		resultStatus: metav1.StatusSuccess,
 	},
 }
@@ -86,8 +88,17 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Client: k8sClient,
 			Logger: ctrl.Log.WithName("skr-watcher-test"),
 		}
-		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
-			testCase.params.moduleName, managedbyLabel, ownedbyAnnotation, testCase.params.changeObjType)
+		ownedByAnnotation := map[string]string{"operator.kyma-project.io/owned-by": "default/ownerName"}
+		managedByLabel := map[string]string{"operator.kyma-project.io/managed-by": "lifecycle-manager"}
+		request, err := GetAdmissionHTTPRequest(
+			testCase.params.operation,
+			testCase.params.watchedName,
+			testCase.params.moduleName,
+			managedByLabel,
+			ownedByAnnotation,
+			testCase.params.changeObjType,
+		)
+
 		Expect(err).ShouldNot(HaveOccurred())
 		skrRecorder := httptest.NewRecorder()
 		handler.Handle(skrRecorder, request)
