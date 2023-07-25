@@ -9,7 +9,9 @@ The main function of the Runtime Watcher is to reduce Lifecycle Manager's worklo
 
 Runtime Watcher also allows to requeue other custom resources, config maps with specific labels, or Secrets in KCP. It could watch changes corresponding to **spec**, or **status** of specified Group Version Kind. <!--TBD: Tutorial how to set up that-->
 
-The workflow of Runtime Watcher consists of the following elements:
+## Components
+
+The workflow of Runtime Watcher includes the following main components:
 
 - Watcher custom resource (CR)
 - Runtime Watcher
