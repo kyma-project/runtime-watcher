@@ -5,9 +5,9 @@
 
 Runtime Watcher is a validation webhook deployed by [Lifecycle Manager](https://github.com/kyma-project/lifecycle-manager) on a Kyma cluster. It watches changes on the resources configured in Watcher custom resources (CRs) in Kyma Control Plane (KCP).
 
-The main function of the Runtime Watcher is to reduce Lifecycle Manager's workload which results in a longer success-requeue-interval. With Runtime Watcher enabled, Kyma CRs should get requeued and reconciled only when a Kyma CR spec changes on a Kyma cluster.
+The main Kyma use case for the Runtime Watcher is to reduce Lifecycle Manager's workload which results in a longer success-requeue-interval. With Runtime Watcher enabled and a Watcher CR properly configured, Kyma CRs should get requeued and reconciled only when a Kyma CR spec changes on a Kyma cluster.
 
-Runtime Watcher also allows to requeue other custom resources, config maps with specific labels, or Secrets in KCP. It could watch changes corresponding to **spec**, or **status** of specified Group Version Kind. <!--TBD: Tutorial how to set up that-->
+Runtime Watcher is able to watch any kind of resoucres and subresources. It can also watch on status amd spec changes of those different resources.
 
 ## Components
 
