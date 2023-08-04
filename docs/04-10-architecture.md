@@ -3,6 +3,8 @@
 ## Overview
 
 The workflow of Runtime Watcher uses the Watcher CR, Runtime Watcher and listener package.
+The following diagram presents Runtime Watcher's workflow.
+![Runtime Watcher architecture](./assets/runtime_watcher_architecture_simplified.svg)
 
 ### Watcher CR
 
@@ -26,22 +28,9 @@ The Listener package is designed to streamline the process of establishing an en
 
 #### Subject Alternative Name (SAN) pinning
 
-SAN pinning is an example of a validation function given to the listener pacakage. At least one SAN of the request certificate needs to match the domain specified in the Kyma CR. For that reason, the certificate of an incoming request to Gateway needs to be forwarded to Lifecycle Manager.
-
-> **NOTE:** The listener package is temporarily part of the Runtime Watcher repository but it will be moved to the Lifecycle Manager repository.
+[SAN pinning](https://github.com/kyma-project/lifecycle-manager/blob/c1e06b7b973aca17cc715b6a4660b76f4e7b9e29/pkg/security/san_pinning.go#L55) is an example implementation of a validation function given to the listener package, and is used in the KLM. The given `Verify` function checks if the certificate of the incoming watcher event request has at least one matching SAN with the domain of the corresponding Kyma CR. The domain of a Kyma CR is saved in an annotation which is called `skr-domain`.
 
 ### Certificates
+Since it is required to have a mTLS connection from the Kyma cluster to the KCP Gateway, signed TLS certificates are needed for the KCP Gateway as well as for each Kyma cluster. Considering the fact that we do not want to rely on third parties in our infrastructure, we are building our own `Public Key Infrastructure`(PKI) by [bootstraping a selfsigned CA issuer](https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers). To build this, we are going to leverage the function of the [Cert-Manager](https://cert-manager.io/). 
 
-## Workflow
-
-The diagram presents Runtime Watcher's workflow.
-
-![Runtime Watcher architecture](./assets/runtime_watcher_architecture_simplified.svg)
-
-KCP environment includes multiple Watcher CRs that are reconciled by Lifecycle Manager. It means that Lifecycle Manager configures VirtualServices on KCP. <!--TBD: update the diagram to multiply the VirtualService-->
-
-Istio Gateway is static and the Lifecycle Manager service is attached to the Lifecycle Manager deployment. VirtualServices are configured dynamically by Watcher CRs.
-
-Runtime Watcher and certificates <!--TBD: or certificate Secret--> are installed in every Kyma reconciliation in a Kyma runtime.
-
-Certificate Secret includes CA certificate, TLS certificate, and TLS key saved as a Secret and stored in KCP. All of those  are copied to the corresponding Kyma cluster during reconciliation. Lifecycle Manager creates the certificates using [cert-manager](https://github.com/cert-manager/cert-manager) and its self-signed feature. The solution requires Cluster Issuer and Issuer in the `istio-system` Namespace. Cluster Issuer issues a RootCACert. Issuer creates and signs all Kyma certificates using the CA certificate.
+In each Kyma reconciliation loop, the KLM will create or update a [Certificate CR](https://cert-manager.io/docs/concepts/certificate/) for the Kyma CR. This certificate CR will then be signed by a deployed [Issuer](https://cert-manager.io/docs/concepts/issuer/#supported-issuers), which will request the Cert-Manager to create a signed certificate. This certificate will then be stored in a secret on KCP and copied over to the corresponding Kyma cluster when the Runtime Watcher is being deployed. The secret includes the CA certificate, a TLS certificate, and a TLS key.
