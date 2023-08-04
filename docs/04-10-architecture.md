@@ -4,6 +4,7 @@
 
 The workflow of Runtime Watcher uses the Watcher CR, Runtime Watcher and listener package.
 The following diagram presents Runtime Watcher's workflow.
+
 ![Runtime Watcher architecture](./assets/runtime_watcher_architecture_simplified.svg)
 
 ### Watcher CR
