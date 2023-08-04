@@ -26,6 +26,8 @@ Runtime Watcher is configured and deployed on a Kyma cluster in the Kyma reconci
 
 The Listener package is designed to streamline the process of establishing an endpoint for an operator (located within KCP). This operator intends to receive Watcher Events that are transmitted from the Runtime Watcher to the KCP. When calling the `RegisterListenerComponent` function, it returns you a runnable Listener, which should be added to your reconile-manager, and a channel. Example use in the KLM can be found [here](https://github.com/kyma-project/lifecycle-manager/blob/24d21bb642ceaf9dadffe7732bf7c3f70c085ffb/controllers/manifest_controller.go#L43-L50). The channel is then the source the operator should mainly deal with, i.e. it can fetch the incoming watch events from the channel and requeue the corresponding resource in the reconcile loop. Furthermore, it is possible to provide a validation function to the `RegisterListenerComponent` which can be used to already filter out not needed request before processing them further. An example for a verify-function is the SAN pinning, described in the next section.
 
+To learn how to setup the listener, have a look [here](./Listener.md)
+
 #### Subject Alternative Name (SAN) pinning
 
 [SAN pinning](https://github.com/kyma-project/lifecycle-manager/blob/c1e06b7b973aca17cc715b6a4660b76f4e7b9e29/pkg/security/san_pinning.go#L55) is an example implementation of a validation function given to the listener package, and is used in the KLM. The given `Verify` function checks if the certificate of the incoming watcher event request has at least one matching SAN with the domain of the corresponding Kyma CR. The domain of a Kyma CR is saved in an annotation which is called `skr-domain`.
