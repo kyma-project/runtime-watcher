@@ -3,37 +3,39 @@
 ## Overview
 
 The workflow of Runtime Watcher uses the Watcher CR, Runtime Watcher and listener package.
-
-### Watcher CR
-
-The Watcher CR configures Kyma Control Plane (KCP) setup and Runtime Watcher on Kyma runtimes. You can have multiple Watcher CRs configured.
-
-### Runtime Watcher
-
-Runtime Watcher consists of a validation webhook, configured by Watcher CRs, and its deployment. The validation webhook is a resource that watches configured resources and sends validation requests to the attached deployment. The deployment sends requests to KCP.
-
-Runtime Watcher is configured and deployed on a Kyma cluster in Kyma reconciliation loop.
-
-### Listener package
-
-The listener package registers an endpoint to the received events, such as functions or example usage, and provides an event channel to listen to. You can also provide your own validation function to the listener package.
-
-#### Subject Alternative Name (SAN) pinning
-
-SAN pinning is an example of a validation function given to the listener pacakage. At least one SAN of the request certificate needs to match the domain specified in the Kyma CR. For that reason, the certificate of an incoming request to Gateway needs to be forwarded to Lifecycle Manager.
-
-> **NOTE:** The listener package is temporarily part of the Runtime Watcher repository but it will be moved to the Lifecycle Manager repository.
-
-## Workflow
-
-The diagram presents Runtime Watcher's workflow.
+The following diagram presents Runtime Watcher's workflow.
 
 ![Runtime Watcher architecture](./assets/runtime_watcher_architecture_simplified.svg)
 
-KCP environment includes multiple Watcher CRs that are reconciled by Lifecycle Manager. It means that Lifecycle Manager configures VirtualServices on KCP. <!--TBD: update the diagram to multiply the VirtualService-->
+### Watcher CR
 
-Istio Gateway is static and the Lifecycle Manager service is attached to the Lifecycle Manager deployment. VirtualServices are configured dynamically by Watcher CRs.
+The Watcher CR's main purpose is to:
+- configure the KCP landscape,
+- configure Runtime Watcher in Kyma clusters.
 
-Runtime Watcher and certificates <!--TBD: or certificate Secret--> are installed in every Kyma reconciliation in a Kyma runtime.
+To configure Virtual Services in KCP, Lifecycle Manager uses the `spec.gateway` and `spec.serviceinfo` fields, and the `operator.kyma-project.io/managed-by` label from each Watcher CR. Each Watcher CR owns one Virtual Service. If Runtime Watcher's configuration changes or the Watcher CR is deleted, Lifecycle Manager re-configures the corresponding Virtual Service or deletes it as well. This mechanism is implemented in its own [reconcile loop](https://github.com/kyma-project/lifecycle-manager/blob/4cb423780633afe7805d26d624c22a6f51943492/controllers/watcher_controller.go#L74).
 
-Certificate Secret includes CA certificate, TLS certificate, and TLS key saved as a Secret and stored in KCP. All of those  are copied to the corresponding Kyma cluster during reconciliation. Lifecycle Manager creates the certificates using [cert-manager](https://github.com/cert-manager/cert-manager) and its self-signed feature. The solution requires Cluster Issuer and Issuer in the `istio-system` Namespace. Cluster Issuer issues a RootCACert. Issuer creates and signs all Kyma certificates using the CA certificate.
+Runtime Watcher is configured during the reconciliation of a Kyma CR. This means, during each reconciliation of a Kyma CR all Watcher CRs are fetched, and one `ValidationWebhookConfiguration` using the `spec.LabelsToWatch`, `spec.ResourceToWatch`, and `spec.Field` from all Watcher CRs is created. The configuration includes one webhook per each Watcher CR. The validation webhook configuration is applied to the Kyma cluster as a part of Runtime Watcher.
+
+
+
+### Runtime Watcher
+
+Runtime Watcher consists of `ValidationWebhookConfiguration` configured by Watcher CRs, an attached deployment, and a Secret holding a TLS certificate. The ValidationWebhookConfiguration is a resource that watches configured resources and sends validation requests to the attached deployment. Instead of validating the received requests, the deployment converts the validation requests into [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/de040bddeba1a7875e3a0e626db4634134971022/listener/pkg/types/event.go#L8), which is sent to KCP using a secured mTLS connection. To establish a secured mTLS connection from a Kyma cluster to KCP, it uses the TLS certificate stored inside a Secret. Go to [certificates](###certificates), to see how this Secret is created.
+
+Runtime Watcher is configured and deployed in a Kyma cluster in the Kyma reconciliation loop.
+
+### Listener package
+
+The Listener package is designed to streamline the process of establishing an endpoint for an operator located in KCP. This operator intends to receive Watcher Events that are transmitted from Runtime Watcher to KCP. When calling the `RegisterListenerComponent` function, it returns you a runnable listener, which should be added to your reconile-manager, and a channel. See this [example of how the listener package is used in Lifecycle Manager](https://github.com/kyma-project/lifecycle-manager/blob/24d21bb642ceaf9dadffe7732bf7c3f70c085ffb/controllers/manifest_controller.go#L43-L50). The channel becomes the source for the operator. For example, the operator can fetch the incoming WatchEvents from the channel and requeue the corresponding resource in the reconcile loop. Furthermore, it is possible to provide a validation function to the `RegisterListenerComponent` which can be used to filter out not needed requests before processing them further. An example of the validation function is SAN pinning.
+
+To learn how to set up a listener, read the [Listener document](./Listener.md).
+
+#### Subject Alternative Name (SAN) pinning
+
+[SAN pinning](https://github.com/kyma-project/lifecycle-manager/blob/c1e06b7b973aca17cc715b6a4660b76f4e7b9e29/pkg/security/san_pinning.go#L55) is an example implementation of a validation function given to the listener package. SAN pinning is used in Lifecycle Manager. The validation function checks if the certificate of the incoming WatchEvent request has at least one matching SAN with the domain of the corresponding Kyma CR. The domain of a Kyma CR is saved in an annotation called `skr-domain`.
+
+### Certificates
+Since it is required to have an mTLS connection from the Kyma cluster to the KCP Gateway, signed TLS certificates are needed for both the KCP Gateway and each Kyma cluster. In order not to rely on third parties in the infrastructure, we build the `Public Key Infrastructure`(PKI) by [bootstraping a self-signed CA issuer](https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers). The PKI uses the function of the [Cert-Manager](https://cert-manager.io/). 
+
+In each Kyma reconciliation loop, Lifecycle Manager creates or updates a [Certificate CR](https://cert-manager.io/docs/concepts/certificate/) for the Kyma CR. The Certificate CR is signed by a deployed [Issuer](https://cert-manager.io/docs/concepts/issuer/#supported-issuers), which requests the Cert-Manager to create a signed certificate. This certificate is stored in a Secret in KCP and copied over to the corresponding Kyma cluster when Runtime Watcher is deployed. The Secret includes the CA certificate, a TLS certificate, and a TLS key.
