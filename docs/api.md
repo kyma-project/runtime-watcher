@@ -53,7 +53,7 @@ spec:
 
 ### **spec.gateway**
 
-Defines the label selector of a Gateway to which the VirtualService should bind to.
+Defines to which label selector of a Gateway the VirtualService binds.
 
 ```yaml
 spec:
