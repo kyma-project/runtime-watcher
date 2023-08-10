@@ -74,7 +74,7 @@ coverage.out
 
 # Ignore backup files
 *.bak
-
+*.bkp
 out.txt
 
 # ignore workspace sub-directory
@@ -82,7 +82,7 @@ out.txt
 
 # ignore vscode delve debug binary
 */__debug_bin
-skr/bin/**
+runtime-watcher/bin/**
 kcp/bin/**
 
 # rendered webhook configuration during test execution
