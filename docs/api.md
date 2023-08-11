@@ -42,7 +42,7 @@ It uses either the `spec` or `status` value to define if Runtime Watcher sends a
 
 ### **spec.serviceInfo**
 
-Specifies the name and Namespace, as well as the port, the incoming events are routed to.
+Specifies to which name, Namespace, and port the incoming events are routed.
 
 ```yaml
 spec:
