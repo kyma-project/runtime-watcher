@@ -1,3 +1,4 @@
+[![REUSE status](https://api.reuse.software/badge/github.com/kyma-project/runtime-watcher)](https://api.reuse.software/info/github.com/kyma-project/runtime-watcher)
 
 # Runtime-Watcher (PoC)
 
