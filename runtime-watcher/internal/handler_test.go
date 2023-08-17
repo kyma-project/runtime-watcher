@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"net/http"
 	"net/http/httptest"
 
@@ -83,8 +85,9 @@ var _ = Describe("given watched resource", Ordered, func() {
 	})
 	DescribeTable("should validate admission request and send correct payload to KCP", func(testCase *testCase) {
 		handler := &internal.Handler{
-			Client: k8sClient,
-			Logger: ctrl.Log.WithName("skr-watcher-test"),
+			Client:       k8sClient,
+			Logger:       ctrl.Log.WithName("skr-watcher-test"),
+			Deserializer: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 		}
 		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
 			testCase.params.moduleName, managedbyLabel, ownedbyAnnotation, testCase.params.changeObjType)
@@ -96,7 +99,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 		admissionReview := admissionv1.AdmissionReview{}
 		bytes, err := io.ReadAll(skrRecorder.Body)
 		Expect(err).ShouldNot(HaveOccurred())
-		_, _, err = internal.UniversalDeserializer.Decode(bytes, nil, &admissionReview)
+		_, _, err = handler.Deserializer.Decode(bytes, nil, &admissionReview)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(admissionReview.Response.Allowed).To(BeTrue())
 		Expect(admissionReview.Response.Result.Message).To(Equal(testCase.results.resultMsg))
