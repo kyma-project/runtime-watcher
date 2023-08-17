@@ -44,7 +44,6 @@ type ServerParameters struct {
 	CACert      string // CA key used to sign the certificate
 	TLSCert     string // path to TLS certificate for https
 	TLSKey      string // path to TLS key matching for certificate
-	TLSServer   bool   // indicates if an HTTPS server should be created
 	TLSCallback bool   // indicates if KCP accepts HTTP or HTTPS requests
 }
 
