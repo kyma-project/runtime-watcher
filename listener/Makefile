@@ -8,7 +8,7 @@ IMG := $(IMG_NAME):$(DOCKER_TAG)
 GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-GOLANG_CI_LINT_VERSION ?= v1.52.2
+GOLANG_CI_LINT_VERSION ?= v1.54.1
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -51,7 +51,7 @@ fmt: ## Run go fmt against code.
 .PHONY: lint
 lint: ## Run golangci-lint against code.
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
-	$(LOCALBIN)/golangci-lint -v run --timeout=10m
+	$(LOCALBIN)/golangci-lint run -v -c .golangci.yaml
 
 .PHONY: docker-build
 docker-build: ## Build docker image for sample-listener.
