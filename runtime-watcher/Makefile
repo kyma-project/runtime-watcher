@@ -61,7 +61,7 @@ test: fmt vet envtest ## Run tests.
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build runtime-watcher binary.
+build: fmt vet ## Build runtime-watcher binary.
 	go build -o bin/webhook main.go
 
 .PHONY: run
