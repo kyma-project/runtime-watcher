@@ -19,6 +19,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"net/http"
 	"os"
 	"strconv"
@@ -94,9 +96,10 @@ func main() {
 	}
 
 	handler := &internal.Handler{
-		Client:     restClient,
-		Logger:     logger,
-		Parameters: params,
+		Client:       restClient,
+		Logger:       logger,
+		Parameters:   params,
+		Deserializer: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 	}
 	http.HandleFunc("/validate/", handler.Handle)
 
