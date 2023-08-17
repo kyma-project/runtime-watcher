@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"net/http"
 	"net/http/httptest"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
