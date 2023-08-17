@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 )
 
@@ -76,12 +76,15 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 	}()
 	<-ctx.Done()
 	l.Logger.Info("SKR events listener is shutting down: context got closed")
-	return server.Shutdown(ctx)
+	err := server.Shutdown(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to shutdown server: %w", err)
+	}
+	return nil
 }
 
 func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-
 		if request.ContentLength > requestSizeLimitInBytes {
 			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
 			l.Logger.Error(errors.New("requestSizeExceeded"), errorMessage)

@@ -3,9 +3,9 @@ linters:
   disable:
     - contextcheck # too many false positives
     - deadcode # deprecated (since v1.49.0) and replaced by 'unused'
+    - depguard # requires whitelisting imported pkgs
     - exhaustivestruct # deprecated (since v1.46.0) and replaced by 'exhaustruct'
     - exhaustruct # TODO enable and fix, use regex to exclude certain cases
-    - forcetypeassert # TODO enable and fix
     - gci # keep disabled for now since it will autofix all imports and result in a git dirty state
     - godox # TODO enable and fix
     - goerr113 # too strict
@@ -14,15 +14,17 @@ linters:
     - interfacer # deprecated (since v1.38.0)
     - ireturn # TODO enable and fix
     - maligned # deprecated (since v1.38.0)
+    - musttag # deprecated
     - nlreturn # too strict and mostly code is not more readable
     - noctx # TODO enable and fix
     - nosnakecase  # deprecated (since v1.48.1) and replaced by 'revive'
+    - rowserrcheck # deprecated
     - scopelint # deprecated (since v1.39.0) and replaced by 'exportloopref'
     - structcheck # deprecated (since v1.49.0) and replaced by 'unused'
     - sqlclosecheck # not needed for this project
     - varcheck # deprecated (since v1.49.0) and replaced by 'unused'
+    - wastedassign # deprecated
     - wsl # too strict and mostly code is not more readable
-    - wrapcheck # TODO enable and fix
 linters-settings:
   gci:
     sections:
@@ -30,24 +32,15 @@ linters-settings:
       - default
       - prefix(github.com/kyma-project)
   cyclop:
-    max-complexity: 15
-  ireturn:
-    allow:
-      - anon
-      - error
-      - empty
-      - stdlib
-      - Client
-      - record.EventRecorder
-      - client.Object
+    max-complexity: 20
 issues:
+  exclude-rules:
+    - path: "_test\\.go"
+      linters:
+        - wrapcheck
   max-issues-per-linter: 0
   max-same-issues: 0
-  fix: true
 output:
   sort-results: true
 run:
-  concurrency: 8
-  timeout: 3m
-  skip-files:
-    - zz_generated.deepcopy.go
+  timeout: 5m
