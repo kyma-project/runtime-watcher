@@ -22,7 +22,7 @@ The workflow of Runtime Watcher includes the following main components:
 The Runtime Watcher consists of multiple parts. First of all, it has a ValidationWebhookConfiguration with one or more webhooks which is re-used. Instead of its original use case, it is re-used to validate CRUD actions (creating, reading, updating, and deleting) on Kubernetes resources, for the general watch mechanism inside the SKR. These webhooks are configured by the Lifecycle Manager using the Watcher CRs. In addition, a deployment is attached to this webhook, which is the receiver for the validation requests. The deployment converts the validation requests into [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/de040bddeba1a7875e3a0e626db4634134971022/listener/pkg/types/event.go#L8), which are then sent to KCP using a secured mTLS connection. To establish the secured mTLS connection from a Kyma cluster to KCP, Lifecycle Manager deploys a Secret with a TLS certificate in each Kyma cluster.
 
 ### Listener package
-The [Listener package](https://github.com/kyma-project/runtime-watcher/tree/main/listener) simplifies setting up an endpoint for an operator residing in KCP, which receives WatchEvents sent by Runtime Watcher to KCP, see the [guide](./docs/Listener.md) how to use it.
+The [Listener package](https://github.com/kyma-project/runtime-watcher/tree/main/listener) simplifies setting up an endpoint for an operator residing in KCP, which receives WatchEvents sent by Runtime Watcher to KCP. Follow the [guide](./docs/Listener.md) to learn how to use it.
 
 ## Read more
 
