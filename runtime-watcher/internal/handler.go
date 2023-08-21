@@ -414,10 +414,9 @@ func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo 
 
 func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 	httpClient := http.Client{}
-	protocol := "http"
+	protocol := "https"
 
 	h.Logger.Info("will attempt to send an https request")
-	protocol = "https"
 
 	certificate, err := tls.LoadX509KeyPair(h.Parameters.TLSCert, h.Parameters.TLSKey)
 	if err != nil {
