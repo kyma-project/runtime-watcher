@@ -32,8 +32,7 @@ import (
 )
 
 const (
-	defaultPort           = 8443
-	defaultTLSEnabledMode = false
+	defaultPort = 8443
 )
 
 func flagError(flagName string) error {
@@ -52,38 +51,20 @@ func serverParams(logger logr.Logger) (internal.ServerParameters, error) {
 	}
 	parameters.Port = port
 
-	// tls server
-	tlsServerEnv := os.Getenv("TLS_SERVER")
-	parameters.TLSServer, err = strconv.ParseBool(tlsServerEnv)
-	if err != nil {
-		logger.V(1).Error(err, "failed parsing tls server flag")
-		parameters.TLSServer = defaultTLSEnabledMode
+	// CA cert
+	parameters.CACert = os.Getenv("CA_CERT")
+	if parameters.CACert == "" {
+		return parameters, flagError("CA_CERT")
 	}
-
-	// tls callback
-	tlsCallbackEnv := os.Getenv("TLS_CALLBACK")
-	parameters.TLSCallback, err = strconv.ParseBool(tlsCallbackEnv)
-	if err != nil {
-		logger.V(1).Error(err, "failed parsing tls callback flag")
-		parameters.TLSCallback = defaultTLSEnabledMode
+	// client cert
+	parameters.TLSCert = os.Getenv("TLS_CERT")
+	if parameters.TLSCert == "" {
+		return parameters, flagError("TLS_CERT")
 	}
-
-	if parameters.TLSServer || parameters.TLSCallback {
-		// CA cert
-		parameters.CACert = os.Getenv("CA_CERT")
-		if parameters.CACert == "" {
-			return parameters, flagError("CA_CERT")
-		}
-		// client cert
-		parameters.TLSCert = os.Getenv("TLS_CERT")
-		if parameters.TLSCert == "" {
-			return parameters, flagError("TLS_CERT")
-		}
-		// client key
-		parameters.TLSKey = os.Getenv("TLS_KEY")
-		if parameters.TLSKey == "" {
-			return parameters, flagError("TLS_KEY")
-		}
+	// client key
+	parameters.TLSKey = os.Getenv("TLS_KEY")
+	if parameters.TLSKey == "" {
+		return parameters, flagError("TLS_KEY")
 	}
 	return parameters, nil
 }
@@ -128,11 +109,8 @@ func main() {
 		ReadTimeout: internal.HTTPClientTimeout,
 	}
 	logger.Info("starting web server", "Port:", params.Port)
-	if params.TLSServer {
-		err = server.ListenAndServeTLS(params.TLSCert, params.TLSKey)
-	} else {
-		err = server.ListenAndServe()
-	}
+
+	err = server.ListenAndServeTLS(params.TLSCert, params.TLSKey)
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")
 		return
