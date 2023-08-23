@@ -350,6 +350,8 @@ github.com/kyma-project/runtime-watcher/listener v0.0.0-20230131092109-316570127
 github.com/kyma-project/runtime-watcher/listener v0.0.0-20230131092109-31657012720d/go.mod h1:KGeHsh0+joeAq7/0ssR6pj7G55gDC3y4CCvtZeofHOI=
 github.com/kyma-project/runtime-watcher/listener v0.0.0-20230619090337-a68fd69e7295 h1:eaLZBxvQcZNaeovL39EDG21nKSiiJ1o1ZJ3NQskz+Ik=
 github.com/kyma-project/runtime-watcher/listener v0.0.0-20230619090337-a68fd69e7295/go.mod h1:KGeHsh0+joeAq7/0ssR6pj7G55gDC3y4CCvtZeofHOI=
+github.com/madflojo/testcerts v1.1.0 h1:kopRnZB2jH1yKhC2d27+GVQLDy/fL9/65UrkpJkF4GA=
+github.com/madflojo/testcerts v1.1.0/go.mod h1:G+ucVds7Pj79qA9/ue9FygnXiBCm622IdzKWna621io=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
