@@ -8,74 +8,76 @@ import (
 
 const (
 	listenerRequestDuration            = "watcher_listener_request_duration"
-	listenerRequests                   = "watcher_listener_requests"
-	listenerRequestErrors              = "watcher_listener_request_error"
-	listenerInflightRequests           = "watcher_listener_inflight_requests"
-	listenerExceedingSizeLimitRequests = "watcher_listener_exceeding_size_limit_requests"
-	listenerFailedVerificationRequests = "watcher_listener_failed_verification_requests"
-	requestUriLabel                    = "request_uri_label"
+	listenerRequests                   = "watcher_listener_requests_total"
+	listenerRequestErrors              = "watcher_listener_request_errors_total"
+	listenerInflightRequests           = "watcher_listener_inflight_requests_total"
+	listenerExceedingSizeLimitRequests = "watcher_listener_exceeding_size_limit_requests_total"
+	listenerFailedVerificationRequests = "watcher_listener_failed_verification_requests_total"
+	requestURILabel                    = "request_uri_label"
 	listenerService                    = "listener_server"
+	serverNameLabel                    = "server_name"
 )
 
 var (
-	Registry                     prometheus.Registerer
+	registry                     prometheus.Registerer
 	httpRequestDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: listenerRequestDuration,
 		Help: "Indicates the latency of each request in seconds",
-	}, []string{requestUriLabel})
+	}, []string{serverNameLabel})
 	httpRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerRequests,
 		Help: "Indicates the number of requests",
-	}, []string{requestUriLabel})
+	}, []string{serverNameLabel})
 	httpRequestErrorsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerRequestErrors,
 		Help: "Indicates the number of failed requests",
-	}, []string{requestUriLabel})
+	}, []string{serverNameLabel})
 	httpInflightRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerInflightRequests,
 		Help: "Indicates the number of inflight requests",
-	}, []string{requestUriLabel})
+	}, []string{serverNameLabel})
 	httpRequestsExceedingSizeLimitCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerExceedingSizeLimitRequests,
 		Help: "Indicates the number of requests exceeding size limit",
-	}, []string{requestUriLabel})
+	}, []string{serverNameLabel})
 	httpFailedVerificationRequests = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerFailedVerificationRequests,
 		Help: "Indicates the number of requests that failed verification",
-	}, []string{requestUriLabel})
+	}, []string{serverNameLabel, requestURILabel})
 )
 
+//nolint:gochecknoinits
 func init() {
-	Registry.MustRegister(httpRequestDurationHistogram)
-	Registry.MustRegister(httpRequestsCounter)
-	Registry.MustRegister(httpRequestErrorsCounter)
-	Registry.MustRegister(httpInflightRequestsCounter)
-	Registry.MustRegister(httpRequestsExceedingSizeLimitCounter)
-	Registry.MustRegister(httpFailedVerificationRequests)
+	registry.MustRegister(httpRequestDurationHistogram)
+	registry.MustRegister(httpRequestsCounter)
+	registry.MustRegister(httpRequestErrorsCounter)
+	registry.MustRegister(httpInflightRequestsCounter)
+	registry.MustRegister(httpRequestsExceedingSizeLimitCounter)
+	registry.MustRegister(httpFailedVerificationRequests)
 }
 
 func UpdateMetrics(duration time.Duration) {
-	recordHttpRequestDuration(duration)
-	recordHttpRequests()
+	recordHTTPRequestDuration(duration)
+	recordHTTPRequests()
 }
 
-func recordHttpRequestDuration(duration time.Duration) {
+func recordHTTPRequestDuration(duration time.Duration) {
 	httpRequestDurationHistogram.WithLabelValues(listenerService).Observe(duration.Seconds())
 }
 
-func recordHttpRequests() {
+func recordHTTPRequests() {
 	httpRequestsCounter.WithLabelValues(listenerService).Inc()
 }
 
-func RecordHttpRequestErrors() {
+func RecordHTTPRequestErrors() {
 	httpRequestErrorsCounter.WithLabelValues(listenerService).Inc()
 }
 
-func RecordHttpInflightRequests(increaseBy float64) {
+func RecordHTTPInflightRequests(increaseBy float64) {
 	httpInflightRequestsCounter.WithLabelValues(listenerService).Add(increaseBy)
 }
 
-func RecordHttpRequestExceedingSizeLimit() {
+func RecordHTTPRequestExceedingSizeLimit() {
 	httpRequestsExceedingSizeLimitCounter.WithLabelValues(listenerService).Inc()
 }
 

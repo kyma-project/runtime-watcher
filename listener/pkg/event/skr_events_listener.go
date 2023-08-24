@@ -87,7 +87,7 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		if request.ContentLength > requestSizeLimitInBytes {
-			metrics.RecordHttpRequestExceedingSizeLimit()
+			metrics.RecordHTTPRequestExceedingSizeLimit()
 			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
 			l.Logger.Error(errors.New("requestSizeExceeded"), errorMessage)
 			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)
@@ -99,11 +99,11 @@ func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) 
 
 		duration := time.Since(start)
 		metrics.UpdateMetrics(duration)
-		metrics.RecordHttpInflightRequests(1)
+		metrics.RecordHTTPInflightRequests(1)
 		if request.Response.Status != strconv.Itoa(http.StatusOK) {
-			metrics.RecordHttpRequestErrors()
+			metrics.RecordHTTPRequestErrors()
 		}
-		defer metrics.RecordHttpInflightRequests(-1)
+		defer metrics.RecordHTTPInflightRequests(-1)
 	}
 }
 
