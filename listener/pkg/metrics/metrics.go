@@ -81,6 +81,6 @@ func RecordHTTPRequestExceedingSizeLimit() {
 	httpRequestsExceedingSizeLimitCounter.WithLabelValues(listenerService).Inc()
 }
 
-func RecordHTTPFailedVerificationRequests(requestUri string) {
-	httpFailedVerificationRequests.WithLabelValues(listenerService, requestUri).Inc()
+func RecordHTTPFailedVerificationRequests(requestURI string) {
+	httpFailedVerificationRequests.WithLabelValues(listenerService, requestURI).Inc()
 }
