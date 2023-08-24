@@ -19,8 +19,7 @@ const (
 )
 
 var (
-	registry prometheus.Registerer //nolint:gochecknoglobals
-	//nolint:gochecknoglobals
+	registry                     prometheus.Registerer                                  //nolint:gochecknoglobals
 	httpRequestDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{ //nolint:gochecknoglobals
 		Name: listenerRequestDuration,
 		Help: "Indicates the latency of each request in seconds",
