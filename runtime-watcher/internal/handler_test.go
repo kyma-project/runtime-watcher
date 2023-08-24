@@ -1,13 +1,14 @@
-package handler_test
+package internal_test
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"net/http"
 	"net/http/httptest"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -88,11 +89,6 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Client:       k8sClient,
 			Logger:       ctrl.Log.WithName("skr-watcher-test"),
 			Deserializer: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
-			Parameters: internal.ServerParameters{
-				CACert:  "/tmp/ca-cert",
-				TLSCert: "/tmp/cert",
-				TLSKey:  "/tmp/key",
-			},
 		}
 		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
 			testCase.params.moduleName, managedByLabel, ownedByAnnotation, testCase.params.changeObjType)
