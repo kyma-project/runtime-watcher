@@ -91,7 +91,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Deserializer: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 		}
 		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
-			testCase.params.moduleName, managedByLabel, ownedByAnnotation, testCase.params.changeObjType)
+			testCase.params.moduleName, managedbyLabel, ownedbyAnnotation, testCase.params.changeObjType)
 		Expect(err).ShouldNot(HaveOccurred())
 		skrRecorder := httptest.NewRecorder()
 		handler.Handle(skrRecorder, request)

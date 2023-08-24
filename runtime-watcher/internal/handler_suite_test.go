@@ -1,10 +1,8 @@
-//nolint:gochecknoglobals
 package internal_test
 
 import (
 	"context"
 	"fmt"
-	"github.com/madflojo/testcerts"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -27,19 +25,19 @@ func TestAPIs(t *testing.T) {
 }
 
 var (
-	ctx           context.Context
-	cancel        context.CancelFunc
-	kcpRecorder   *httptest.ResponseRecorder
-	kcpMockServer *httptest.Server
+	ctx           context.Context            //nolint:gochecknoglobals
+	cancel        context.CancelFunc         //nolint:gochecknoglobals
+	kcpRecorder   *httptest.ResponseRecorder //nolint:gochecknoglobals
+	kcpMockServer *httptest.Server           //nolint:gochecknoglobals
 
-	managedByLabel = map[string]string{
+	managedbyLabel = map[string]string{ //nolint:gochecknoglobals
 		internal.ManagedByLabel: "lifecycle-manager",
 	}
-	ownedByAnnotation = map[string]string{
+	ownedbyAnnotation = map[string]string{ //nolint:gochecknoglobals
 		internal.OwnedByAnnotation: fmt.Sprintf("%s/%s", metav1.NamespaceDefault, ownerName),
 	}
-	testEnv   *envtest.Environment
-	k8sClient client.Client
+	testEnv   *envtest.Environment //nolint:gochecknoglobals
+	k8sClient client.Client        //nolint:gochecknoglobals
 )
 
 const (
@@ -62,24 +60,14 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
+	Expect(err).NotTo(HaveOccurred())
+
 	k8sClient, err = client.New(cfg, client.Options{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
 	kcpTestHandler := BootStrapKcpMockHandlers(moduleName)
 	kcpRecorder = kcpTestHandler.Recorder
-
-	ca := testcerts.NewCA()
-	certs, err := ca.NewKeyPair("localhost")
-	Expect(err).NotTo(HaveOccurred())
-	certPath := "/tmp/cert"
-	err = os.Setenv("TLS_CERT", certPath)
-	Expect(err).ShouldNot(HaveOccurred())
-	keyPath := "/tmp/key"
-	err = os.Setenv("TLS_KEY", keyPath)
-	Expect(err).ShouldNot(HaveOccurred())
-	err = certs.ToFile(certPath, keyPath)
-	Expect(err).NotTo(HaveOccurred())
 
 	// start listener server
 	kcpMockServer = httptest.NewServer(kcpTestHandler)
