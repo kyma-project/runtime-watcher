@@ -129,7 +129,7 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 
 		// verify request
 		if err := l.VerifyFunc(req, watcherEvent); err != nil {
-			metrics.RecordHttpFailedVerificationRequests(req.RequestURI)
+			metrics.RecordHTTPFailedVerificationRequests(req.RequestURI)
 			l.Logger.Info("request could not be verified - Event will not be dispatched",
 				"error", err)
 			return
