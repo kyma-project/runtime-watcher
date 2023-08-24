@@ -400,19 +400,19 @@ func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 		return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
 	}
 	publicPemBlock, _ := pem.Decode(caCertBytes)
-	rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
-	if errParse != nil {
+	rootPubCrt, err := x509.ParseCertificate(publicPemBlock.Bytes)
+	if err != nil {
 		msg := "failed to parse public key"
 		return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
 	}
-	rootCertpool := x509.NewCertPool()
-	rootCertpool.AddCert(rootPubCrt)
+	rootCertPool := x509.NewCertPool()
+	rootCertPool.AddCert(rootPubCrt)
 
 	httpClient.Timeout = HTTPClientTimeout
 	//nolint:gosec
 	httpClient.Transport = &http.Transport{
 		TLSClientConfig: &tls.Config{
-			RootCAs:      rootCertpool,
+			RootCAs:      rootCertPool,
 			Certificates: []tls.Certificate{certificate},
 		},
 	}
