@@ -100,9 +100,11 @@ func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) 
 		duration := time.Since(start)
 		metrics.UpdateMetrics(duration)
 		metrics.RecordHTTPInflightRequests(1)
-		if request.Response.Status != strconv.Itoa(http.StatusOK) {
+
+		if request.Response != nil && request.Response.Status != strconv.Itoa(http.StatusOK) {
 			metrics.RecordHTTPRequestErrors()
 		}
+
 		defer metrics.RecordHTTPInflightRequests(-1)
 	}
 }

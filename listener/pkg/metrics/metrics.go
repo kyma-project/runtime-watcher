@@ -32,7 +32,7 @@ var (
 		Name: listenerRequestErrors,
 		Help: "Indicates the number of failed requests",
 	}, []string{serverNameLabel})
-	httpInflightRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
+	httpInflightRequestsGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{ //nolint:gochecknoglobals
 		Name: listenerInflightRequests,
 		Help: "Indicates the number of inflight requests",
 	}, []string{serverNameLabel})
@@ -51,7 +51,7 @@ func init() {
 	registry.MustRegister(httpRequestDurationHistogram)
 	registry.MustRegister(httpRequestsCounter)
 	registry.MustRegister(httpRequestErrorsCounter)
-	registry.MustRegister(httpInflightRequestsCounter)
+	registry.MustRegister(httpInflightRequestsGauge)
 	registry.MustRegister(httpRequestsExceedingSizeLimitCounter)
 	registry.MustRegister(httpFailedVerificationRequests)
 }
@@ -74,7 +74,7 @@ func RecordHTTPRequestErrors() {
 }
 
 func RecordHTTPInflightRequests(increaseBy float64) {
-	httpInflightRequestsCounter.WithLabelValues(listenerService).Add(increaseBy)
+	httpInflightRequestsGauge.WithLabelValues(listenerService).Add(increaseBy)
 }
 
 func RecordHTTPRequestExceedingSizeLimit() {
