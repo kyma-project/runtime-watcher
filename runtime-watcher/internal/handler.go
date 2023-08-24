@@ -40,10 +40,11 @@ type Handler struct {
 }
 
 type ServerParameters struct {
-	Port    int    // webhook server port
-	CACert  string // CA key used to sign the certificate
-	TLSCert string // path to TLS certificate for https
-	TLSKey  string // path to TLS key matching for certificate
+	Port        int    // webhook server port
+	CACert      string // CA key used to sign the certificate
+	TLSCert     string // path to TLS certificate for https
+	TLSKey      string // path to TLS key matching for certificate
+	TLSCallback bool   // indicates if KCP accepts HTTP or HTTPS requests
 }
 
 type admissionResponseInfo struct {
@@ -387,37 +388,43 @@ func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo 
 
 func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 	httpClient := http.Client{}
-	h.Logger.Info("will attempt to send an https request")
-	certificate, err := tls.LoadX509KeyPair(h.Parameters.TLSCert, h.Parameters.TLSKey)
-	if err != nil {
-		msg := "could not load tls certificate"
-		return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+	protocol := "http"
+
+	if h.Parameters.TLSCallback {
+		h.Logger.Info("will attempt to send an https request")
+		protocol = "https"
+
+		certificate, err := tls.LoadX509KeyPair(h.Parameters.TLSCert, h.Parameters.TLSKey)
+		if err != nil {
+			msg := "could not load tls certificate"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+
+		caCertBytes, err := os.ReadFile(h.Parameters.CACert)
+		if err != nil {
+			msg := "could not load CA certificate"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+		publicPemBlock, _ := pem.Decode(caCertBytes)
+		rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
+		if errParse != nil {
+			msg := "failed to parse public key"
+			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
+		}
+		rootCertpool := x509.NewCertPool()
+		rootCertpool.AddCert(rootPubCrt)
+
+		httpClient.Timeout = HTTPClientTimeout
+		//nolint:gosec
+		httpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:      rootCertpool,
+				Certificates: []tls.Certificate{certificate},
+			},
+		}
 	}
 
-	caCertBytes, err := os.ReadFile(h.Parameters.CACert)
-	if err != nil {
-		msg := "could not load CA certificate"
-		return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
-	}
-	publicPemBlock, _ := pem.Decode(caCertBytes)
-	rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
-	if errParse != nil {
-		msg := "failed to parse public key"
-		return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
-	}
-	rootCertpool := x509.NewCertPool()
-	rootCertpool.AddCert(rootPubCrt)
-
-	httpClient.Timeout = HTTPClientTimeout
-	//nolint:gosec
-	httpClient.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs:      rootCertpool,
-			Certificates: []tls.Certificate{certificate},
-		},
-	}
-
-	url := fmt.Sprintf("%s://%s", "https", uri)
+	url := fmt.Sprintf("%s://%s", protocol, uri)
 	h.Logger.Info("KCP Address", "url", url)
 	return httpClient, url, nil
 }

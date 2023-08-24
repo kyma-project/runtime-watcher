@@ -50,6 +50,12 @@ func serverParams(logger logr.Logger) (internal.ServerParameters, error) {
 	}
 	parameters.Port = port
 
+	tlsCallbackEnv := os.Getenv("TLS_CALLBACK")
+	parameters.TLSCallback, err = strconv.ParseBool(tlsCallbackEnv)
+	if err != nil {
+		logger.V(1).Error(err, "failed parsing tls callback flag")
+	}
+
 	parameters.CACert = os.Getenv("CA_CERT")
 	if parameters.CACert == "" {
 		return parameters, flagError("CA_CERT")
