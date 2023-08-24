@@ -19,31 +19,32 @@ const (
 )
 
 var (
-	registry                     prometheus.Registerer //nolint:gochecknoglobals//nolint:gochecknoglobals
-	httpRequestDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	registry prometheus.Registerer //nolint:gochecknoglobals
+	//nolint:gochecknoglobals
+	httpRequestDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{ //nolint:gochecknoglobals
 		Name: listenerRequestDuration,
 		Help: "Indicates the latency of each request in seconds",
-	}, []string{serverNameLabel}) //nolint:gochecknoglobals
-	httpRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+	}, []string{serverNameLabel})
+	httpRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
 		Name: listenerRequests,
 		Help: "Indicates the number of requests",
-	}, []string{serverNameLabel}) //nolint:gochecknoglobals
-	httpRequestErrorsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+	}, []string{serverNameLabel})
+	httpRequestErrorsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
 		Name: listenerRequestErrors,
 		Help: "Indicates the number of failed requests",
-	}, []string{serverNameLabel}) //nolint:gochecknoglobals
-	httpInflightRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+	}, []string{serverNameLabel})
+	httpInflightRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
 		Name: listenerInflightRequests,
 		Help: "Indicates the number of inflight requests",
-	}, []string{serverNameLabel}) //nolint:gochecknoglobals
-	httpRequestsExceedingSizeLimitCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+	}, []string{serverNameLabel})
+	httpRequestsExceedingSizeLimitCounter = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
 		Name: listenerExceedingSizeLimitRequests,
 		Help: "Indicates the number of requests exceeding size limit",
-	}, []string{serverNameLabel}) //nolint:gochecknoglobals
-	httpFailedVerificationRequests = prometheus.NewCounterVec(prometheus.CounterOpts{
+	}, []string{serverNameLabel})
+	httpFailedVerificationRequests = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
 		Name: listenerFailedVerificationRequests,
 		Help: "Indicates the number of requests that failed verification",
-	}, []string{serverNameLabel, requestURILabel}) //nolint:gochecknoglobals
+	}, []string{serverNameLabel, requestURILabel})
 )
 
 //nolint:gochecknoinits
