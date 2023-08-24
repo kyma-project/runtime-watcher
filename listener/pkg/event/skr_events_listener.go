@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
@@ -52,7 +53,6 @@ func NewSKREventListener(addr, componentName string, verify Verify,
 
 func (l *SKREventListener) Start(ctx context.Context) error {
 	l.Logger = ctrlLog.FromContext(ctx, "Module", "Listener")
-	metrics.Initialize()
 	router := http.NewServeMux()
 
 	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.ComponentName)
@@ -87,7 +87,7 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		if request.ContentLength > requestSizeLimitInBytes {
-			metrics.RecordHttpRequestExceedingSizeLimit(request.RequestURI)
+			metrics.RecordHttpRequestExceedingSizeLimit()
 			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
 			l.Logger.Error(errors.New("requestSizeExceeded"), errorMessage)
 			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)
@@ -98,12 +98,12 @@ func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) 
 		next.ServeHTTP(writer, request)
 
 		duration := time.Since(start)
-		metrics.UpdateMetrics(request.RequestURI, duration)
-		metrics.RecordHttpInflightRequests(request.RequestURI, 1)
-		if request.Response.Status != "201" {
-			metrics.RecordHttpRequestErrors(request.RequestURI)
+		metrics.UpdateMetrics(duration)
+		metrics.RecordHttpInflightRequests(1)
+		if request.Response.Status != strconv.Itoa(http.StatusOK) {
+			metrics.RecordHttpRequestErrors()
 		}
-		defer metrics.RecordHttpInflightRequests(request.RequestURI, -1)
+		defer metrics.RecordHttpInflightRequests(-1)
 	}
 }
 
