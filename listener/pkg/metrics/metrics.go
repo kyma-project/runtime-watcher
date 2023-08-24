@@ -10,7 +10,7 @@ const (
 	listenerRequestDuration            = "watcher_listener_request_duration"
 	listenerRequests                   = "watcher_listener_requests_total"
 	listenerRequestErrors              = "watcher_listener_request_errors_total"
-	listenerInflightRequests           = "watcher_listener_inflight_requests_total"
+	listenerInflightRequests           = "watcher_listener_inflight_requests"
 	listenerExceedingSizeLimitRequests = "watcher_listener_exceeding_size_limit_requests_total"
 	listenerFailedVerificationRequests = "watcher_listener_failed_verification_requests_total"
 	requestURILabel                    = "request_uri_label"
