@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
@@ -34,9 +33,10 @@ const (
 )
 
 type Handler struct {
-	Client     client.Client
-	Logger     logr.Logger
-	Parameters ServerParameters
+	Client       client.Client
+	Logger       logr.Logger
+	Parameters   ServerParameters
+	Deserializer runtime.Decoder
 }
 
 type ServerParameters struct {
@@ -44,7 +44,6 @@ type ServerParameters struct {
 	CACert      string // CA key used to sign the certificate
 	TLSCert     string // path to TLS certificate for https
 	TLSKey      string // path to TLS key matching for certificate
-	TLSServer   bool   // indicates if an HTTPS server should be created
 	TLSCallback bool   // indicates if KCP accepts HTTP or HTTPS requests
 }
 
@@ -56,30 +55,6 @@ type admissionResponseInfo struct {
 
 type responseInterface interface {
 	isEmpty() bool
-}
-
-type Resource struct {
-	metav1.GroupVersionKind `json:"groupVersionKind"`
-	SubResource             string `json:"subResource"`
-}
-
-type Metadata struct {
-	Name        string            `json:"name"`
-	Namespace   string            `json:"namespace"`
-	Annotations map[string]string `json:"annotations"`
-	Labels      map[string]string `json:"labels"`
-}
-
-func (m Metadata) isEmpty() bool {
-	return m.Name == ""
-}
-
-type ObjectWatched struct {
-	Metadata   `json:"metadata"`
-	Spec       map[string]interface{} `json:"spec"`
-	APIVersion string                 `json:"apiVersion"`
-	Kind       string                 `json:"kind"`
-	Status     map[string]interface{} `json:"status"`
 }
 
 const (
@@ -102,9 +77,6 @@ const (
 	StatusSubResource        = "status"
 	namespaceNameEntityCount = 2
 )
-
-//nolint:gochecknoglobals
-var UniversalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 
 func getModuleName(urlPath string) (string, error) {
 	var moduleName string
@@ -394,7 +366,7 @@ func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
 
 func (h *Handler) getAdmissionRequestFromBytes(body []byte) *admissionv1.AdmissionReview {
 	admissionReview := admissionv1.AdmissionReview{}
-	if _, _, err := UniversalDeserializer.Decode(body, nil, &admissionReview); err != nil {
+	if _, _, err := h.Deserializer.Decode(body, nil, &admissionReview); err != nil {
 		h.Logger.Error(fmt.Errorf("admission request could not be retreived, %s%s %w", admissionError,
 			errorSeparator, err), "")
 		return nil
