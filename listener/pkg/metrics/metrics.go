@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 const (
@@ -14,12 +15,11 @@ const (
 	listenerExceedingSizeLimitRequests = "watcher_listener_exceeding_size_limit_requests_total"
 	listenerFailedVerificationRequests = "watcher_listener_failed_verification_requests_total"
 	requestURILabel                    = "request_uri_label"
-	listenerService                    = "listener_server"
+	listenerService                    = "listener"
 	serverNameLabel                    = "server_name"
 )
 
 var (
-	registry                     = prometheus.DefaultRegisterer                         //nolint:gochecknoglobals
 	httpRequestDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{ //nolint:gochecknoglobals
 		Name: listenerRequestDuration,
 		Help: "Indicates the latency of each request in seconds",
@@ -32,7 +32,7 @@ var (
 		Name: listenerRequestErrors,
 		Help: "Indicates the number of failed requests",
 	}, []string{serverNameLabel})
-	httpInflightRequestsGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{ //nolint:gochecknoglobals
+	HttpInflightRequestsGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{ //nolint:gochecknoglobals
 		Name: listenerInflightRequests,
 		Help: "Indicates the number of inflight requests",
 	}, []string{serverNameLabel})
@@ -46,14 +46,13 @@ var (
 	}, []string{serverNameLabel, requestURILabel})
 )
 
-//nolint:gochecknoinits
-func init() {
-	registry.MustRegister(httpRequestDurationHistogram)
-	registry.MustRegister(httpRequestsCounter)
-	registry.MustRegister(httpRequestErrorsCounter)
-	registry.MustRegister(httpInflightRequestsGauge)
-	registry.MustRegister(httpRequestsExceedingSizeLimitCounter)
-	registry.MustRegister(httpFailedVerificationRequests)
+func InitMetrics(metricsRegistry metrics.RegistererGatherer) {
+	metricsRegistry.MustRegister(httpRequestDurationHistogram)
+	metricsRegistry.MustRegister(httpRequestsCounter)
+	metricsRegistry.MustRegister(httpRequestErrorsCounter)
+	metricsRegistry.MustRegister(HttpInflightRequestsGauge)
+	metricsRegistry.MustRegister(httpRequestsExceedingSizeLimitCounter)
+	metricsRegistry.MustRegister(httpFailedVerificationRequests)
 }
 
 func UpdateMetrics(duration time.Duration) {
@@ -74,7 +73,7 @@ func RecordHTTPRequestErrors() {
 }
 
 func RecordHTTPInflightRequests(increaseBy float64) {
-	httpInflightRequestsGauge.WithLabelValues(listenerService).Add(increaseBy)
+	HttpInflightRequestsGauge.WithLabelValues(listenerService).Add(increaseBy)
 }
 
 func RecordHTTPRequestExceedingSizeLimit() {
