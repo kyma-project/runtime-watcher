@@ -4,14 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
@@ -22,9 +18,9 @@ const (
 	requestSizeLimitInBytes = 16384 // 16KB
 )
 
-func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
-	listener := NewSKREventListener(addr, componentName, verify)
-	return listener, &source.Channel{Source: listener.ReceivedEvents}
+type SkrWatcherEvent struct {
+	// Object is the object from the event
+	*types.WatchEvent
 }
 
 // Verify is a function which is being called to verify an incoming request to the listener.
@@ -37,7 +33,7 @@ type SKREventListener struct {
 	Addr           string
 	Logger         logr.Logger
 	ComponentName  string
-	ReceivedEvents chan event.GenericEvent
+	ReceivedEvents chan SkrWatcherEvent
 	VerifyFunc     Verify
 }
 
@@ -46,13 +42,13 @@ func NewSKREventListener(addr, componentName string, verify Verify,
 	return &SKREventListener{
 		Addr:           addr,
 		ComponentName:  componentName,
-		ReceivedEvents: make(chan event.GenericEvent),
+		ReceivedEvents: make(chan SkrWatcherEvent),
 		VerifyFunc:     verify,
 	}
 }
 
 func (l *SKREventListener) Start(ctx context.Context) error {
-	l.Logger = ctrlLog.FromContext(ctx, "Module", "Listener")
+
 	router := http.NewServeMux()
 
 	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.ComponentName)
@@ -126,10 +122,9 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 			return
 		}
 
-		genericEvtObject := GenericEvent(watcherEvent)
 		// add event to the channel
-		l.ReceivedEvents <- event.GenericEvent{Object: genericEvtObject}
-		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
+		l.ReceivedEvents <- SkrWatcherEvent{watcherEvent}
+		l.Logger.Info("dispatched event object into channel", "resource-name", watcherEvent.Owner.Name)
 		writer.WriteHeader(http.StatusOK)
 	}
 }
