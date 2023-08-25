@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	httpRequestDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	httpRequestDurationGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: listenerRequestDuration,
 		Help: "Indicates the latency of each request in seconds",
 	}, []string{serverNameLabel})
@@ -47,7 +47,7 @@ var (
 )
 
 func Init(metricsRegistry prometheus.Registerer) {
-	metricsRegistry.MustRegister(httpRequestDurationHistogram)
+	metricsRegistry.MustRegister(httpRequestDurationGauge)
 	metricsRegistry.MustRegister(httpRequestsCounter)
 	metricsRegistry.MustRegister(httpRequestErrorsCounter)
 	metricsRegistry.MustRegister(HTTPInflightRequestsGauge)
@@ -77,7 +77,7 @@ func RecordHTTPFailedVerificationRequests(requestURI string) {
 }
 
 func recordHTTPRequestDuration(duration time.Duration) {
-	httpRequestDurationHistogram.WithLabelValues(listenerService).Observe(duration.Seconds())
+	httpRequestDurationGauge.WithLabelValues(listenerService).Set(duration.Seconds())
 }
 
 func recordHTTPRequests() {
