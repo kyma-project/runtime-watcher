@@ -1,3 +1,4 @@
+//nolint:gochecknoglobals
 package metrics
 
 import (
@@ -20,33 +21,33 @@ const (
 )
 
 var (
-	httpRequestDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{ //nolint:gochecknoglobals
+	httpRequestDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: listenerRequestDuration,
 		Help: "Indicates the latency of each request in seconds",
 	}, []string{serverNameLabel})
-	httpRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
+	httpRequestsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerRequests,
 		Help: "Indicates the number of requests",
 	}, []string{serverNameLabel})
-	httpRequestErrorsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
+	httpRequestErrorsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerRequestErrors,
 		Help: "Indicates the number of failed requests",
 	}, []string{serverNameLabel})
-	HTTPInflightRequestsGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{ //nolint:gochecknoglobals
+	HTTPInflightRequestsGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: listenerInflightRequests,
 		Help: "Indicates the number of inflight requests",
 	}, []string{serverNameLabel})
-	httpRequestsExceedingSizeLimitCounter = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
+	httpRequestsExceedingSizeLimitCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerExceedingSizeLimitRequests,
 		Help: "Indicates the number of requests exceeding size limit",
 	}, []string{serverNameLabel})
-	httpFailedVerificationRequests = prometheus.NewCounterVec(prometheus.CounterOpts{ //nolint:gochecknoglobals
+	httpFailedVerificationRequests = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: listenerFailedVerificationRequests,
 		Help: "Indicates the number of requests that failed verification",
 	}, []string{serverNameLabel, requestURILabel})
 )
 
-func InitMetrics(metricsRegistry metrics.RegistererGatherer) {
+func Init(metricsRegistry metrics.RegistererGatherer) {
 	metricsRegistry.MustRegister(httpRequestDurationHistogram)
 	metricsRegistry.MustRegister(httpRequestsCounter)
 	metricsRegistry.MustRegister(httpRequestErrorsCounter)
@@ -55,17 +56,9 @@ func InitMetrics(metricsRegistry metrics.RegistererGatherer) {
 	metricsRegistry.MustRegister(httpFailedVerificationRequests)
 }
 
-func UpdateMetrics(duration time.Duration) {
+func UpdateHTTPRequestMetrics(duration time.Duration) {
 	recordHTTPRequestDuration(duration)
 	recordHTTPRequests()
-}
-
-func recordHTTPRequestDuration(duration time.Duration) {
-	httpRequestDurationHistogram.WithLabelValues(listenerService).Observe(duration.Seconds())
-}
-
-func recordHTTPRequests() {
-	httpRequestsCounter.WithLabelValues(listenerService).Inc()
 }
 
 func RecordHTTPRequestErrors() {
@@ -82,4 +75,12 @@ func RecordHTTPRequestExceedingSizeLimit() {
 
 func RecordHTTPFailedVerificationRequests(requestURI string) {
 	httpFailedVerificationRequests.WithLabelValues(listenerService, requestURI).Inc()
+}
+
+func recordHTTPRequestDuration(duration time.Duration) {
+	httpRequestDurationHistogram.WithLabelValues(listenerService).Observe(duration.Seconds())
+}
+
+func recordHTTPRequests() {
+	httpRequestsCounter.WithLabelValues(listenerService).Inc()
 }

@@ -94,18 +94,7 @@ func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) 
 			return
 		}
 
-		start := time.Now()
-		next.ServeHTTP(writer, request)
-
-		duration := time.Since(start)
-		metrics.UpdateMetrics(duration)
-		metrics.RecordHTTPInflightRequests(1)
-
-		if request.Response != nil && request.Response.Status != strconv.Itoa(http.StatusOK) {
-			metrics.RecordHTTPRequestErrors()
-		}
-
-		defer metrics.RecordHTTPInflightRequests(-1)
+		executeRequestAndUpdateMetrics(next, writer, request)
 	}
 }
 
@@ -143,4 +132,19 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
 		writer.WriteHeader(http.StatusOK)
 	}
+}
+
+func executeRequestAndUpdateMetrics(next http.HandlerFunc, writer http.ResponseWriter, request *http.Request) {
+	start := time.Now()
+	next.ServeHTTP(writer, request)
+
+	duration := time.Since(start)
+	metrics.UpdateHTTPRequestMetrics(duration)
+	metrics.RecordHTTPInflightRequests(1)
+
+	if request.Response != nil && request.Response.Status != strconv.Itoa(http.StatusOK) {
+		metrics.RecordHTTPRequestErrors()
+	}
+
+	defer metrics.RecordHTTPInflightRequests(-1)
 }
