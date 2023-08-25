@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 const (
@@ -47,7 +46,7 @@ var (
 	}, []string{serverNameLabel, requestURILabel})
 )
 
-func Init(metricsRegistry metrics.RegistererGatherer) {
+func Init(metricsRegistry prometheus.Registerer) {
 	metricsRegistry.MustRegister(httpRequestDurationHistogram)
 	metricsRegistry.MustRegister(httpRequestsCounter)
 	metricsRegistry.MustRegister(httpRequestErrorsCounter)
