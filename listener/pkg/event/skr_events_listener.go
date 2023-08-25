@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -51,7 +53,6 @@ func NewSKREventListener(addr, componentName string, verify Verify,
 
 func (l *SKREventListener) Start(ctx context.Context) error {
 	l.Logger = ctrlLog.FromContext(ctx, "Module", "Listener")
-
 	router := http.NewServeMux()
 
 	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.ComponentName)
@@ -86,13 +87,14 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		if request.ContentLength > requestSizeLimitInBytes {
+			metrics.RecordHTTPRequestExceedingSizeLimit()
 			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
 			l.Logger.Error(errors.New("requestSizeExceeded"), errorMessage)
 			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)
 			return
 		}
 
-		next.ServeHTTP(writer, request)
+		executeRequestAndUpdateMetrics(next, writer, request)
 	}
 }
 
@@ -118,6 +120,7 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 
 		// verify request
 		if err := l.VerifyFunc(req, watcherEvent); err != nil {
+			metrics.RecordHTTPFailedVerificationRequests(req.RequestURI)
 			l.Logger.Info("request could not be verified - Event will not be dispatched",
 				"error", err)
 			return
@@ -129,4 +132,19 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
 		writer.WriteHeader(http.StatusOK)
 	}
+}
+
+func executeRequestAndUpdateMetrics(next http.HandlerFunc, writer http.ResponseWriter, request *http.Request) {
+	start := time.Now()
+	next.ServeHTTP(writer, request)
+
+	duration := time.Since(start)
+	metrics.UpdateHTTPRequestMetrics(duration)
+	metrics.RecordHTTPInflightRequests(1)
+
+	if request.Response != nil && request.Response.Status != strconv.Itoa(http.StatusOK) {
+		metrics.RecordHTTPRequestErrors()
+	}
+
+	defer metrics.RecordHTTPInflightRequests(-1)
 }
