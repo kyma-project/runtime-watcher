@@ -12,9 +12,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -121,9 +119,6 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	// log admission response message
 	h.Logger.Info(validation.message)
 
-	// store incoming request
-	h.storeIncomingRequest(body)
-
 	// prepare response
 	responseBytes := h.prepareResponse(admissionReview, validation)
 	if responseBytes == nil {
@@ -133,29 +128,6 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	if _, err = writer.Write(responseBytes); err != nil {
 		h.Logger.Error(err, admissionError)
 		return
-	}
-}
-
-func (h *Handler) storeIncomingRequest(body []byte) {
-	// store incoming request
-	enableSideCarStr := os.Getenv("WEBHOOK_SIDE_CAR")
-	sideCarEnabled := false
-	var err error
-	if enableSideCarStr != "" {
-		sideCarEnabled, err = strconv.ParseBool(enableSideCarStr)
-		if err != nil {
-			h.Logger.Error(err, "cannot parse sidecar enable env variable ")
-			return
-		}
-	}
-
-	if sideCarEnabled {
-		storeRequest := &storeRequest{
-			logger: h.Logger,
-			path:   requestStorePath,
-			mu:     sync.Mutex{},
-		}
-		go storeRequest.save(body)
 	}
 }
 
