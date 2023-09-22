@@ -20,7 +20,7 @@ Runtime Watcher is configured during the reconciliation of a Kyma CR. This means
 
 ### Runtime Watcher
 
-Runtime Watcher consists of `ValidationWebhookConfiguration` configured by Watcher CRs, an attached deployment, and a Secret holding a TLS certificate. The ValidationWebhookConfiguration is a resource that watches configured resources and sends validation requests to the attached deployment. Instead of validating the received requests, the deployment converts the validation requests into [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/de040bddeba1a7875e3a0e626db4634134971022/listener/pkg/types/event.go#L8), which are sent to KCP using a secured mTLS connection. To establish a secured mTLS connection from a Kyma cluster to KCP, it uses the TLS certificate stored inside a Secret. To see how this Secret is created, go to [certificates](###certificates).
+Runtime Watcher consists of `ValidationWebhookConfiguration` configured by Watcher CRs, an attached deployment, and a Secret holding a TLS certificate. The ValidationWebhookConfiguration is a resource that watches configured resources and sends validation requests to the attached deployment. Instead of validating the received requests, the deployment converts the validation requests into [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/de040bddeba1a7875e3a0e626db4634134971022/listener/pkg/types/event.go#L8), which are sent to KCP using a secured mTLS connection. To establish a secured mTLS connection from a Kyma cluster to KCP, it uses the TLS certificate stored inside a Secret. To see how this Secret is created, go to [certificates](#certificates).
 
 Runtime Watcher is configured and deployed in a Kyma cluster in the Kyma reconciliation loop.
 
