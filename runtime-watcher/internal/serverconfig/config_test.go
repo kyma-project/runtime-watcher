@@ -5,9 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
-
 	"github.com/go-logr/logr"
+	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 	"github.com/stretchr/testify/assert"
 )
 
