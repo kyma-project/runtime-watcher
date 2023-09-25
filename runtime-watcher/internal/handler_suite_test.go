@@ -1,21 +1,18 @@
+//nolint:gochecknoglobals
 package internal_test
 
 import (
 	"context"
-	"fmt"
 	"net/http/httptest"
 	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/kyma-project/runtime-watcher/skr/internal"
 )
 
 func TestAPIs(t *testing.T) {
@@ -25,30 +22,18 @@ func TestAPIs(t *testing.T) {
 }
 
 var (
-	ctx           context.Context            //nolint:gochecknoglobals
-	cancel        context.CancelFunc         //nolint:gochecknoglobals
-	kcpRecorder   *httptest.ResponseRecorder //nolint:gochecknoglobals
-	kcpMockServer *httptest.Server           //nolint:gochecknoglobals
-
-	managedbyLabel = map[string]string{ //nolint:gochecknoglobals
-		internal.ManagedByLabel: "lifecycle-manager",
-	}
-	ownedbyAnnotation = map[string]string{ //nolint:gochecknoglobals
-		internal.OwnedByAnnotation: fmt.Sprintf("%s/%s", metav1.NamespaceDefault, ownerName),
-	}
-	testEnv   *envtest.Environment //nolint:gochecknoglobals
-	k8sClient client.Client        //nolint:gochecknoglobals
+	cancel        context.CancelFunc
+	kcpRecorder   *httptest.ResponseRecorder
+	kcpMockServer *httptest.Server
+	testEnv       *envtest.Environment
+	k8sClient     client.Client
 )
 
-const (
-	moduleName = "kyma"
-	crName1    = "kyma-1"
-	ownerName  = "ownerName"
-)
+const moduleName = "kyma"
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	ctx, cancel = context.WithCancel(context.TODO())
+	_, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment for skr-watcher tests")
 
@@ -77,6 +62,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).ShouldNot(HaveOccurred())
 	err = os.Setenv("KCP_CONTRACT", "v1")
 	Expect(err).ShouldNot(HaveOccurred())
+
+	_ = os.Setenv("CA_CERT", "tmp")
+	_ = os.Setenv("TLS_CERT", "tmp")
+	_ = os.Setenv("TLS_KEY", "tmp")
 })
 
 var _ = AfterSuite(func() {

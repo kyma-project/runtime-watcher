@@ -19,30 +19,34 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 )
 
 const (
-	HTTPClientTimeout = time.Minute * 3
-	EventEndpoint     = "event"
+	HTTPClientTimeout        = time.Minute * 3
+	eventEndpoint            = "event"
+	admissionError           = "admission error"
+	errorSeparator           = ":"
+	invalidationMessage      = "invalidated from webhook"
+	validationMessage        = "validated from webhook"
+	kcpReqFailedMsg          = "kcp request failed"
+	kcpReqSucceededMsg       = "kcp request succeeded"
+	urlPathPattern           = "/validate/%s"
+	ownedBy                  = "operator.kyma-project.io/owned-by"
+	statusSubResource        = "status"
+	namespaceNameEntityCount = 2
 )
 
 type Handler struct {
 	Client       client.Client
 	Logger       logr.Logger
-	Parameters   ServerParameters
+	Config       serverconfig.ServerConfig
 	Deserializer runtime.Decoder
-}
-
-type ServerParameters struct {
-	Port        int    // webhook server port
-	CACert      string // CA key used to sign the certificate
-	TLSCert     string // path to TLS certificate for https
-	TLSKey      string // path to TLS key matching for certificate
-	TLSCallback bool   // indicates if KCP accepts HTTP or HTTPS requests
 }
 
 type admissionResponseInfo struct {
@@ -52,60 +56,19 @@ type admissionResponseInfo struct {
 }
 
 type responseInterface interface {
-	isEmpty() bool
-}
-
-const (
-	admissionError      = "admission error"
-	errorSeparator      = ":"
-	invalidationMessage = "invalidated from webhook"
-	validationMessage   = "validated from webhook"
-	KcpReqFailedMsg     = "kcp request failed"
-	KcpReqSucceededMsg  = "kcp request succeeded"
-
-	requestStorePath = "/tmp/request"
-	urlPathPattern   = "/validate/%s"
-
-	OperatorPrefix    = "operator.kyma-project.io"
-	Separator         = "/"
-	OwnedByAnnotation = OperatorPrefix + Separator + "owned-by"
-	OwnedBySeperator  = "/"
-	ManagedByLabel    = "operator.kyma-project.io/managed-by"
-
-	StatusSubResource        = "status"
-	namespaceNameEntityCount = 2
-)
-
-func getModuleName(urlPath string) (string, error) {
-	var moduleName string
-	_, err := fmt.Sscanf(urlPath, urlPathPattern, &moduleName)
-	if err != nil && !errors.Is(err, io.EOF) {
-		return "", fmt.Errorf("could not parse url path")
-	}
-
-	if err != nil && errors.Is(err, io.EOF) || moduleName == "" {
-		return "", fmt.Errorf("module name cannot be empty")
-	}
-
-	return moduleName, nil
+	IsEmpty() bool
 }
 
 func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
-	moduleName, err := getModuleName(req.URL.Path)
-	if err != nil {
-		h.Logger.Error(err, "failed to get module name")
-		return
-	}
-	// read incoming request to bytes
+
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		h.Logger.Error(err, admissionError)
 		return
 	}
 
-	// create admission review from bytes
-	admissionReview := h.getAdmissionRequestFromBytes(body)
+	admissionReview := h.parseAdmissionReview(body)
 	if admissionReview == nil {
 		return
 	}
@@ -114,12 +77,16 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()),
 	)
 
+	moduleName, err := getModuleName(req.URL.Path)
+	if err != nil {
+		h.Logger.Error(err, "failed to get module name")
+		return
+	}
+
 	validation := h.validateResources(admissionReview, moduleName)
 
-	// log admission response message
 	h.Logger.Info(validation.message)
 
-	// prepare response
 	responseBytes := h.prepareResponse(admissionReview, validation)
 	if responseBytes == nil {
 		h.Logger.Info("empty response from incoming admission review")
@@ -131,10 +98,37 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (h *Handler) parseAdmissionReview(body []byte) *admissionv1.AdmissionReview {
+	admissionReview := admissionv1.AdmissionReview{}
+	if _, _, err := h.Deserializer.Decode(body, nil, &admissionReview); err != nil {
+		h.Logger.Error(fmt.Errorf("admission request could not be retreived, %s%s %w", admissionError,
+			errorSeparator, err), "")
+		return nil
+	} else if admissionReview.Request == nil {
+		h.Logger.Error(fmt.Errorf("admission request was empty, %s%s %w", admissionError, errorSeparator, err),
+			"")
+		return nil
+	}
+	return &admissionReview
+}
+
+func getModuleName(urlPath string) (string, error) {
+	var moduleName string
+	_, err := fmt.Sscanf(urlPath, urlPathPattern, &moduleName)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", fmt.Errorf("could not parse url path")
+	}
+
+	if err != nil && errors.Is(err, io.EOF) || moduleName == "" {
+		return "", fmt.Errorf("module name must not be empty")
+	}
+
+	return moduleName, nil
+}
+
 func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 	validation admissionResponseInfo,
 ) []byte {
-	// prepare response object
 	finalizedAdmissionReview := admissionv1.AdmissionReview{}
 	finalizedAdmissionReview.Kind = admissionReview.Kind
 	finalizedAdmissionReview.APIVersion = admissionReview.APIVersion
@@ -244,7 +238,7 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 			// send request to kcp for all UPDATE events
 			registerChange = true
 		}
-	case StatusSubResource:
+	case statusSubResource:
 		registerChange = !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
 	default:
 		return fmt.Sprintf("invalid subresource for watched resource %s/%s",
@@ -260,94 +254,76 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 }
 
 func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) string {
-	ownerKey, err := getKcpResourceName(watched)
+	owner, err := extractOwner(watched)
 	if err != nil {
 		h.Logger.Error(err, "resource owner name could not be determined")
 		return "resource owner name could not be determined"
 	}
 
-	ownerParts := strings.Split(ownerKey, OwnedBySeperator)
-	if len(ownerParts) != namespaceNameEntityCount {
-		return fmt.Sprintf("annotation %s not set correctly on resource %s/%s: %s", OwnedByAnnotation,
-			watched.Namespace, watched.Name, ownerKey)
-	}
-	ownerNs := ownerParts[0]
-	ownerName := ownerParts[1]
-
-	// send request to kcp
 	watcherEvent := &listenerTypes.WatchEvent{
-		Owner:      client.ObjectKey{Namespace: ownerNs, Name: ownerName},
+		Owner:      client.ObjectKey{Namespace: owner.Namespace, Name: owner.Name},
 		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg)
-		return KcpReqFailedMsg
+		h.Logger.Error(err, kcpReqFailedMsg)
+		return kcpReqFailedMsg
 	}
 
 	requestPayload := bytes.NewBuffer(postBody)
 
-	kcpAddr := os.Getenv("KCP_ADDR")
-	contract := os.Getenv("KCP_CONTRACT")
-
-	if kcpAddr == "" || contract == "" {
-		return KcpReqFailedMsg
+	if h.Config.KCPAddress == "" || h.Config.KCPContract == "" {
+		return kcpReqFailedMsg
 	}
 
-	uri := fmt.Sprintf("%s/%s/%s/%s", kcpAddr, contract, moduleName, EventEndpoint)
+	uri := fmt.Sprintf("%s/%s/%s/%s", h.Config.KCPAddress, h.Config.KCPContract, moduleName, eventEndpoint)
 	httpClient, url, err := h.getHTTPClientAndURL(uri)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg)
+		h.Logger.Error(err, kcpReqFailedMsg)
 		return err.Error()
 	}
 
 	resp, err := httpClient.Post(url, "application/json", requestPayload)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg, "postBody", watcherEvent)
-		return KcpReqFailedMsg
+		h.Logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
+		return kcpReqFailedMsg
 	}
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		h.Logger.Error(err, KcpReqFailedMsg, "postBody", watcherEvent)
+		h.Logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
 		h.Logger.Error(err, fmt.Sprintf("responseBody: %s with StatusCode: %d", responseBody, resp.StatusCode))
-		return KcpReqFailedMsg
+		return kcpReqFailedMsg
 	}
 
 	h.Logger.Info(fmt.Sprintf("sent request to KCP successfully for resource %s/%s",
 		watched.Namespace, watched.Name), "postBody", watcherEvent)
-	return KcpReqSucceededMsg
+	return kcpReqSucceededMsg
 }
 
-func getKcpResourceName(watched ObjectWatched) (string, error) {
-	if watched.Annotations == nil || watched.Annotations[OwnedByAnnotation] == "" {
-		return "", fmt.Errorf("no `ownedBy` annotation found for watched resource %s/%s", watched.Namespace, watched.Name)
+func extractOwner(watched ObjectWatched) (types.NamespacedName, error) {
+	if watched.Annotations == nil || watched.Annotations[ownedBy] == "" {
+		return types.NamespacedName{}, fmt.Errorf("no '%s' annotation found for watched resource %s",
+			ownedBy, watched.NamespacedName())
 	}
-	return watched.Annotations[OwnedByAnnotation], nil
+	ownerKey := watched.Annotations[ownedBy]
+	ownerParts := strings.Split(ownerKey, "/")
+	if len(ownerParts) != namespaceNameEntityCount {
+		return types.NamespacedName{}, fmt.Errorf("annotation %s not set correctly on resource %s: %s",
+			ownedBy, watched.NamespacedName(), ownerKey)
+	}
+
+	return types.NamespacedName{Namespace: ownerParts[0], Name: ownerParts[1]}, nil
 }
 
 func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
 ) admissionResponseInfo {
-	if err := json.Unmarshal(rawBytes, response); err != nil || response.isEmpty() {
+	if err := json.Unmarshal(rawBytes, response); err != nil || response.IsEmpty() {
 		h.Logger.Error(fmt.Errorf("admission review resource object could not be unmarshaled %s%s %w",
 			admissionError, errorSeparator, err), "")
 	}
 	return h.validAdmissionReviewObj("")
-}
-
-func (h *Handler) getAdmissionRequestFromBytes(body []byte) *admissionv1.AdmissionReview {
-	admissionReview := admissionv1.AdmissionReview{}
-	if _, _, err := h.Deserializer.Decode(body, nil, &admissionReview); err != nil {
-		h.Logger.Error(fmt.Errorf("admission request could not be retreived, %s%s %w", admissionError,
-			errorSeparator, err), "")
-		return nil
-	} else if admissionReview.Request == nil {
-		h.Logger.Error(fmt.Errorf("admission request was empty, %s%s %w", admissionError, errorSeparator, err),
-			"")
-		return nil
-	}
-	return &admissionReview
 }
 
 func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo {
@@ -362,17 +338,17 @@ func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 	httpClient := http.Client{}
 	protocol := "http"
 
-	if h.Parameters.TLSCallback {
+	if h.Config.TLSCallbackEnabled {
 		h.Logger.Info("will attempt to send an https request")
 		protocol = "https"
 
-		certificate, err := tls.LoadX509KeyPair(h.Parameters.TLSCert, h.Parameters.TLSKey)
+		certificate, err := tls.LoadX509KeyPair(h.Config.TLSCertPath, h.Config.TLSKeyPath)
 		if err != nil {
 			msg := "could not load tls certificate"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
 		}
 
-		caCertBytes, err := os.ReadFile(h.Parameters.CACert)
+		caCertBytes, err := os.ReadFile(h.Config.CACertPath)
 		if err != nil {
 			msg := "could not load CA certificate"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
@@ -383,14 +359,14 @@ func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 			msg := "failed to parse public key"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
 		}
-		rootCertpool := x509.NewCertPool()
-		rootCertpool.AddCert(rootPubCrt)
+		rootCertPool := x509.NewCertPool()
+		rootCertPool.AddCert(rootPubCrt)
 
 		httpClient.Timeout = HTTPClientTimeout
 		//nolint:gosec
 		httpClient.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs:      rootCertpool,
+				RootCAs:      rootCertPool,
 				Certificates: []tls.Certificate{certificate},
 			},
 		}
