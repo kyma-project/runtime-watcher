@@ -3,12 +3,12 @@ package internal_test
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 	"io"
-	"net/http"
-	"net/http/httptest"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"net/http"
+	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -85,9 +85,13 @@ var _ = Describe("given watched resource", Ordered, func() {
 		kcpRecorder.Flush()
 	})
 	DescribeTable("should validate admission request and send correct payload to KCP", func(testCase *testCase) {
+		logger := ctrl.Log.WithName("skr-watcher-test")
+		config, err := serverconfig.ParseFromEnv(logger)
+		Expect(err).ShouldNot(HaveOccurred())
 		handler := &internal.Handler{
+			Config:       config,
 			Client:       k8sClient,
-			Logger:       ctrl.Log.WithName("skr-watcher-test"),
+			Logger:       logger,
 			Deserializer: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 		}
 		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,

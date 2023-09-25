@@ -77,6 +77,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).ShouldNot(HaveOccurred())
 	err = os.Setenv("KCP_CONTRACT", "v1")
 	Expect(err).ShouldNot(HaveOccurred())
+
+	_ = os.Setenv("CA_CERT", "tmp")
+	_ = os.Setenv("TLS_CERT", "tmp")
+	_ = os.Setenv("TLS_KEY", "tmp")
 })
 
 var _ = AfterSuite(func() {
