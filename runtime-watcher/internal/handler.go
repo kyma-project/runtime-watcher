@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 )
 
 const (
@@ -33,16 +34,8 @@ const (
 type Handler struct {
 	Client       client.Client
 	Logger       logr.Logger
-	Parameters   ServerParameters
+	Config       serverconfig.ServerConfig
 	Deserializer runtime.Decoder
-}
-
-type ServerParameters struct {
-	Port        int    // webhook server port
-	CACert      string // CA key used to sign the certificate
-	TLSCert     string // path to TLS certificate for https
-	TLSKey      string // path to TLS key matching for certificate
-	TLSCallback bool   // indicates if KCP accepts HTTP or HTTPS requests
 }
 
 type admissionResponseInfo struct {
@@ -63,8 +56,7 @@ const (
 	KcpReqFailedMsg     = "kcp request failed"
 	KcpReqSucceededMsg  = "kcp request succeeded"
 
-	requestStorePath = "/tmp/request"
-	urlPathPattern   = "/validate/%s"
+	urlPathPattern = "/validate/%s"
 
 	OperatorPrefix    = "operator.kyma-project.io"
 	Separator         = "/"
@@ -362,17 +354,17 @@ func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 	httpClient := http.Client{}
 	protocol := "http"
 
-	if h.Parameters.TLSCallback {
+	if h.Config.TLSCallbackEnabled {
 		h.Logger.Info("will attempt to send an https request")
 		protocol = "https"
 
-		certificate, err := tls.LoadX509KeyPair(h.Parameters.TLSCert, h.Parameters.TLSKey)
+		certificate, err := tls.LoadX509KeyPair(h.Config.TLSCert, h.Config.TLSKey)
 		if err != nil {
 			msg := "could not load tls certificate"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
 		}
 
-		caCertBytes, err := os.ReadFile(h.Parameters.CACert)
+		caCertBytes, err := os.ReadFile(h.Config.CACert)
 		if err != nil {
 			msg := "could not load CA certificate"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
@@ -383,14 +375,14 @@ func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 			msg := "failed to parse public key"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
 		}
-		rootCertpool := x509.NewCertPool()
-		rootCertpool.AddCert(rootPubCrt)
+		rootCertPool := x509.NewCertPool()
+		rootCertPool.AddCert(rootPubCrt)
 
 		httpClient.Timeout = HTTPClientTimeout
 		//nolint:gosec
 		httpClient.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs:      rootCertpool,
+				RootCAs:      rootCertPool,
 				Certificates: []tls.Certificate{certificate},
 			},
 		}
