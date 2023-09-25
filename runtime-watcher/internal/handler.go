@@ -280,14 +280,11 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 
 	requestPayload := bytes.NewBuffer(postBody)
 
-	kcpAddr := os.Getenv("KCP_ADDR")
-	contract := os.Getenv("KCP_CONTRACT")
-
-	if kcpAddr == "" || contract == "" {
+	if h.Config.KCPAddress == "" || h.Config.KCPContract == "" {
 		return KcpReqFailedMsg
 	}
 
-	uri := fmt.Sprintf("%s/%s/%s/%s", kcpAddr, contract, moduleName, EventEndpoint)
+	uri := fmt.Sprintf("%s/%s/%s/%s", h.Config.KCPAddress, h.Config.KCPContract, moduleName, EventEndpoint)
 	httpClient, url, err := h.getHTTPClientAndURL(uri)
 	if err != nil {
 		h.Logger.Error(err, KcpReqFailedMsg)
