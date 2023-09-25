@@ -28,7 +28,21 @@ import (
 
 const (
 	HTTPClientTimeout = time.Minute * 3
-	EventEndpoint     = "event"
+	eventEndpoint     = "event"
+
+	admissionError      = "admission error"
+	errorSeparator      = ":"
+	invalidationMessage = "invalidated from webhook"
+	validationMessage   = "validated from webhook"
+	KcpReqFailedMsg     = "kcp request failed"
+	KcpReqSucceededMsg  = "kcp request succeeded"
+
+	urlPathPattern = "/validate/%s"
+
+	ownedBy = "operator.kyma-project.io/owned-by"
+
+	StatusSubResource        = "status"
+	namespaceNameEntityCount = 2
 )
 
 type Handler struct {
@@ -45,59 +59,19 @@ type admissionResponseInfo struct {
 }
 
 type responseInterface interface {
-	isEmpty() bool
-}
-
-const (
-	admissionError      = "admission error"
-	errorSeparator      = ":"
-	invalidationMessage = "invalidated from webhook"
-	validationMessage   = "validated from webhook"
-	KcpReqFailedMsg     = "kcp request failed"
-	KcpReqSucceededMsg  = "kcp request succeeded"
-
-	urlPathPattern = "/validate/%s"
-
-	OperatorPrefix    = "operator.kyma-project.io"
-	Separator         = "/"
-	OwnedByAnnotation = OperatorPrefix + Separator + "owned-by"
-	OwnedBySeperator  = "/"
-	ManagedByLabel    = "operator.kyma-project.io/managed-by"
-
-	StatusSubResource        = "status"
-	namespaceNameEntityCount = 2
-)
-
-func getModuleName(urlPath string) (string, error) {
-	var moduleName string
-	_, err := fmt.Sscanf(urlPath, urlPathPattern, &moduleName)
-	if err != nil && !errors.Is(err, io.EOF) {
-		return "", fmt.Errorf("could not parse url path")
-	}
-
-	if err != nil && errors.Is(err, io.EOF) || moduleName == "" {
-		return "", fmt.Errorf("module name cannot be empty")
-	}
-
-	return moduleName, nil
+	IsEmpty() bool
 }
 
 func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
-	moduleName, err := getModuleName(req.URL.Path)
-	if err != nil {
-		h.Logger.Error(err, "failed to get module name")
-		return
-	}
-	// read incoming request to bytes
+
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		h.Logger.Error(err, admissionError)
 		return
 	}
 
-	// create admission review from bytes
-	admissionReview := h.getAdmissionRequestFromBytes(body)
+	admissionReview := h.parseAdmissionReview(body)
 	if admissionReview == nil {
 		return
 	}
@@ -106,12 +80,16 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()),
 	)
 
+	moduleName, err := getModuleName(req.URL.Path)
+	if err != nil {
+		h.Logger.Error(err, "failed to get module name")
+		return
+	}
+
 	validation := h.validateResources(admissionReview, moduleName)
 
-	// log admission response message
 	h.Logger.Info(validation.message)
 
-	// prepare response
 	responseBytes := h.prepareResponse(admissionReview, validation)
 	if responseBytes == nil {
 		h.Logger.Info("empty response from incoming admission review")
@@ -123,10 +101,37 @@ func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (h *Handler) parseAdmissionReview(body []byte) *admissionv1.AdmissionReview {
+	admissionReview := admissionv1.AdmissionReview{}
+	if _, _, err := h.Deserializer.Decode(body, nil, &admissionReview); err != nil {
+		h.Logger.Error(fmt.Errorf("admission request could not be retreived, %s%s %w", admissionError,
+			errorSeparator, err), "")
+		return nil
+	} else if admissionReview.Request == nil {
+		h.Logger.Error(fmt.Errorf("admission request was empty, %s%s %w", admissionError, errorSeparator, err),
+			"")
+		return nil
+	}
+	return &admissionReview
+}
+
+func getModuleName(urlPath string) (string, error) {
+	var moduleName string
+	_, err := fmt.Sscanf(urlPath, urlPathPattern, &moduleName)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", fmt.Errorf("could not parse url path")
+	}
+
+	if err != nil && errors.Is(err, io.EOF) || moduleName == "" {
+		return "", fmt.Errorf("module name must not be empty")
+	}
+
+	return moduleName, nil
+}
+
 func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 	validation admissionResponseInfo,
 ) []byte {
-	// prepare response object
 	finalizedAdmissionReview := admissionv1.AdmissionReview{}
 	finalizedAdmissionReview.Kind = admissionReview.Kind
 	finalizedAdmissionReview.APIVersion = admissionReview.APIVersion
@@ -252,23 +257,14 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 }
 
 func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) string {
-	ownerKey, err := getKcpResourceName(watched)
+	ownerNamespace, ownerName, err := extractOwner(watched)
 	if err != nil {
 		h.Logger.Error(err, "resource owner name could not be determined")
 		return "resource owner name could not be determined"
 	}
 
-	ownerParts := strings.Split(ownerKey, OwnedBySeperator)
-	if len(ownerParts) != namespaceNameEntityCount {
-		return fmt.Sprintf("annotation %s not set correctly on resource %s/%s: %s", OwnedByAnnotation,
-			watched.Namespace, watched.Name, ownerKey)
-	}
-	ownerNs := ownerParts[0]
-	ownerName := ownerParts[1]
-
-	// send request to kcp
 	watcherEvent := &listenerTypes.WatchEvent{
-		Owner:      client.ObjectKey{Namespace: ownerNs, Name: ownerName},
+		Owner:      client.ObjectKey{Namespace: ownerNamespace, Name: ownerName},
 		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
@@ -284,7 +280,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 		return KcpReqFailedMsg
 	}
 
-	uri := fmt.Sprintf("%s/%s/%s/%s", h.Config.KCPAddress, h.Config.KCPContract, moduleName, EventEndpoint)
+	uri := fmt.Sprintf("%s/%s/%s/%s", h.Config.KCPAddress, h.Config.KCPContract, moduleName, eventEndpoint)
 	httpClient, url, err := h.getHTTPClientAndURL(uri)
 	if err != nil {
 		h.Logger.Error(err, KcpReqFailedMsg)
@@ -309,34 +305,30 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	return KcpReqSucceededMsg
 }
 
-func getKcpResourceName(watched ObjectWatched) (string, error) {
-	if watched.Annotations == nil || watched.Annotations[OwnedByAnnotation] == "" {
-		return "", fmt.Errorf("no `ownedBy` annotation found for watched resource %s/%s", watched.Namespace, watched.Name)
+func extractOwner(watched ObjectWatched) (namespace, name string, err error) {
+	if watched.Annotations == nil || watched.Annotations[ownedBy] == "" {
+		return namespace, name, fmt.Errorf("no '%s' annotation found for watched resource %s",
+			ownedBy, watched.NamespacedName())
 	}
-	return watched.Annotations[OwnedByAnnotation], nil
+	ownerKey := watched.Annotations[ownedBy]
+	ownerParts := strings.Split(ownerKey, "/")
+	if len(ownerParts) != namespaceNameEntityCount {
+		return namespace, name, fmt.Errorf("annotation %s not set correctly on resource %s: %s",
+			ownedBy, watched.NamespacedName(), ownerKey)
+	}
+
+	namespace = ownerParts[0]
+	name = ownerParts[1]
+	return namespace, name, nil
 }
 
 func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
 ) admissionResponseInfo {
-	if err := json.Unmarshal(rawBytes, response); err != nil || response.isEmpty() {
+	if err := json.Unmarshal(rawBytes, response); err != nil || response.IsEmpty() {
 		h.Logger.Error(fmt.Errorf("admission review resource object could not be unmarshaled %s%s %w",
 			admissionError, errorSeparator, err), "")
 	}
 	return h.validAdmissionReviewObj("")
-}
-
-func (h *Handler) getAdmissionRequestFromBytes(body []byte) *admissionv1.AdmissionReview {
-	admissionReview := admissionv1.AdmissionReview{}
-	if _, _, err := h.Deserializer.Decode(body, nil, &admissionReview); err != nil {
-		h.Logger.Error(fmt.Errorf("admission request could not be retreived, %s%s %w", admissionError,
-			errorSeparator, err), "")
-		return nil
-	} else if admissionReview.Request == nil {
-		h.Logger.Error(fmt.Errorf("admission request was empty, %s%s %w", admissionError, errorSeparator, err),
-			"")
-		return nil
-	}
-	return &admissionReview
 }
 
 func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo {

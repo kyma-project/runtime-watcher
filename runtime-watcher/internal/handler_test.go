@@ -1,3 +1,4 @@
+//nolint:gochecknoglobals
 package internal_test
 
 import (
@@ -39,11 +40,15 @@ type testCaseParams struct {
 	changeObjType ChangeObj
 }
 
-//nolint:gochecknoglobals
+const (
+	crName    = "kyma-1"
+	ownerName = "ownerName"
+)
+
 var baseTestCase = testCase{
 	params: testCaseParams{
 		operation:   admissionv1.Create,
-		watchedName: crName1,
+		watchedName: crName,
 		moduleName:  moduleName,
 		ownerName:   ownerName,
 	},
@@ -65,7 +70,7 @@ func createTableEntries() []TableEntry {
 
 			if changeType == NoChange && operationToTest == admissionv1.Update {
 				currentTestCase.results.resultMsg = fmt.Sprintf("no change detected on watched resource %s/%s",
-					metav1.NamespaceDefault, crName1)
+					metav1.NamespaceDefault, crName)
 			} else if operationToTest == admissionv1.Connect {
 				currentTestCase.results.resultMsg = fmt.Sprintf("operation %s not supported for resource %s",
 					admissionv1.Connect, metav1.GroupVersionKind(schema.FromAPIVersionAndKind(
@@ -94,8 +99,14 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Logger:       logger,
 			Deserializer: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 		}
+		managedByLabel := map[string]string{
+			"operator.kyma-project.io/managed-by": "lifecycle-manager",
+		}
+		ownedByAnnotation := map[string]string{
+			"operator.kyma-project.io/owned-by": fmt.Sprintf("%s/%s", metav1.NamespaceDefault, ownerName),
+		}
 		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
-			testCase.params.moduleName, managedbyLabel, ownedbyAnnotation, testCase.params.changeObjType)
+			testCase.params.moduleName, managedByLabel, ownedByAnnotation, testCase.params.changeObjType)
 		Expect(err).ShouldNot(HaveOccurred())
 		skrRecorder := httptest.NewRecorder()
 		handler.Handle(skrRecorder, request)
