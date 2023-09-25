@@ -66,7 +66,7 @@ func main() {
 		ReadTimeout: internal.HTTPClientTimeout,
 	}
 	logger.Info("starting web server", "Port:", config.Port)
-	err = server.ListenAndServeTLS(config.TLSCert, config.TLSKey)
+	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)
 
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")

@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -253,14 +255,14 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 }
 
 func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) string {
-	ownerNamespace, ownerName, err := extractOwner(watched)
+	owner, err := extractOwner(watched)
 	if err != nil {
 		h.Logger.Error(err, "resource owner name could not be determined")
 		return "resource owner name could not be determined"
 	}
 
 	watcherEvent := &listenerTypes.WatchEvent{
-		Owner:      client.ObjectKey{Namespace: ownerNamespace, Name: ownerName},
+		Owner:      client.ObjectKey{Namespace: owner.Namespace, Name: owner.Name},
 		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
@@ -301,21 +303,19 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	return kcpReqSucceededMsg
 }
 
-func extractOwner(watched ObjectWatched) (namespace, name string, err error) {
+func extractOwner(watched ObjectWatched) (types.NamespacedName, error) {
 	if watched.Annotations == nil || watched.Annotations[ownedBy] == "" {
-		return namespace, name, fmt.Errorf("no '%s' annotation found for watched resource %s",
+		return types.NamespacedName{}, fmt.Errorf("no '%s' annotation found for watched resource %s",
 			ownedBy, watched.NamespacedName())
 	}
 	ownerKey := watched.Annotations[ownedBy]
 	ownerParts := strings.Split(ownerKey, "/")
 	if len(ownerParts) != namespaceNameEntityCount {
-		return namespace, name, fmt.Errorf("annotation %s not set correctly on resource %s: %s",
+		return types.NamespacedName{}, fmt.Errorf("annotation %s not set correctly on resource %s: %s",
 			ownedBy, watched.NamespacedName(), ownerKey)
 	}
 
-	namespace = ownerParts[0]
-	name = ownerParts[1]
-	return namespace, name, nil
+	return types.NamespacedName{Namespace: ownerParts[0], Name: ownerParts[1]}, nil
 }
 
 func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
@@ -343,13 +343,13 @@ func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 		h.Logger.Info("will attempt to send an https request")
 		protocol = "https"
 
-		certificate, err := tls.LoadX509KeyPair(h.Config.TLSCert, h.Config.TLSKey)
+		certificate, err := tls.LoadX509KeyPair(h.Config.TLSCertPath, h.Config.TLSKeyPath)
 		if err != nil {
 			msg := "could not load tls certificate"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
 		}
 
-		caCertBytes, err := os.ReadFile(h.Config.CACert)
+		caCertBytes, err := os.ReadFile(h.Config.CACertPath)
 		if err != nil {
 			msg := "could not load CA certificate"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)

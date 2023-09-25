@@ -22,11 +22,11 @@ const (
 )
 
 type ServerConfig struct {
-	Port               int    // Webhook server port
-	CACert             string // CA key used to sign the certificate
-	TLSCert            string // Path to TLS certificate for https
-	TLSKey             string // Path to TLS key matching for certificate
-	TLSCallbackEnabled bool   // Indicates if KCP accepts HTTPS requests
+	Port               int
+	CACertPath         string
+	TLSCertPath        string
+	TLSKeyPath         string
+	TLSCallbackEnabled bool
 	KCPAddress         string
 	KCPContract        string
 }
@@ -40,6 +40,9 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 	webhookPort, found := os.LookupEnv(envWebhookPort)
 	if found {
 		port, err := strconv.Atoi(webhookPort)
+		if err != nil {
+			logger.Error(err, flagError(envWebhookPort).Error())
+		}
 		if err = validatePortRange(port); err != nil {
 			logger.Error(err, flagError(envWebhookPort).Error())
 		} else {
@@ -57,16 +60,16 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 		}
 	}
 
-	config.CACert = os.Getenv(envCACert)
-	if config.CACert == "" {
+	config.CACertPath = os.Getenv(envCACert)
+	if config.CACertPath == "" {
 		return config, flagError(envCACert)
 	}
-	config.TLSCert = os.Getenv(envTLSCert)
-	if config.TLSCert == "" {
+	config.TLSCertPath = os.Getenv(envTLSCert)
+	if config.TLSCertPath == "" {
 		return config, flagError(envTLSCert)
 	}
-	config.TLSKey = os.Getenv(envTLSKey)
-	if config.TLSKey == "" {
+	config.TLSKeyPath = os.Getenv(envTLSKey)
+	if config.TLSKeyPath == "" {
 		return config, flagError(envTLSKey)
 	}
 	config.KCPAddress = os.Getenv(envKCPAddress)
