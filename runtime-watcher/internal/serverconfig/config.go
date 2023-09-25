@@ -3,9 +3,10 @@ package serverconfig
 import (
 	"errors"
 	"fmt"
-	"github.com/go-logr/logr"
 	"os"
 	"strconv"
+
+	"github.com/go-logr/logr"
 )
 
 const (

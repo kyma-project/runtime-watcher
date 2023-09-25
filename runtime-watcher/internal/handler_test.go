@@ -4,12 +4,14 @@ package internal_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 	"io"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
