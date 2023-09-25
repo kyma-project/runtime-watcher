@@ -1,7 +1,7 @@
 
 # Kyma Listener
 
-Listener module that listens to events sent by the Kyma [Watcher](https://github.com/kyma-project/runtime-watcher/tree/main/operator) component.
+Listener module that listens to events sent by the Kyma [Watcher](https://github.com/kyma-project/runtime-watcher/tree/main/runtime-watcher) component.
 
 ## Overview
 
