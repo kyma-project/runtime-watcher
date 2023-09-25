@@ -53,7 +53,7 @@ var baseTestCase = testCase{
 		ownerName:   ownerName,
 	},
 	results: testCaseResults{
-		resultMsg:    internal.KcpReqSucceededMsg,
+		resultMsg:    "kcp request succeeded",
 		resultStatus: metav1.StatusSuccess,
 	},
 }

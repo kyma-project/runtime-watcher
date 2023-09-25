@@ -119,7 +119,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 	}
 
 	if changeObj == StatusChange {
-		admissionReview.Request.SubResource = internal.StatusSubResource
+		admissionReview.Request.SubResource = "status"
 	}
 
 	if operation == admissionv1.Delete || operation == admissionv1.Update {

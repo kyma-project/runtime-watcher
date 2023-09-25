@@ -27,21 +27,17 @@ import (
 )
 
 const (
-	HTTPClientTimeout = time.Minute * 3
-	eventEndpoint     = "event"
-
-	admissionError      = "admission error"
-	errorSeparator      = ":"
-	invalidationMessage = "invalidated from webhook"
-	validationMessage   = "validated from webhook"
-	KcpReqFailedMsg     = "kcp request failed"
-	KcpReqSucceededMsg  = "kcp request succeeded"
-
-	urlPathPattern = "/validate/%s"
-
-	ownedBy = "operator.kyma-project.io/owned-by"
-
-	StatusSubResource        = "status"
+	HTTPClientTimeout        = time.Minute * 3
+	eventEndpoint            = "event"
+	admissionError           = "admission error"
+	errorSeparator           = ":"
+	invalidationMessage      = "invalidated from webhook"
+	validationMessage        = "validated from webhook"
+	kcpReqFailedMsg          = "kcp request failed"
+	kcpReqSucceededMsg       = "kcp request succeeded"
+	urlPathPattern           = "/validate/%s"
+	ownedBy                  = "operator.kyma-project.io/owned-by"
+	statusSubResource        = "status"
 	namespaceNameEntityCount = 2
 )
 
@@ -241,7 +237,7 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 			// send request to kcp for all UPDATE events
 			registerChange = true
 		}
-	case StatusSubResource:
+	case statusSubResource:
 		registerChange = !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
 	default:
 		return fmt.Sprintf("invalid subresource for watched resource %s/%s",
@@ -270,39 +266,39 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	}
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg)
-		return KcpReqFailedMsg
+		h.Logger.Error(err, kcpReqFailedMsg)
+		return kcpReqFailedMsg
 	}
 
 	requestPayload := bytes.NewBuffer(postBody)
 
 	if h.Config.KCPAddress == "" || h.Config.KCPContract == "" {
-		return KcpReqFailedMsg
+		return kcpReqFailedMsg
 	}
 
 	uri := fmt.Sprintf("%s/%s/%s/%s", h.Config.KCPAddress, h.Config.KCPContract, moduleName, eventEndpoint)
 	httpClient, url, err := h.getHTTPClientAndURL(uri)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg)
+		h.Logger.Error(err, kcpReqFailedMsg)
 		return err.Error()
 	}
 
 	resp, err := httpClient.Post(url, "application/json", requestPayload)
 	if err != nil {
-		h.Logger.Error(err, KcpReqFailedMsg, "postBody", watcherEvent)
-		return KcpReqFailedMsg
+		h.Logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
+		return kcpReqFailedMsg
 	}
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		h.Logger.Error(err, KcpReqFailedMsg, "postBody", watcherEvent)
+		h.Logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
 		h.Logger.Error(err, fmt.Sprintf("responseBody: %s with StatusCode: %d", responseBody, resp.StatusCode))
-		return KcpReqFailedMsg
+		return kcpReqFailedMsg
 	}
 
 	h.Logger.Info(fmt.Sprintf("sent request to KCP successfully for resource %s/%s",
 		watched.Namespace, watched.Name), "postBody", watcherEvent)
-	return KcpReqSucceededMsg
+	return kcpReqSucceededMsg
 }
 
 func extractOwner(watched ObjectWatched) (namespace, name string, err error) {
