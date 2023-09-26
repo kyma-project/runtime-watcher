@@ -39,7 +39,11 @@ const (
 	namespaceNameEntityCount = 2
 )
 
-func NewHandler(client client.Client, logger logr.Logger, config serverconfig.ServerConfig, parser parser.RequestParser) *Handler {
+func NewHandler(client client.Client,
+	logger logr.Logger,
+	config serverconfig.ServerConfig,
+	parser parser.RequestParser,
+) *Handler {
 	return &Handler{
 		client:        client,
 		logger:        logger,
