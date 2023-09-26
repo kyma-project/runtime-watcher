@@ -145,7 +145,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 func generateAdmissionRequestRawObject(objectName string, labels, annotations map[string]string,
 	isOldObject bool, changeObj ChangeObj,
 ) ([]byte, error) {
-	objectWatched := &internal.ObjectWatched{
+	objectWatched := &internal.WatchedObject{
 		Metadata: internal.Metadata{
 			Name:        objectName,
 			Namespace:   metav1.NamespaceDefault,
@@ -167,9 +167,9 @@ func generateAdmissionRequestRawObject(objectName string, labels, annotations ma
 	return rawObject, nil
 }
 
-func configureObjectWatched(objectWatched *internal.ObjectWatched,
+func configureObjectWatched(objectWatched *internal.WatchedObject,
 	isOldObject bool, changeObj ChangeObj,
-) *internal.ObjectWatched {
+) *internal.WatchedObject {
 	if isOldObject {
 		switch changeObj {
 		case NoSpecField:

@@ -17,13 +17,13 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 )
 
@@ -31,9 +31,6 @@ const (
 	HTTPClientTimeout        = time.Minute * 3
 	eventEndpoint            = "event"
 	admissionError           = "admission error"
-	errorSeparator           = ":"
-	invalidationMessage      = "invalidated from webhook"
-	validationMessage        = "validated from webhook"
 	kcpReqFailedMsg          = "kcp request failed"
 	kcpReqSucceededMsg       = "kcp request succeeded"
 	urlPathPattern           = "/validate/%s"
@@ -42,74 +39,54 @@ const (
 	namespaceNameEntityCount = 2
 )
 
-type Handler struct {
-	Client       client.Client
-	Logger       logr.Logger
-	Config       serverconfig.ServerConfig
-	Deserializer runtime.Decoder
+func NewHandler(client client.Client, logger logr.Logger, config serverconfig.ServerConfig, parser parser.RequestParser) *Handler {
+	return &Handler{
+		client:        client,
+		logger:        logger,
+		config:        config,
+		requestParser: parser,
+	}
 }
 
-type admissionResponseInfo struct {
-	allowed bool
-	message string
-	status  string
+type Handler struct {
+	client        client.Client
+	logger        logr.Logger
+	config        serverconfig.ServerConfig
+	requestParser parser.RequestParser
 }
 
 type responseInterface interface {
 	IsEmpty() bool
 }
 
-func (h *Handler) Handle(writer http.ResponseWriter, req *http.Request) {
-	defer req.Body.Close()
-
-	body, err := io.ReadAll(req.Body)
+func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
+	admissionReview, err := h.requestParser.ParseAdmissionReview(request)
 	if err != nil {
-		h.Logger.Error(err, admissionError)
+		h.logger.Error(errors.Join(errAdmission, err), "failed to parse AdmissionReview")
 		return
 	}
 
-	admissionReview := h.parseAdmissionReview(body)
-	if admissionReview == nil {
-		return
-	}
+	h.logger.Info(fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()))
 
-	h.Logger.Info(
-		fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()),
-	)
-
-	moduleName, err := getModuleName(req.URL.Path)
+	moduleName, err := getModuleName(request.URL.Path)
 	if err != nil {
-		h.Logger.Error(err, "failed to get module name")
+		h.logger.Error(err, "failed to get module name")
 		return
 	}
 
-	validation := h.validateResources(admissionReview, moduleName)
+	validationMsg := h.validateResources(admissionReview.Request, moduleName)
 
-	h.Logger.Info(validation.message)
+	h.logger.Info(string(validationMsg))
 
-	responseBytes := h.prepareResponse(admissionReview, validation)
+	responseBytes := h.prepareResponse(admissionReview, validationMsg)
 	if responseBytes == nil {
-		h.Logger.Info("empty response from incoming admission review")
+		h.logger.Info("empty response from incoming admission review")
 		return
 	}
 	if _, err = writer.Write(responseBytes); err != nil {
-		h.Logger.Error(err, admissionError)
+		h.logger.Error(err, admissionError)
 		return
 	}
-}
-
-func (h *Handler) parseAdmissionReview(body []byte) *admissionv1.AdmissionReview {
-	admissionReview := admissionv1.AdmissionReview{}
-	if _, _, err := h.Deserializer.Decode(body, nil, &admissionReview); err != nil {
-		h.Logger.Error(fmt.Errorf("admission request could not be retreived, %s%s %w", admissionError,
-			errorSeparator, err), "")
-		return nil
-	} else if admissionReview.Request == nil {
-		h.Logger.Error(fmt.Errorf("admission request was empty, %s%s %w", admissionError, errorSeparator, err),
-			"")
-		return nil
-	}
-	return &admissionReview
 }
 
 func getModuleName(urlPath string) (string, error) {
@@ -127,101 +104,79 @@ func getModuleName(urlPath string) (string, error) {
 }
 
 func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
-	validation admissionResponseInfo,
+	validationMessage admissionMessage,
 ) []byte {
-	finalizedAdmissionReview := admissionv1.AdmissionReview{}
-	finalizedAdmissionReview.Kind = admissionReview.Kind
-	finalizedAdmissionReview.APIVersion = admissionReview.APIVersion
-	finalizedAdmissionReview.Response = &admissionv1.AdmissionResponse{
-		UID:     admissionReview.Request.UID,
-		Allowed: validation.allowed,
-	}
-	finalizedAdmissionReview.APIVersion = admissionReview.APIVersion
+	h.logger.Info(fmt.Sprintf("Preparing response for AdmissionReview: %s %s %s",
+		admissionReview.Request.Kind.Kind,
+		string(admissionReview.Request.Operation),
+		validationMessage))
 
-	finalizedAdmissionReview.Response.Result = &metav1.Status{
-		Message: validation.message,
-		Status:  validation.status,
-	}
-	if !validation.allowed {
-		h.Logger.Info(
-			fmt.Sprintf("%s %s %s", admissionReview.Request.Kind.Kind,
-				string(admissionReview.Request.Operation), invalidationMessage),
-		)
-	} else {
-		h.Logger.Info(
-			fmt.Sprintf("%s %s %s", admissionReview.Request.Kind.Kind,
-				string(admissionReview.Request.Operation), validationMessage),
-		)
+	finalizedAdmissionReview := admissionv1.AdmissionReview{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       admissionReview.Kind,
+			APIVersion: admissionReview.APIVersion,
+		},
+		Response: &admissionv1.AdmissionResponse{
+			UID:     admissionReview.Request.UID,
+			Allowed: true,
+			Result: &metav1.Status{
+				Message: string(validationMessage),
+				Status:  metav1.StatusSuccess,
+			},
+		},
 	}
 
 	admissionReviewBytes, err := json.Marshal(&finalizedAdmissionReview)
 	if err != nil {
-		h.Logger.Error(err, admissionError)
+		h.logger.Error(err, admissionError)
 		return nil
 	}
 	return admissionReviewBytes
 }
 
-func (h *Handler) validateResources(admissionReview *admissionv1.AdmissionReview, moduleName string,
-) admissionResponseInfo {
-	var msg string
-	switch admissionReview.Request.Operation {
+type admissionMessage string
+
+func (h *Handler) validateResources(request *admissionv1.AdmissionRequest, moduleName string,
+) admissionMessage {
+	object, oldObject := WatchedObject{}, WatchedObject{}
+
+	switch request.Operation {
 	case admissionv1.Update:
-		oldObjectWatched := ObjectWatched{}
-		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
-			&oldObjectWatched)
-		if !validatedResource.allowed {
-			return validatedResource
+		h.unmarshalWatchedObject(request.OldObject.Raw, &oldObject)
+		h.unmarshalWatchedObject(request.Object.Raw, &object)
+		resource := &Resource{
+			GroupVersionKind: request.Kind,
+			SubResource:      request.SubResource,
 		}
-
-		objectWatched := ObjectWatched{}
-		validatedResource = h.unmarshalRawObj(admissionReview.Request.Object.Raw, &objectWatched)
-		if !validatedResource.allowed {
-			return validatedResource
-		}
-
-		// send notification to kcp
-		msg = h.sendRequestToKcpOnUpdate(&Resource{
-			GroupVersionKind: admissionReview.Request.Kind,
-			SubResource:      admissionReview.Request.SubResource,
-		}, oldObjectWatched, objectWatched, moduleName)
-
-		// send valid admission response - under all circumstances!
-		return h.validAdmissionReviewObj(msg)
+		msg := h.sendRequestToKcpOnUpdate(resource, oldObject, object, moduleName)
+		return admissionMessage(msg)
 	case admissionv1.Delete:
-		oldObjectWatched := ObjectWatched{}
-		validatedResource := h.unmarshalRawObj(admissionReview.Request.OldObject.Raw,
-			&oldObjectWatched)
-		if !validatedResource.allowed {
-			return validatedResource
-		}
-
-		// send notification to kcp
-		msg = h.sendRequestToKcp(moduleName, oldObjectWatched)
-
-		// return valid admission response - under all circumstances!
-		return h.validAdmissionReviewObj(msg)
+		h.unmarshalWatchedObject(request.OldObject.Raw, &oldObject)
+		msg := h.sendRequestToKcp(moduleName, oldObject)
+		return admissionMessage(msg)
 	case admissionv1.Create:
-		objectWatched := ObjectWatched{}
-		validatedResource := h.unmarshalRawObj(admissionReview.Request.Object.Raw,
-			&objectWatched)
-		if !validatedResource.allowed {
-			return validatedResource
-		}
-
-		// send notification to kcp
-		msg = h.sendRequestToKcp(moduleName, objectWatched)
-
-		// return valid admission response - under all circumstances!
+		h.unmarshalWatchedObject(request.Object.Raw, &object)
+		msg := h.sendRequestToKcp(moduleName, object)
+		return admissionMessage(msg)
 	case admissionv1.Connect:
-		msg = fmt.Sprintf("operation %s not supported for resource %s",
-			admissionv1.Connect, admissionReview.Request.Kind.String())
+		msg := fmt.Sprintf("operation %s not supported for %s", admissionv1.Connect, request.Kind.String())
+		return admissionMessage(msg)
 	}
-
-	return h.validAdmissionReviewObj(msg)
+	return ""
 }
 
-func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched, objectWatched ObjectWatched,
+var errAdmission = errors.New(admissionError)
+
+func (h *Handler) unmarshalWatchedObject(rawBytes []byte, response responseInterface) {
+	if err := json.Unmarshal(rawBytes, response); err != nil {
+		h.logger.Error(errors.Join(errAdmission, err), "failed to unmarshal admission review resource object")
+	}
+	if response.IsEmpty() {
+		h.logger.Error(errAdmission, "admission review resource object is empty")
+	}
+}
+
+func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObj, obj WatchedObject,
 	moduleName string,
 ) string {
 	var registerChange bool
@@ -231,33 +186,33 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObjectWatched,
 	switch watchedSubResource {
 	// means watched on spec
 	case "":
-		if oldObjectWatched.Spec != nil && objectWatched.Spec != nil {
-			registerChange = !reflect.DeepEqual(oldObjectWatched.Spec, objectWatched.Spec)
+		if oldObj.Spec != nil && obj.Spec != nil {
+			registerChange = !reflect.DeepEqual(oldObj.Spec, obj.Spec)
 		} else {
 			// object watched doesn't have spec field
 			// send request to kcp for all UPDATE events
 			registerChange = true
 		}
 	case statusSubResource:
-		registerChange = !reflect.DeepEqual(oldObjectWatched.Status, objectWatched.Status)
+		registerChange = !reflect.DeepEqual(oldObj.Status, obj.Status)
 	default:
 		return fmt.Sprintf("invalid subresource for watched resource %s/%s",
-			objectWatched.Namespace, objectWatched.Name)
+			obj.Namespace, obj.Name)
 	}
 
 	if !registerChange {
 		return fmt.Sprintf("no change detected on watched resource %s/%s",
-			objectWatched.Namespace, objectWatched.Name)
+			obj.Namespace, obj.Name)
 	}
 
-	return h.sendRequestToKcp(moduleName, objectWatched)
+	return h.sendRequestToKcp(moduleName, obj)
 }
 
-func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) string {
+func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) string {
 	owner, err := extractOwner(watched)
 	if err != nil {
-		h.Logger.Error(err, "resource owner name could not be determined")
-		return "resource owner name could not be determined"
+		h.logger.Error(err, "resource owner name could not be determined")
+		return kcpReqFailedMsg
 	}
 
 	watcherEvent := &listenerTypes.WatchEvent{
@@ -267,42 +222,42 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched ObjectWatched) str
 	}
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
-		h.Logger.Error(err, kcpReqFailedMsg)
+		h.logger.Error(err, kcpReqFailedMsg)
 		return kcpReqFailedMsg
 	}
 
 	requestPayload := bytes.NewBuffer(postBody)
 
-	if h.Config.KCPAddress == "" || h.Config.KCPContract == "" {
+	if h.config.KCPAddress == "" || h.config.KCPContract == "" {
 		return kcpReqFailedMsg
 	}
 
-	uri := fmt.Sprintf("%s/%s/%s/%s", h.Config.KCPAddress, h.Config.KCPContract, moduleName, eventEndpoint)
+	uri := fmt.Sprintf("%s/%s/%s/%s", h.config.KCPAddress, h.config.KCPContract, moduleName, eventEndpoint)
 	httpClient, url, err := h.getHTTPClientAndURL(uri)
 	if err != nil {
-		h.Logger.Error(err, kcpReqFailedMsg)
+		h.logger.Error(err, kcpReqFailedMsg)
 		return err.Error()
 	}
 
 	resp, err := httpClient.Post(url, "application/json", requestPayload)
 	if err != nil {
-		h.Logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
+		h.logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
 		return kcpReqFailedMsg
 	}
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		h.Logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
-		h.Logger.Error(err, fmt.Sprintf("responseBody: %s with StatusCode: %d", responseBody, resp.StatusCode))
+		h.logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
+		h.logger.Error(err, fmt.Sprintf("responseBody: %s with StatusCode: %d", responseBody, resp.StatusCode))
 		return kcpReqFailedMsg
 	}
 
-	h.Logger.Info(fmt.Sprintf("sent request to KCP successfully for resource %s/%s",
+	h.logger.Info(fmt.Sprintf("sent request to KCP successfully for resource %s/%s",
 		watched.Namespace, watched.Name), "postBody", watcherEvent)
 	return kcpReqSucceededMsg
 }
 
-func extractOwner(watched ObjectWatched) (types.NamespacedName, error) {
+func extractOwner(watched WatchedObject) (types.NamespacedName, error) {
 	if watched.Annotations == nil || watched.Annotations[ownedBy] == "" {
 		return types.NamespacedName{}, fmt.Errorf("no '%s' annotation found for watched resource %s",
 			ownedBy, watched.NamespacedName())
@@ -317,38 +272,21 @@ func extractOwner(watched ObjectWatched) (types.NamespacedName, error) {
 	return types.NamespacedName{Namespace: ownerParts[0], Name: ownerParts[1]}, nil
 }
 
-func (h *Handler) unmarshalRawObj(rawBytes []byte, response responseInterface,
-) admissionResponseInfo {
-	if err := json.Unmarshal(rawBytes, response); err != nil || response.IsEmpty() {
-		h.Logger.Error(fmt.Errorf("admission review resource object could not be unmarshaled %s%s %w",
-			admissionError, errorSeparator, err), "")
-	}
-	return h.validAdmissionReviewObj("")
-}
-
-func (h *Handler) validAdmissionReviewObj(message string) admissionResponseInfo {
-	return admissionResponseInfo{
-		allowed: true,
-		message: message,
-		status:  metav1.StatusSuccess,
-	}
-}
-
 func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 	httpClient := http.Client{}
 	protocol := "http"
 
-	if h.Config.TLSCallbackEnabled {
-		h.Logger.Info("will attempt to send an https request")
+	if h.config.TLSCallbackEnabled {
+		h.logger.Info("will attempt to send an https request")
 		protocol = "https"
 
-		certificate, err := tls.LoadX509KeyPair(h.Config.TLSCertPath, h.Config.TLSKeyPath)
+		certificate, err := tls.LoadX509KeyPair(h.config.TLSCertPath, h.config.TLSKeyPath)
 		if err != nil {
 			msg := "could not load tls certificate"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
 		}
 
-		caCertBytes, err := os.ReadFile(h.Config.CACertPath)
+		caCertBytes, err := os.ReadFile(h.config.CACertPath)
 		if err != nil {
 			msg := "could not load CA certificate"
 			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
@@ -373,6 +311,6 @@ func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
 	}
 
 	url := fmt.Sprintf("%s://%s", protocol, uri)
-	h.Logger.Info("KCP Address", "url", url)
+	h.logger.Info("KCP Address", "url", url)
 	return httpClient, url, nil
 }

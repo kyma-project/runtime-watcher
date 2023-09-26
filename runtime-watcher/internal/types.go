@@ -26,7 +26,7 @@ func (m Metadata) NamespacedName() string {
 	return fmt.Sprintf("%s/%s", m.Namespace, m.Name)
 }
 
-type ObjectWatched struct {
+type WatchedObject struct {
 	Metadata   `json:"metadata"`
 	Spec       map[string]interface{} `json:"spec"`
 	APIVersion string                 `json:"apiVersion"`

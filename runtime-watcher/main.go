@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,13 +54,9 @@ func main() {
 		logger.Error(err, "rest client could not be determined for skr-webhook")
 		return
 	}
-	deserializer := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
-	handler := &internal.Handler{
-		Client:       restClient,
-		Logger:       logger,
-		Config:       config,
-		Deserializer: deserializer,
-	}
+
+	requestParser := parser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
+	handler := internal.NewHandler(restClient, logger, config, *requestParser)
 	http.HandleFunc("/validate/", handler.Handle)
 
 	server := http.Server{
