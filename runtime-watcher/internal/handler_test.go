@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
+	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -74,7 +76,7 @@ func createTableEntries() []TableEntry {
 				currentTestCase.results.resultMsg = fmt.Sprintf("no change detected on watched resource %s/%s",
 					metav1.NamespaceDefault, crName)
 			} else if operationToTest == admissionv1.Connect {
-				currentTestCase.results.resultMsg = fmt.Sprintf("operation %s not supported for resource %s",
+				currentTestCase.results.resultMsg = fmt.Sprintf("operation %s not supported for %s",
 					admissionv1.Connect, metav1.GroupVersionKind(schema.FromAPIVersionAndKind(
 						WatchedResourceAPIVersion, WatchedResourceKind)))
 			}
@@ -95,29 +97,24 @@ var _ = Describe("given watched resource", Ordered, func() {
 		logger := ctrl.Log.WithName("skr-watcher-test")
 		config, err := serverconfig.ParseFromEnv(logger)
 		Expect(err).ShouldNot(HaveOccurred())
-		handler := &internal.Handler{
-			Config:       config,
-			Client:       k8sClient,
-			Logger:       logger,
-			Deserializer: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
-		}
-		managedByLabel := map[string]string{
-			"operator.kyma-project.io/managed-by": "lifecycle-manager",
-		}
-		ownedByAnnotation := map[string]string{
-			"operator.kyma-project.io/owned-by": fmt.Sprintf("%s/%s", metav1.NamespaceDefault, ownerName),
-		}
+
+		managedByLabel := map[string]string{"operator.kyma-project.io/managed-by": "lifecycle-manager"}
+		namespacedName := fmt.Sprintf("%s/%s", metav1.NamespaceDefault, ownerName)
+		ownedByAnnotation := map[string]string{"operator.kyma-project.io/owned-by": namespacedName}
 		request, err := GetAdmissionHTTPRequest(testCase.params.operation, testCase.params.watchedName,
 			testCase.params.moduleName, managedByLabel, ownedByAnnotation, testCase.params.changeObjType)
 		Expect(err).ShouldNot(HaveOccurred())
+
 		skrRecorder := httptest.NewRecorder()
+		requestParser := parser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
+		handler := internal.NewHandler(k8sClient, logger, config, *requestParser)
 		handler.Handle(skrRecorder, request)
 
-		// check admission review response
-		admissionReview := admissionv1.AdmissionReview{}
 		bytes, err := io.ReadAll(skrRecorder.Body)
 		Expect(err).ShouldNot(HaveOccurred())
-		_, _, err = handler.Deserializer.Decode(bytes, nil, &admissionReview)
+
+		admissionReview := admissionv1.AdmissionReview{}
+		_, _, err = decoder.Decode(bytes, nil, &admissionReview)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(admissionReview.Response.Allowed).To(BeTrue())
 		Expect(admissionReview.Response.Result.Message).To(Equal(testCase.results.resultMsg))

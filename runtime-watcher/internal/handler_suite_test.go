@@ -7,6 +7,9 @@ import (
 	"os"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +30,7 @@ var (
 	kcpMockServer *httptest.Server
 	testEnv       *envtest.Environment
 	k8sClient     client.Client
+	decoder       runtime.Decoder
 )
 
 const moduleName = "kyma"
@@ -53,7 +57,7 @@ var _ = BeforeSuite(func() {
 
 	kcpTestHandler := BootStrapKcpMockHandlers(moduleName)
 	kcpRecorder = kcpTestHandler.Recorder
-
+	decoder = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 	// start listener server
 	kcpMockServer = httptest.NewServer(kcpTestHandler)
 
