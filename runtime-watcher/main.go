@@ -20,8 +20,8 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"os"
-	"strconv"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -29,49 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
+	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 )
-
-const defaultPort = 8443
-
-func flagError(flagName string) error {
-	return fmt.Errorf("failed parsing %s flag", flagName)
-}
-
-func serverParams(logger logr.Logger) (internal.ServerParameters, error) {
-	parameters := internal.ServerParameters{}
-
-	portEnv := os.Getenv("WEBHOOK_PORT")
-	port, err := strconv.Atoi(portEnv)
-	if err != nil {
-		logger.V(1).Error(err, flagError("WEBHOOK_PORT").Error())
-		parameters.Port = defaultPort
-	}
-	parameters.Port = port
-
-	tlsCallbackEnv := os.Getenv("TLS_CALLBACK")
-	parameters.TLSCallback, err = strconv.ParseBool(tlsCallbackEnv)
-	if err != nil {
-		logger.V(1).Error(err, "failed parsing tls callback flag")
-	}
-
-	parameters.CACert = os.Getenv("CA_CERT")
-	if parameters.CACert == "" {
-		return parameters, flagError("CA_CERT")
-	}
-
-	parameters.TLSCert = os.Getenv("TLS_CERT")
-	if parameters.TLSCert == "" {
-		return parameters, flagError("TLS_CERT")
-	}
-
-	parameters.TLSKey = os.Getenv("TLS_KEY")
-	if parameters.TLSKey == "" {
-		return parameters, flagError("TLS_KEY")
-	}
-	return parameters, nil
-}
 
 func main() {
 	logger := ctrl.Log.WithName("skr-webhook")
@@ -82,7 +42,7 @@ func main() {
 	flag.Parse()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	params, err := serverParams(logger)
+	config, err := serverconfig.ParseFromEnv(logger)
 	if err != nil {
 		logger.Error(err, "necessary bootstrap settings missing")
 		return
@@ -95,20 +55,16 @@ func main() {
 		return
 	}
 
-	handler := &internal.Handler{
-		Client:       restClient,
-		Logger:       logger,
-		Parameters:   params,
-		Deserializer: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
-	}
+	requestParser := parser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
+	handler := internal.NewHandler(restClient, logger, config, *requestParser)
 	http.HandleFunc("/validate/", handler.Handle)
 
 	server := http.Server{
-		Addr:        fmt.Sprintf(":%s", strconv.Itoa(params.Port)),
+		Addr:        fmt.Sprintf(":%d", config.Port),
 		ReadTimeout: internal.HTTPClientTimeout,
 	}
-	logger.Info("starting web server", "Port:", params.Port)
-	err = server.ListenAndServeTLS(params.TLSCert, params.TLSKey)
+	logger.Info("starting web server", "Port:", config.Port)
+	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)
 
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")

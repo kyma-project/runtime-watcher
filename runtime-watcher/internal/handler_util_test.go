@@ -119,7 +119,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 	}
 
 	if changeObj == StatusChange {
-		admissionReview.Request.SubResource = internal.StatusSubResource
+		admissionReview.Request.SubResource = "status"
 	}
 
 	if operation == admissionv1.Delete || operation == admissionv1.Update {
@@ -145,7 +145,7 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 func generateAdmissionRequestRawObject(objectName string, labels, annotations map[string]string,
 	isOldObject bool, changeObj ChangeObj,
 ) ([]byte, error) {
-	objectWatched := &internal.ObjectWatched{
+	obj := &internal.WatchedObject{
 		Metadata: internal.Metadata{
 			Name:        objectName,
 			Namespace:   metav1.NamespaceDefault,
@@ -158,7 +158,7 @@ func generateAdmissionRequestRawObject(objectName string, labels, annotations ma
 		APIVersion: WatchedResourceAPIVersion,
 	}
 
-	configuredObjectWatched := configureObjectWatched(objectWatched, isOldObject, changeObj)
+	configuredObjectWatched := configureObjectWatched(obj, isOldObject, changeObj)
 
 	rawObject, err := json.Marshal(configuredObjectWatched)
 	if err != nil {
@@ -167,33 +167,33 @@ func generateAdmissionRequestRawObject(objectName string, labels, annotations ma
 	return rawObject, nil
 }
 
-func configureObjectWatched(objectWatched *internal.ObjectWatched,
+func configureObjectWatched(obj *internal.WatchedObject,
 	isOldObject bool, changeObj ChangeObj,
-) *internal.ObjectWatched {
+) *internal.WatchedObject {
 	if isOldObject {
 		switch changeObj {
 		case NoSpecField:
-			objectWatched.Spec = nil
+			obj.Spec = nil
 		case NoChange, SpecChange, StatusChange:
 			fallthrough
 		default:
-			objectWatched.Status[specOrStatusKey] = specOrStatusOldValue
-			objectWatched.Spec[specOrStatusKey] = specOrStatusOldValue
+			obj.Status[specOrStatusKey] = specOrStatusOldValue
+			obj.Spec[specOrStatusKey] = specOrStatusOldValue
 		}
 	} else {
 		switch changeObj {
 		case SpecChange:
-			objectWatched.Spec[specOrStatusKey] = specOrStatusNewValue
+			obj.Spec[specOrStatusKey] = specOrStatusNewValue
 		case StatusChange:
-			objectWatched.Status[specOrStatusKey] = specOrStatusNewValue
+			obj.Status[specOrStatusKey] = specOrStatusNewValue
 		case NoSpecField:
-			objectWatched.Spec = nil
+			obj.Spec = nil
 		case NoChange:
 			fallthrough
 		default:
-			objectWatched.Status[specOrStatusKey] = specOrStatusOldValue
-			objectWatched.Spec[specOrStatusKey] = specOrStatusOldValue
+			obj.Status[specOrStatusKey] = specOrStatusOldValue
+			obj.Spec[specOrStatusKey] = specOrStatusOldValue
 		}
 	}
-	return objectWatched
+	return obj
 }
