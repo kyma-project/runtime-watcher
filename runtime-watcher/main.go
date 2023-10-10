@@ -61,7 +61,7 @@ func main() {
 
 	server := http.Server{
 		Addr:        fmt.Sprintf(":%d", config.Port),
-		ReadTimeout: internal.HTTPClientTimeout,
+		ReadTimeout: internal.HTTPSClientTimeout,
 	}
 	logger.Info("starting web server", "Port:", config.Port)
 	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)

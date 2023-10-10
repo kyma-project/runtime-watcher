@@ -3,9 +3,14 @@ package internal_test
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal/tlstest"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -31,6 +36,7 @@ var (
 	testEnv       *envtest.Environment
 	k8sClient     client.Client
 	decoder       runtime.Decoder
+	certProvider  tlstest.CertProvider
 )
 
 const moduleName = "kyma"
@@ -58,8 +64,25 @@ var _ = BeforeSuite(func() {
 	kcpTestHandler := BootStrapKcpMockHandlers(moduleName)
 	kcpRecorder = kcpTestHandler.Recorder
 	decoder = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
+
+	// prepare TLS Certificates
+	certProvider, err := tlstest.NewCertProvider()
+	Expect(err).NotTo(HaveOccurred())
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certProvider.RootCert.Certificate[0],
+	}))
+
 	// start listener server
-	kcpMockServer = httptest.NewServer(kcpTestHandler)
+	kcpMockServer = httptest.NewUnstartedServer(kcpTestHandler)
+	kcpMockServer.TLS = &tls.Config{
+		Certificates: []tls.Certificate{*certProvider.ServerCert},
+		ClientCAs:    caCertPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS13,
+	}
+	kcpMockServer.StartTLS()
 
 	// set KCP env vars
 	err = os.Setenv("KCP_ADDR", kcpMockServer.Listener.Addr().String())
@@ -67,12 +90,15 @@ var _ = BeforeSuite(func() {
 	err = os.Setenv("KCP_CONTRACT", "v1")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	_ = os.Setenv("CA_CERT", "tmp")
-	_ = os.Setenv("TLS_CERT", "tmp")
-	_ = os.Setenv("TLS_KEY", "tmp")
+	_ = os.Setenv("CA_CERT", certProvider.RootCertFile.Name())
+	_ = os.Setenv("TLS_CERT", certProvider.ClientCertFile.Name())
+	_ = os.Setenv("TLS_KEY", certProvider.ClientKeyFile.Name())
 })
 
 var _ = AfterSuite(func() {
+	err := certProvider.CleanUp()
+	Expect(err).ToNot(HaveOccurred())
+
 	By("tearing down the test environment")
 	Expect(testEnv.Stop()).To(Succeed())
 

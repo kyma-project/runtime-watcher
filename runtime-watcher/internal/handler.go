@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	HTTPClientTimeout        = time.Minute * 3
+	HTTPSClientTimeout       = time.Minute * 3
 	eventEndpoint            = "event"
 	admissionError           = "admission error"
 	kcpReqFailedMsg          = "kcp request failed"
@@ -236,14 +236,14 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) str
 		return kcpReqFailedMsg
 	}
 
-	uri := fmt.Sprintf("%s/%s/%s/%s", h.config.KCPAddress, h.config.KCPContract, moduleName, eventEndpoint)
-	httpClient, url, err := h.getHTTPClientAndURL(uri)
+	url := fmt.Sprintf("https://%s/%s/%s/%s", h.config.KCPAddress, h.config.KCPContract, moduleName, eventEndpoint)
+	httpsClient, err := h.getHTTPSClient()
 	if err != nil {
 		h.logger.Error(err, kcpReqFailedMsg)
 		return err.Error()
 	}
 
-	resp, err := httpClient.Post(url, "application/json", requestPayload)
+	resp, err := httpsClient.Post(url, "application/json", requestPayload)
 	if err != nil {
 		h.logger.Error(err, kcpReqFailedMsg, "postBody", watcherEvent)
 		return kcpReqFailedMsg
@@ -276,45 +276,36 @@ func extractOwner(watched WatchedObject) (types.NamespacedName, error) {
 	return types.NamespacedName{Namespace: ownerParts[0], Name: ownerParts[1]}, nil
 }
 
-func (h *Handler) getHTTPClientAndURL(uri string) (http.Client, string, error) {
-	httpClient := http.Client{}
-	protocol := "http"
+func (h *Handler) getHTTPSClient() (*http.Client, error) {
+	httpsClient := http.Client{}
 
-	if h.config.TLSCallbackEnabled {
-		h.logger.Info("will attempt to send an https request")
-		protocol = "https"
+	certificate, err := tls.LoadX509KeyPair(h.config.TLSCertPath, h.config.TLSKeyPath)
+	if err != nil {
+		msg := "could not load tls certificate"
+		return nil, fmt.Errorf("%s :%w", msg, err)
+	}
+	caCertBytes, err := os.ReadFile(h.config.CACertPath)
+	if err != nil {
+		msg := "could not load CA certificate"
+		return nil, fmt.Errorf("%s :%w", msg, err)
+	}
+	publicPemBlock, _ := pem.Decode(caCertBytes)
+	rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
+	if errParse != nil {
+		msg := "failed to parse public key"
+		return nil, fmt.Errorf("%s :%w", msg, errParse)
+	}
+	rootCertPool := x509.NewCertPool()
+	rootCertPool.AddCert(rootPubCrt)
 
-		certificate, err := tls.LoadX509KeyPair(h.config.TLSCertPath, h.config.TLSKeyPath)
-		if err != nil {
-			msg := "could not load tls certificate"
-			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
-		}
-
-		caCertBytes, err := os.ReadFile(h.config.CACertPath)
-		if err != nil {
-			msg := "could not load CA certificate"
-			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
-		}
-		publicPemBlock, _ := pem.Decode(caCertBytes)
-		rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
-		if errParse != nil {
-			msg := "failed to parse public key"
-			return httpClient, msg, fmt.Errorf("%s :%w", msg, err)
-		}
-		rootCertPool := x509.NewCertPool()
-		rootCertPool.AddCert(rootPubCrt)
-
-		httpClient.Timeout = HTTPClientTimeout
-		//nolint:gosec
-		httpClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs:      rootCertPool,
-				Certificates: []tls.Certificate{certificate},
-			},
-		}
+	httpsClient.Timeout = HTTPSClientTimeout
+	//nolint:gosec
+	httpsClient.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			Certificates: []tls.Certificate{certificate},
+			RootCAs:      rootCertPool,
+		},
 	}
 
-	url := fmt.Sprintf("%s://%s", protocol, uri)
-	h.logger.Info("KCP Address", "url", url)
-	return httpClient, url, nil
+	return &httpsClient, nil
 }
