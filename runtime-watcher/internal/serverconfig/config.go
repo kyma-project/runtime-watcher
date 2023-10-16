@@ -13,7 +13,6 @@ const (
 	minPort, maxPort = 1, 65535
 	defaultPort      = 8443
 	envWebhookPort   = "WEBHOOK_PORT"
-	envTLSCallback   = "TLS_CALLBACK"
 	envCACert        = "CA_CERT"
 	envTLSCert       = "TLS_CERT"
 	envTLSKey        = "TLS_KEY"
@@ -22,13 +21,12 @@ const (
 )
 
 type ServerConfig struct {
-	Port               int
-	CACertPath         string
-	TLSCertPath        string
-	TLSKeyPath         string
-	TLSCallbackEnabled bool
-	KCPAddress         string
-	KCPContract        string
+	Port        int
+	CACertPath  string
+	TLSCertPath string
+	TLSKeyPath  string
+	KCPAddress  string
+	KCPContract string
 }
 
 func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
@@ -47,16 +45,6 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 			logger.Error(err, flagError(envWebhookPort).Error())
 		} else {
 			config.Port = port
-		}
-	}
-
-	tlsCallbackEnabled, found := os.LookupEnv(envTLSCallback)
-	if found {
-		tlsCallbackEnabledValue, err := strconv.ParseBool(tlsCallbackEnabled)
-		if err != nil {
-			logger.Error(err, flagError(envTLSCallback).Error())
-		} else {
-			config.TLSCallbackEnabled = tlsCallbackEnabledValue
 		}
 	}
 
