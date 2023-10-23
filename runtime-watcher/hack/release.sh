@@ -17,7 +17,11 @@ get_previous_release_version() {
     if [[ $GORELEASER_CURRENT_TAG == *"-rc"* ]]; then
         export GORELEASER_PREVIOUS_TAG=${TAG_LIST_WITHOUT_RC[0]}
     else
-        export GORELEASER_PREVIOUS_TAG=${TAG_LIST_WITHOUT_RC[1]}
+        if [[ ${#TAG_LIST_WITHOUT_RC[@]} -gt 1 ]]; then
+            export GORELEASER_PREVIOUS_TAG=${TAG_LIST_WITHOUT_RC[1]}
+        else
+            export GORELEASER_PREVIOUS_TAG=""
+        fi
     fi
 }
 
