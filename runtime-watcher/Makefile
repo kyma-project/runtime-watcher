@@ -108,3 +108,10 @@ $(ENVTEST): $(LOCALBIN)
 lint: ## Run golangci-lint against code.
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run -v -c .golangci.yaml
+
+.PHONY: release
+release:
+	./hack/release.sh
+
+.PHONY: ci-release
+ci-release: resolve build test release
