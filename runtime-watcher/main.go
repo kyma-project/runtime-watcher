@@ -34,6 +34,7 @@ import (
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 )
 
+//nolint:gochecknoglobals
 var buildVersion = "not-provided"
 
 func main() {
