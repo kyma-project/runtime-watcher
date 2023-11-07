@@ -2,6 +2,8 @@ FROM golang:1.21-alpine as builder
 
 WORKDIR /app
 
+RUN printenv | sed 's/=.+/./g'
+
 COPY go.mod go.mod
 COPY go.sum go.sum
 
