@@ -34,7 +34,7 @@ import (
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 )
 
-var buildVersion string = "not-provided"
+var buildVersion = "not-provided"
 
 func main() {
 	var printVersion bool
@@ -48,8 +48,12 @@ func main() {
 	flag.Parse()
 
 	if printVersion {
-		fmt.Printf("Runtime Watcher version: %s\n", buildVersion)
-		os.Exit(1)
+		msg := fmt.Sprintf("Runtime Watcher version: %s\n", buildVersion)
+		_, err := os.Stdout.WriteString(msg)
+		if err != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
