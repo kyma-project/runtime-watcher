@@ -2,7 +2,7 @@ FROM golang:1.21-alpine as builder
 ARG BUILD_VERSION=from-Dockerfile
 
 RUN printenv | sed 's/=.*//g'
-RUN echo TAG_default_tag=${TAG_default_tag}
+RUN echo TAG_BUILD_VERSION=${TAG_BUILD_VERSION}
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN go mod download
 COPY main.go main.go
 COPY internal/ internal/
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X 'main.buildVersion=${BUILD_VERSION}'" -a -o webhook main.go 
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X 'main.buildVersion=${TAG_BUILD_VERSION}'" -a -o webhook main.go 
 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
