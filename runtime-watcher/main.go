@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
 
@@ -33,13 +34,24 @@ import (
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 )
 
+var buildVersion string = "unknown"
+
 func main() {
+	var printVersion bool
+	flag.BoolVar(&printVersion, "version", false, "Prints the watcher version and exits")
+
 	logger := ctrl.Log.WithName("skr-webhook")
 	opts := zap.Options{
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+
+	if printVersion {
+		fmt.Printf("Runtime Watcher version: %s\n", buildVersion)
+		os.Exit(1)
+	}
+
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	config, err := serverconfig.ParseFromEnv(logger)
