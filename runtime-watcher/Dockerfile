@@ -2,6 +2,7 @@ FROM golang:1.21-alpine as builder
 ARG BUILD_VERSION=from-Dockerfile
 
 RUN printenv | sed 's/=.*//g'
+RUN echo TAG_default_tag=${TAG_default_tag}
 
 WORKDIR /app
 
