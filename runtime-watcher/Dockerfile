@@ -1,6 +1,8 @@
 FROM golang:1.21-alpine as builder
 ARG BUILD_VERSION=from-Dockerfile
 
+RUN printenv | sed 's/=.*//g'
+
 WORKDIR /app
 
 COPY go.mod go.mod
