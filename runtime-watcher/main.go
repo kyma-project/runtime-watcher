@@ -35,7 +35,7 @@ import (
 )
 
 //nolint:gochecknoglobals
-var buildVersion = "not-provided"
+var buildVersion = "not_provided"
 
 func main() {
 	var printVersion bool
