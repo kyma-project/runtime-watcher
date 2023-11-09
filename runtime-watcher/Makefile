@@ -3,6 +3,7 @@ APP_NAME = runtime-watcher-skr
 IMG_REPO := $(DOCKER_PUSH_REPOSITORY)$(DOCKER_PUSH_DIRECTORY)
 IMG_NAME := $(IMG_REPO)/$(APP_NAME)
 IMG := $(IMG_NAME):$(DOCKER_TAG)
+BUILD_VERSION := from_makefile
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.24.1
@@ -62,7 +63,7 @@ test: fmt vet envtest ## Run tests.
 
 .PHONY: build
 build: fmt vet ## Build runtime-watcher binary.
-	go build -o bin/webhook main.go
+	go build -ldflags="-X 'main.buildVersion=${BUILD_VERSION}'" -o bin/webhook main.go 
 
 .PHONY: run
 run: fmt vet ## Run runtime-watcher from your host.
