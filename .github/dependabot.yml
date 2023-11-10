@@ -1,0 +1,40 @@
+# https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/listener"
+    labels:
+      - "go"
+      - "area/dependency"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "chore(dependabot)"
+  - package-ecosystem: "gomod"
+    directory: "/runtime-watcher"
+    labels:
+      - "go"
+      - "area/dependency"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "chore(dependabot)"
+  - package-ecosystem: "docker"
+    directory: "/listener"
+    labels:
+      - "docker"
+      - "area/dependency"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "chore(dependabot)"
+  - package-ecosystem: "docker"
+    directory: "/runtime-watcher"
+    labels:
+      - "docker"
+      - "area/dependency"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "chore(dependabot)"
