@@ -3,7 +3,7 @@ module github.com/kyma-project/runtime-watcher/skr
 go 1.21
 
 require (
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.3.0
 	github.com/google/uuid v1.3.0
 	github.com/kyma-project/runtime-watcher/listener v0.0.0-20231011102033-b8383d92883e
 	github.com/onsi/ginkgo/v2 v2.8.3
