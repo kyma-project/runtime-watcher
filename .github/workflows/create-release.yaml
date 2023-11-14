@@ -1,0 +1,28 @@
+name: "Create release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Create release'
+        default: ""
+        required: true
+
+jobs:
+  validate-release:
+    name: Validate release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check if tag already exists
+        run: |
+          if ![ $(git tag -l ${{ inputs.name }}) ]; then
+            echo "::error ::Tag ${{ inputs.name }} doesn't exist"
+            exit 1
+          fi
+
