@@ -21,7 +21,7 @@ jobs:
       
       - name: Check if tag already exists
         run: |
-          if ![ $(git tag -l ${{ inputs.name }}) ]; then
+          if ! [ $(git tag -l ${{ inputs.name }}) ]; then
             echo "::error ::Tag ${{ inputs.name }} doesn't exist"
             exit 1
           fi
