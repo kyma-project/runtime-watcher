@@ -73,8 +73,8 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 		h.logger.Error(errors.Join(errAdmission, err), "failed to parse AdmissionReview")
 		return
 	}
-
-	h.metrics.UpdateSomething("handle_entry", 20)
+	someValue := 20
+	h.metrics.UpdateSomething("handle_entry", float64(someValue))
 
 	h.logger.Info(fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()))
 

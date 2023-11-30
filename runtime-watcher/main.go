@@ -19,10 +19,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 
