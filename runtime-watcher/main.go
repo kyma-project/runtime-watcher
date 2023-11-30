@@ -19,10 +19,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
+	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -59,6 +61,12 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	http.Handle("/metrics", promhttp.Handler())
+	err := http.ListenAndServe(":2112", nil)
+	if err != nil {
+		logger.Error(err, "failed to wire up metrics endpoint")
+	}
+
 	logger.Info("starting the Runtime Watcher", "Version:", buildVersion)
 
 	config, err := serverconfig.ParseFromEnv(logger)
@@ -74,8 +82,9 @@ func main() {
 		return
 	}
 
-	requestParser := parser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
-	handler := internal.NewHandler(restClient, logger, config, *requestParser)
+	requestParser := requestparser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
+	metrics := watchermetrics.NewMetrics()
+	handler := internal.NewHandler(restClient, logger, config, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
 
 	server := http.Server{
@@ -85,6 +94,7 @@ func main() {
 	logger.Info("starting web server", "Port:", config.Port)
 	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)
 
+	metrics.UpdateSomething("server_start", 1)
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")
 		return

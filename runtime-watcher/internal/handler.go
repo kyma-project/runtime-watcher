@@ -23,8 +23,9 @@ import (
 
 	"github.com/go-logr/logr"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
-	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
+	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
+	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 )
 
 const (
@@ -42,13 +43,15 @@ const (
 func NewHandler(client client.Client,
 	logger logr.Logger,
 	config serverconfig.ServerConfig,
-	parser parser.RequestParser,
+	parser requestparser.RequestParser,
+	metrics watchermetrics.WatcherMetrics,
 ) *Handler {
 	return &Handler{
 		client:        client,
 		logger:        logger,
 		config:        config,
 		requestParser: parser,
+		metrics:       metrics,
 	}
 }
 
@@ -56,7 +59,8 @@ type Handler struct {
 	client        client.Client
 	logger        logr.Logger
 	config        serverconfig.ServerConfig
-	requestParser parser.RequestParser
+	requestParser requestparser.RequestParser
+	metrics       watchermetrics.WatcherMetrics
 }
 
 type responseInterface interface {
@@ -69,6 +73,8 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 		h.logger.Error(errors.Join(errAdmission, err), "failed to parse AdmissionReview")
 		return
 	}
+
+	h.metrics.UpdateSomething("handle_entry", 20)
 
 	h.logger.Info(fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()))
 
