@@ -68,13 +68,14 @@ type responseInterface interface {
 }
 
 func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
+	h.metrics.UpdateAdmissionRequestsTotal()
+	start := time.Now()
 	admissionReview, err := h.requestParser.ParseAdmissionReview(request)
 	if err != nil {
 		h.logger.Error(errors.Join(errAdmission, err), "failed to parse AdmissionReview")
+		h.metrics.UpdateAdmissionRequestsErrorTotal()
 		return
 	}
-	someValue := 20
-	h.metrics.UpdateSomething("handle_entry", float64(someValue))
 
 	h.logger.Info(fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()))
 
@@ -97,6 +98,9 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 		h.logger.Error(err, admissionError)
 		return
 	}
+
+	duration := time.Since(start)
+	h.metrics.UpdateRequestDuration(duration)
 }
 
 func getModuleName(urlPath string) (string, error) {
@@ -218,11 +222,12 @@ func (h *Handler) sendRequestToKcpOnUpdate(resource *Resource, oldObj, obj Watch
 	return h.sendRequestToKcp(moduleName, obj)
 }
 
-func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) string {
+func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) error {
 	owner, err := extractOwner(watched)
 	if err != nil {
-		h.logger.Error(err, "resource owner name could not be determined")
-		return kcpReqFailedMsg
+		err = fmt.Errorf("resource owner name could not be determined: %w", err)
+		h.logger.Error(err, err.Error())
+		return err
 	}
 
 	watcherEvent := &listenerTypes.WatchEvent{
@@ -232,14 +237,15 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) str
 	}
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
-		h.logger.Error(err, kcpReqFailedMsg)
-		return kcpReqFailedMsg
+		err = fmt.Errorf("%s: %w", kcpReqFailedMsg, err)
+		h.logger.Error(err, err.Error())
+		return err
 	}
 
 	requestPayload := bytes.NewBuffer(postBody)
 
 	if h.config.KCPAddress == "" || h.config.KCPContract == "" {
-		return kcpReqFailedMsg
+		return errors.New("")
 	}
 
 	url := fmt.Sprintf("https://%s/%s/%s/%s", h.config.KCPAddress, h.config.KCPContract, moduleName, eventEndpoint)

@@ -22,11 +22,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,7 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal"
+	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
+	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 )
 
 //nolint:gochecknoglobals
@@ -63,7 +61,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	http.Handle("/metrics", promhttp.Handler())
-	err := http.ListenAndServe(":2112", nil)
+	err := http.ListenAndServe(":2112", http.DefaultServeMux)
 	if err != nil {
 		logger.Error(err, "failed to wire up metrics endpoint")
 	}
@@ -82,8 +80,8 @@ func main() {
 		logger.Error(err, "rest client could not be determined for skr-webhook")
 		return
 	}
-
-	requestParser := requestparser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
+	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
+	requestParser := requestparser.NewRequestParser(decoder)
 	metrics := watchermetrics.NewMetrics()
 	handler := internal.NewHandler(restClient, logger, config, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
@@ -95,7 +93,6 @@ func main() {
 	logger.Info("starting web server", "Port:", config.Port)
 	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)
 
-	metrics.UpdateSomething("server_start", 1)
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")
 		return
