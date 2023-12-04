@@ -4,6 +4,7 @@ package internal_test
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -107,7 +108,8 @@ var _ = Describe("given watched resource", Ordered, func() {
 
 		skrRecorder := httptest.NewRecorder()
 		requestParser := requestparser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
-		handler := internal.NewHandler(k8sClient, logger, config, *requestParser)
+		metrics := watchermetrics.NewMetrics()
+		handler := internal.NewHandler(k8sClient, logger, config, *requestParser, *metrics)
 		handler.Handle(skrRecorder, request)
 
 		bytes, err := io.ReadAll(skrRecorder.Body)
