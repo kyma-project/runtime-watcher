@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -42,14 +42,12 @@ var buildVersion = "not_provided"
 func main() {
 	var printVersion bool
 	flag.BoolVar(&printVersion, "version", false, "Prints the watcher version and exits")
-
 	logger := ctrl.Log.WithName("skr-webhook")
 	opts := zap.Options{
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
-
 	if printVersion {
 		msg := fmt.Sprintf("Runtime Watcher version: %s\n", buildVersion)
 		_, err := os.Stdout.WriteString(msg)
@@ -64,7 +62,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	metricsServer := &http.Server{
 		Addr:              ":2112",
-		ReadHeaderTimeout: 10 * time.Second,
+		ReadHeaderTimeout: internal.HTTPTimeout,
 	}
 	err := metricsServer.ListenAndServe()
 	if err != nil {
@@ -90,10 +88,9 @@ func main() {
 	metrics := watchermetrics.NewMetrics()
 	handler := internal.NewHandler(restClient, logger, config, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
-
 	server := http.Server{
 		Addr:        fmt.Sprintf(":%d", config.Port),
-		ReadTimeout: internal.HTTPSClientTimeout,
+		ReadTimeout: internal.HTTPTimeout,
 	}
 	logger.Info("starting web server", "Port:", config.Port)
 	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)

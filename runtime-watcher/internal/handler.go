@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	HTTPSClientTimeout       = time.Minute * 3
+	HTTPTimeout              = time.Minute * 3
 	eventEndpoint            = "event"
 	admissionError           = "admission error"
 	kcpReqFailedMsg          = "kcp request failed"
@@ -278,7 +278,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	return nil
 }
 
-func (h *Handler) logAndReturnKCPErr(err error, params ...any) error {
+func (h *Handler) logAndReturnKCPErr(err error, params ...interface{}) error {
 	err = errors.Join(errKcpRequest, err)
 	h.logger.Error(err, err.Error(), params)
 	return err
@@ -321,7 +321,7 @@ func (h *Handler) getHTTPSClient() (*http.Client, error) {
 	rootCertPool := x509.NewCertPool()
 	rootCertPool.AddCert(rootPubCrt)
 
-	httpsClient.Timeout = HTTPSClientTimeout
+	httpsClient.Timeout = HTTPTimeout
 	//nolint:gosec
 	httpsClient.Transport = &http.Transport{
 		TLSClientConfig: &tls.Config{
