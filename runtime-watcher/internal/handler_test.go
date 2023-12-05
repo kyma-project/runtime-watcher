@@ -107,10 +107,11 @@ var _ = Describe("given watched resource", Ordered, func() {
 			testCase.params.moduleName, managedByLabel, ownedByAnnotation, testCase.params.changeObjType)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		skrRecorder := httptest.NewRecorder()
-		requestParser := requestparser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
+		decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
+		requestParser := requestparser.NewRequestParser(decoder)
 		metrics := watchermetrics.NewMetrics()
 		handler := internal.NewHandler(k8sClient, logger, config, *requestParser, *metrics)
+		skrRecorder := httptest.NewRecorder()
 		handler.Handle(skrRecorder, request)
 
 		bytes, err := io.ReadAll(skrRecorder.Body)

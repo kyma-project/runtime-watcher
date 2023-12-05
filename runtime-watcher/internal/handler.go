@@ -243,12 +243,6 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
-	postBody, err := json.Marshal(watcherEvent)
-	if err != nil {
-		return h.logAndReturnKCPErr(err)
-	}
-
-	requestPayload := bytes.NewBuffer(postBody)
 
 	if h.config.KCPAddress == "" || h.config.KCPContract == "" {
 		return h.logAndReturnKCPErr(errors.New("KCPAddress or KCPContract empty"))
@@ -260,7 +254,11 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 		return h.logAndReturnKCPErr(err)
 	}
 
-	resp, err := httpsClient.Post(url, "application/json", requestPayload)
+	postBody, err := json.Marshal(watcherEvent)
+	if err != nil {
+		return h.logAndReturnKCPErr(err)
+	}
+	resp, err := httpsClient.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		return h.logAndReturnKCPErr(err, "postBody", watcherEvent)
 	}

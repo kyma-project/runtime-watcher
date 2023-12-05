@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -61,7 +62,11 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	http.Handle("/metrics", promhttp.Handler())
-	err := http.ListenAndServe(":2112", http.DefaultServeMux)
+	metricsServer := &http.Server{
+		Addr:              ":2112",
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	err := metricsServer.ListenAndServe()
 	if err != nil {
 		logger.Error(err, "failed to wire up metrics endpoint")
 	}
