@@ -260,17 +260,21 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	}
 	resp, err := httpsClient.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
-		return h.logAndReturnKCPErr(err, "postBody", watcherEvent)
+		err = errors.Join(errKcpRequest, err)
+		h.logger.Error(err, err.Error(), "postBody", watcherEvent)
+		return err
 	}
 	defer resp.Body.Close()
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return h.logAndReturnKCPErr(err, "postBody", watcherEvent)
+		err = errors.Join(errKcpRequest, err)
+		h.logger.Error(err, err.Error(), "postBody", watcherEvent)
+		return err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return h.logAndReturnKCPErr(
-			fmt.Errorf("%w: responseBody: %s with StatusCode: %d", err, responseBody, resp.StatusCode),
-			"postBody", watcherEvent)
+		err = fmt.Errorf("%w: responseBody: %s with StatusCode: %d", errKcpRequest, responseBody, resp.StatusCode)
+		h.logger.Error(err, err.Error(), "postBody", watcherEvent)
+		return err
 	}
 
 	h.logger.Info(fmt.Sprintf("sent request to KCP successfully for resource %s/%s",
@@ -278,9 +282,9 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	return nil
 }
 
-func (h *Handler) logAndReturnKCPErr(err error, params ...interface{}) error {
+func (h *Handler) logAndReturnKCPErr(err error) error {
 	err = errors.Join(errKcpRequest, err)
-	h.logger.Error(err, err.Error(), params)
+	h.logger.Error(err, err.Error())
 	return err
 }
 
