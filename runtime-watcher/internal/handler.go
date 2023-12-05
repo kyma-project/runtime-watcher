@@ -193,8 +193,10 @@ func (h *Handler) validateResources(request *admissionv1.AdmissionRequest, modul
 	return kcpReqSucceededMsg
 }
 
-var errAdmission = errors.New(admissionError)
-var errKcpRequest = errors.New(kcpReqFailedMsg)
+var (
+	errAdmission  = errors.New(admissionError)
+	errKcpRequest = errors.New(kcpReqFailedMsg)
+)
 
 func (h *Handler) unmarshalWatchedObject(rawBytes []byte, response responseInterface) {
 	if err := json.Unmarshal(rawBytes, response); err != nil {

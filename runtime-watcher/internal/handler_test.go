@@ -4,10 +4,11 @@ package internal_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 	"io"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 
