@@ -161,7 +161,7 @@ func (h *Handler) validateResources(request *admissionv1.AdmissionRequest, modul
 		}
 		changed, err := h.checkForChange(resource, oldObject, object)
 		if err != nil {
-			h.metrics.UpdateFailedKCPTotal()
+			h.metrics.UpdateFailedKCPTotal(watchermetrics.ReasonSubresource)
 			return err.Error()
 		}
 		if !changed {
@@ -170,21 +170,18 @@ func (h *Handler) validateResources(request *admissionv1.AdmissionRequest, modul
 		}
 		err = h.sendRequestToKcp(moduleName, object)
 		if err != nil {
-			h.metrics.UpdateFailedKCPTotal()
 			return err.Error()
 		}
 	case admissionv1.Delete:
 		h.unmarshalWatchedObject(request.OldObject.Raw, &oldObject)
 		err := h.sendRequestToKcp(moduleName, oldObject)
 		if err != nil {
-			h.metrics.UpdateFailedKCPTotal()
 			return err.Error()
 		}
 	case admissionv1.Create:
 		h.unmarshalWatchedObject(request.Object.Raw, &object)
 		err := h.sendRequestToKcp(moduleName, object)
 		if err != nil {
-			h.metrics.UpdateFailedKCPTotal()
 			return err.Error()
 		}
 	case admissionv1.Connect:
@@ -237,7 +234,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 
 	owner, err := extractOwner(watched)
 	if err != nil {
-		return h.logAndReturnKCPErr(fmt.Errorf("resource owner name could not be determined: %w", err))
+		return h.logAndReturnKCPErr(err, watchermetrics.ReasonOwner)
 	}
 
 	watcherEvent := &listenerTypes.WatchEvent{
@@ -247,23 +244,24 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	}
 
 	if h.config.KCPAddress == "" || h.config.KCPContract == "" {
-		return h.logAndReturnKCPErr(errors.New("KCPAddress or KCPContract empty"))
+		return h.logAndReturnKCPErr(errors.New("KCPAddress or KCPContract empty"), watchermetrics.ReasonKcpAddress)
 	}
 
 	url := fmt.Sprintf("https://%s/%s/%s/%s", h.config.KCPAddress, h.config.KCPContract, moduleName, eventEndpoint)
 	httpsClient, err := h.getHTTPSClient()
 	if err != nil {
-		return h.logAndReturnKCPErr(err)
+		return h.logAndReturnKCPErr(err, watchermetrics.ReasonRequest)
 	}
 
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
-		return h.logAndReturnKCPErr(err)
+		return h.logAndReturnKCPErr(err, watchermetrics.ReasonRequest)
 	}
 	resp, err := httpsClient.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		err = errors.Join(errKcpRequest, err)
 		h.logger.Error(err, err.Error(), "postBody", watcherEvent)
+		h.metrics.UpdateFailedKCPTotal(watchermetrics.ReasonResponse)
 		return err
 	}
 	defer resp.Body.Close()
@@ -271,11 +269,13 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	if err != nil {
 		err = errors.Join(errKcpRequest, err)
 		h.logger.Error(err, err.Error(), "postBody", watcherEvent)
+		h.metrics.UpdateFailedKCPTotal(watchermetrics.ReasonResponse)
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("%w: responseBody: %s with StatusCode: %d", errKcpRequest, responseBody, resp.StatusCode)
 		h.logger.Error(err, err.Error(), "postBody", watcherEvent)
+		h.metrics.UpdateFailedKCPTotal(watchermetrics.ReasonResponse)
 		return err
 	}
 
@@ -284,9 +284,10 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	return nil
 }
 
-func (h *Handler) logAndReturnKCPErr(err error) error {
+func (h *Handler) logAndReturnKCPErr(err error, reason watchermetrics.KcpErrReason) error {
 	err = errors.Join(errKcpRequest, err)
 	h.logger.Error(err, err.Error())
+	h.metrics.UpdateFailedKCPTotal(reason)
 	return err
 }
 
