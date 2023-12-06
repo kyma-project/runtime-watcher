@@ -233,6 +233,8 @@ func (h *Handler) checkForChange(resource *Resource, oldObj, obj WatchedObject) 
 }
 
 func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) error {
+	h.metrics.UpdateKCPTotal()
+
 	owner, err := extractOwner(watched)
 	if err != nil {
 		return h.logAndReturnKCPErr(fmt.Errorf("resource owner name could not be determined: %w", err))
