@@ -22,16 +22,18 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
-
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal"
+	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
+	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 )
 
 //nolint:gochecknoglobals
@@ -40,14 +42,12 @@ var buildVersion = "not_provided"
 func main() {
 	var printVersion bool
 	flag.BoolVar(&printVersion, "version", false, "Prints the watcher version and exits")
-
 	logger := ctrl.Log.WithName("skr-webhook")
 	opts := zap.Options{
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
-
 	if printVersion {
 		msg := fmt.Sprintf("Runtime Watcher version: %s\n", buildVersion)
 		_, err := os.Stdout.WriteString(msg)
@@ -58,6 +58,16 @@ func main() {
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	http.Handle("/metrics", promhttp.Handler())
+	metricsServer := &http.Server{
+		Addr:              ":2112",
+		ReadHeaderTimeout: internal.HTTPTimeout,
+	}
+	err := metricsServer.ListenAndServe()
+	if err != nil {
+		logger.Error(err, "failed to wire up metrics endpoint")
+	}
 
 	logger.Info("starting the Runtime Watcher", "Version:", buildVersion)
 
@@ -73,14 +83,14 @@ func main() {
 		logger.Error(err, "rest client could not be determined for skr-webhook")
 		return
 	}
-
-	requestParser := parser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
-	handler := internal.NewHandler(restClient, logger, config, *requestParser)
+	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
+	requestParser := requestparser.NewRequestParser(decoder)
+	metrics := watchermetrics.NewMetrics()
+	handler := internal.NewHandler(restClient, logger, config, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
-
 	server := http.Server{
 		Addr:        fmt.Sprintf(":%d", config.Port),
-		ReadTimeout: internal.HTTPSClientTimeout,
+		ReadTimeout: internal.HTTPTimeout,
 	}
 	logger.Info("starting web server", "Port:", config.Port)
 	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)

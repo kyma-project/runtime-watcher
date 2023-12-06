@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/parser"
+	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
+
+	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -105,9 +107,11 @@ var _ = Describe("given watched resource", Ordered, func() {
 			testCase.params.moduleName, managedByLabel, ownedByAnnotation, testCase.params.changeObjType)
 		Expect(err).ShouldNot(HaveOccurred())
 
+		decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
+		requestParser := requestparser.NewRequestParser(decoder)
+		metrics := watchermetrics.NewMetrics()
+		handler := internal.NewHandler(k8sClient, logger, config, *requestParser, *metrics)
 		skrRecorder := httptest.NewRecorder()
-		requestParser := parser.NewRequestParser(serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer())
-		handler := internal.NewHandler(k8sClient, logger, config, *requestParser)
 		handler.Handle(skrRecorder, request)
 
 		bytes, err := io.ReadAll(skrRecorder.Body)
