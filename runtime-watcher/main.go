@@ -19,10 +19,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
@@ -59,22 +59,22 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	http.Handle("/metrics", promhttp.Handler())
-	metricsServer := &http.Server{
-		Addr:              ":2112",
-		ReadHeaderTimeout: internal.HTTPTimeout,
-	}
-	err := metricsServer.ListenAndServe()
-	if err != nil {
-		logger.Error(err, "failed to wire up metrics endpoint")
-	}
-
 	logger.Info("starting the Runtime Watcher", "Version:", buildVersion)
 
 	config, err := serverconfig.ParseFromEnv(logger)
 	if err != nil {
 		logger.Error(err, "necessary bootstrap settings missing")
 		return
+	}
+
+	http.Handle("/metrics", promhttp.Handler())
+	metricsServer := &http.Server{
+		Addr:              fmt.Sprintf(":%d", config.MetricsPort),
+		ReadHeaderTimeout: internal.HTTPTimeout,
+	}
+	err = metricsServer.ListenAndServe()
+	if err != nil {
+		logger.Error(err, "failed to wire up metrics endpoint")
 	}
 
 	restConfig := ctrl.GetConfigOrDie()
