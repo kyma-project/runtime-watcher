@@ -10,18 +10,21 @@ import (
 )
 
 const (
-	minPort, maxPort = 1, 65535
-	defaultPort      = 8443
-	envWebhookPort   = "WEBHOOK_PORT"
-	envCACert        = "CA_CERT"
-	envTLSCert       = "TLS_CERT"
-	envTLSKey        = "TLS_KEY"
-	envKCPAddress    = "KCP_ADDR"
-	envKCPContract   = "KCP_CONTRACT"
+	minPort, maxPort   = 1, 65535
+	defaultWebhookPort = 8443
+	defaultMetricsPort = 2112
+	envWebhookPort     = "WEBHOOK_PORT"
+	envMetricsPort     = "METRICS_PORT"
+	envCACert          = "CA_CERT"
+	envTLSCert         = "TLS_CERT"
+	envTLSKey          = "TLS_KEY"
+	envKCPAddress      = "KCP_ADDR"
+	envKCPContract     = "KCP_CONTRACT"
 )
 
 type ServerConfig struct {
 	Port        int
+	MetricsPort int
 	CACertPath  string
 	TLSCertPath string
 	TLSKeyPath  string
@@ -34,7 +37,7 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 
 	config := ServerConfig{}
 
-	config.Port = defaultPort
+	config.Port = defaultWebhookPort
 	webhookPort, found := os.LookupEnv(envWebhookPort)
 	if found {
 		port, err := strconv.Atoi(webhookPort)
@@ -45,6 +48,20 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 			logger.Error(err, flagError(envWebhookPort).Error())
 		} else {
 			config.Port = port
+		}
+	}
+
+	config.MetricsPort = defaultMetricsPort
+	metricsPort, found := os.LookupEnv(envMetricsPort)
+	if found {
+		port, err := strconv.Atoi(metricsPort)
+		if err != nil {
+			logger.Error(err, flagError(envMetricsPort).Error())
+		}
+		if err = validatePortRange(port); err != nil {
+			logger.Error(err, flagError(envMetricsPort).Error())
+		} else {
+			config.MetricsPort = port
 		}
 	}
 
