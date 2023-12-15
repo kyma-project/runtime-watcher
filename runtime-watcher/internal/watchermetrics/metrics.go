@@ -53,8 +53,15 @@ func NewMetrics() *WatcherMetrics {
 			Help: "Indicates total failed requests to KCP count",
 		}, []string{kcpErrReasonLabel}),
 	}
-
 	return metrics
+}
+
+func (w *WatcherMetrics) RegisterAll() {
+	prometheus.MustRegister(w.requestDurationGauge)
+	prometheus.MustRegister(w.admissionRequestsErrorTotalCounter)
+	prometheus.MustRegister(w.admissionRequestsTotalCounter)
+	prometheus.MustRegister(w.kcpRequestsTotalCounter)
+	prometheus.MustRegister(w.failedKCPRequestsTotalCounter)
 }
 
 func (w *WatcherMetrics) UpdateRequestDuration(duration time.Duration) {
