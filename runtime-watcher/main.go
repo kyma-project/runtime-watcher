@@ -68,16 +68,6 @@ func main() {
 		return
 	}
 
-	http.Handle("/metrics", promhttp.Handler())
-	metricsServer := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.MetricsPort),
-		ReadHeaderTimeout: internal.HTTPTimeout,
-	}
-	err = metricsServer.ListenAndServe()
-	if err != nil {
-		logger.Error(err, "failed to wire up metrics endpoint")
-	}
-
 	restConfig := ctrl.GetConfigOrDie()
 	restClient, err := client.New(restConfig, client.Options{})
 	if err != nil {
@@ -90,7 +80,7 @@ func main() {
 	metrics.RegisterAll()
 	http.Handle("/metrics", promhttp.Handler())
 	metricsServer := &http.Server{
-		Addr:              ":2112",
+		Addr:              fmt.Sprintf(":%d", config.MetricsPort),
 		ReadHeaderTimeout: internal.HTTPTimeout,
 	}
 	err = metricsServer.ListenAndServe()
