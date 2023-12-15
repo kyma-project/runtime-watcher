@@ -19,9 +19,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -76,7 +77,7 @@ func main() {
 	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 	requestParser := requestparser.NewRequestParser(decoder)
 	metrics := watchermetrics.NewMetrics()
-
+	metrics.RegisterAll()
 	http.Handle("/metrics", promhttp.Handler())
 	metricsServer := &http.Server{
 		Addr:              ":2112",
