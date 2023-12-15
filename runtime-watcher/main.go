@@ -68,6 +68,16 @@ func main() {
 		return
 	}
 
+	restConfig := ctrl.GetConfigOrDie()
+	restClient, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		logger.Error(err, "rest client could not be determined for skr-webhook")
+		return
+	}
+	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
+	requestParser := requestparser.NewRequestParser(decoder)
+	metrics := watchermetrics.NewMetrics()
+	metrics.RegisterAll()
 	http.Handle("/metrics", promhttp.Handler())
 	metricsServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.MetricsPort),
@@ -78,15 +88,6 @@ func main() {
 		logger.Error(err, "failed to wire up metrics endpoint")
 	}
 
-	restConfig := ctrl.GetConfigOrDie()
-	restClient, err := client.New(restConfig, client.Options{})
-	if err != nil {
-		logger.Error(err, "rest client could not be determined for skr-webhook")
-		return
-	}
-	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
-	requestParser := requestparser.NewRequestParser(decoder)
-	metrics := watchermetrics.NewMetrics()
 	handler := internal.NewHandler(restClient, logger, config, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
 	server := http.Server{
