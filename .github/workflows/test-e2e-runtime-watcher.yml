@@ -109,6 +109,20 @@ jobs:
         run: |
           echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           echo "IMAGE_REPO=dev" >> $GITHUB_ENV
+      - name: Patch watcher image
+        working-directory: lifecycle-manager
+        run: |
+          pushd config/watcher_local_test
+          echo \
+          "- op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --watcher-dev-registry=true
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --skr-watcher-image-tag=$VERSION_TAG" >> patch_watcher_img.yaml
+          cat patch_watcher_img.yaml
+          kustomize edit add patch --path patch_watcher_img.yaml --kind Deployment
+          popd
       - name: Deploy lifecycle-manager
         working-directory: lifecycle-manager
         run: |
