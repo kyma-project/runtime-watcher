@@ -65,8 +65,7 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping test environment")
 
 	kcpModuleCRD := &apiextensionsv1.CustomResourceDefinition{}
-	modulePath := filepath.Join("../..", "config", "samples", "component-integration-installed",
-		"crd", "operator.kyma-project.io_kcpmodules.yaml")
+	modulePath := filepath.Join("testdata", "kcp_module_crd.yaml")
 	moduleFile, err := os.ReadFile(modulePath)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(moduleFile).ToNot(BeEmpty())
@@ -75,17 +74,21 @@ var _ = BeforeSuite(func() {
 	controlPlaneConfig, runtimeConfig, err = getKubeConfigs()
 	Expect(err).ToNot(HaveOccurred())
 	controlPlaneRESTConfig, err = clientcmd.RESTConfigFromKubeConfig(*controlPlaneConfig)
+	Expect(controlPlaneRESTConfig).ToNot(BeNil())
 	controlPlaneRESTConfig.QPS = clientQPS
 	controlPlaneRESTConfig.Burst = clientBurst
 	Expect(err).ToNot(HaveOccurred())
 	runtimeRESTConfig, err = clientcmd.RESTConfigFromKubeConfig(*runtimeConfig)
+	Expect(runtimeRESTConfig).ToNot(BeNil())
 	runtimeRESTConfig.QPS = clientQPS
 	runtimeRESTConfig.Burst = clientBurst
 	Expect(err).ToNot(HaveOccurred())
 
 	controlPlaneClient, err = client.New(controlPlaneRESTConfig, client.Options{Scheme: k8sclientscheme.Scheme})
+	Expect(controlPlaneClient).ToNot(BeNil())
 	Expect(err).NotTo(HaveOccurred())
 	runtimeClient, err = client.New(runtimeRESTConfig, client.Options{Scheme: k8sclientscheme.Scheme})
+	Expect(runtimeClient).ToNot(BeNil())
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(api.AddToScheme(k8sclientscheme.Scheme)).NotTo(HaveOccurred())
