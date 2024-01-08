@@ -107,12 +107,15 @@ jobs:
       - name: Override Kustomize Controller Image TAG and Image repository environment variables in Pull Request to PR Image
         if: ${{ github.event_name == 'pull_request' }}
         run: |
+          pwd
           echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           echo "IMAGE_REPO=dev" >> $GITHUB_ENV
       - name: Patch watcher image
         working-directory: lifecycle-manager
         run: |
+          pwd
           pushd config/watcher_local_test
+          pwd
           echo \
           "- op: add
             path: /spec/template/spec/containers/0/args/-
@@ -126,6 +129,7 @@ jobs:
       - name: Deploy lifecycle-manager
         working-directory: lifecycle-manager
         run: |
+          pwd
           maxRetry=5
           for retry in $(seq 1 $maxRetry)
           do
@@ -148,4 +152,5 @@ jobs:
       - name: Run e2e tests
         working-directory: runtime-watcher
         run: |
+          pwd
           make -C tests/e2e ${{ matrix.e2e-test }}
