@@ -1,13 +1,14 @@
 package utils
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/kyma-project/lifecycle-manager/api/shared"
 	"github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
-	"strings"
 
-	"errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	machineryruntime "k8s.io/apimachinery/pkg/runtime"
 )

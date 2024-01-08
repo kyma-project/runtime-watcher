@@ -4,18 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"go.uber.org/zap/zapcore"
-	k8szap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
 
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	"go.uber.org/zap/zapcore"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	machineryaml "k8s.io/apimachinery/pkg/util/yaml"
 	k8sclientscheme "k8s.io/client-go/kubernetes/scheme"
@@ -23,6 +21,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	k8szap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kyma-project/lifecycle-manager/api"
 	"github.com/kyma-project/lifecycle-manager/api/v1beta2"
@@ -91,7 +90,6 @@ var _ = BeforeSuite(func() {
 
 	Expect(api.AddToScheme(k8sclientscheme.Scheme)).NotTo(HaveOccurred())
 	Expect(apiextensionsv1.AddToScheme(k8sclientscheme.Scheme)).NotTo(HaveOccurred())
-	Expect(certmanagerv1.AddToScheme(k8sclientscheme.Scheme)).NotTo(HaveOccurred())
 	SetDefaultEventuallyPollingInterval(pollingInterval)
 	SetDefaultEventuallyTimeout(eventuallyTimeout)
 	SetDefaultConsistentlyDuration(consistentDuration)

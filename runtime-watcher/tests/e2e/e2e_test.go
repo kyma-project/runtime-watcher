@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/kyma-project/runtime-watcher/skr/tests/e2e/utils"
 	apicorev1 "k8s.io/api/core/v1"
-	"time"
 
 	apiappsv1 "k8s.io/api/apps/v1"
 	apimetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
