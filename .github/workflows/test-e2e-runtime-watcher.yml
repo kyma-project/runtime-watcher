@@ -15,7 +15,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # Context for which we should look for the matching status
-          statusName: ${{ (github.event_name == 'pull_request') && 'pull-runtime-watcher-build' || 'main-runtime-watcher-build' }}
+          statusName: ${{ (github.event_name == 'pull_request') && 'pull-runtime-watcher-img-build' || 'main-runtime-watcher-build' }}
           timeoutSeconds: 900
           intervalSeconds: 10
       - name: Exit If Failing Build Requirement
