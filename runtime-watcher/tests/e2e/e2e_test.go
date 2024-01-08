@@ -99,8 +99,8 @@ var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
 				WithArguments(runtimeClient, "fast").
 				Should(Succeed())
 		})
-		logAssert := utils.NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient, runtimeClient)
 		It("Then new reconciliation gets triggered for KCP Kyma CR", func() {
+			logAssert := utils.NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient, runtimeClient)
 			Eventually(logAssert.CheckKLMLogs).
 				WithContext(ctx).
 				WithArguments(incomingRequestMsg, timeNow).
@@ -126,6 +126,7 @@ var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
 		})
 
 		It("Then new reconciliation gets triggered for KCP Kyma CR", func() {
+			logAssert := utils.NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient, runtimeClient)
 			Eventually(logAssert.CheckKLMLogs).
 				WithContext(ctx).
 				WithArguments(incomingRequestMsg, patchingTimestamp).

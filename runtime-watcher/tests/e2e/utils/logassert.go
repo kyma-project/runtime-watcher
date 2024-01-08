@@ -62,9 +62,9 @@ func (l *LogAsserter) CheckKLMLogs(ctx context.Context, msg string, since *apime
 func (l *LogAsserter) CheckRemoteWatcherLogs(ctx context.Context, since *apimetav1.Time) error {
 	_, err := fetchLogsFromPod(ctx, l.runtimeConfig, l.runtimeClient, remoteNamespace, "skr-webhook", watcherPodContainer, since)
 	if err != nil {
-		return errors.Join(err)
+		return errors.Join(err, ErrWatcherLogsNotFound)
 	}
-	return ErrWatcherLogsNotFound
+	return nil
 }
 
 func fetchLogsFromPod(ctx context.Context,
