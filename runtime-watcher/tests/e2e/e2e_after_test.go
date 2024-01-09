@@ -16,35 +16,43 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func CleanupKymaAfterAll(kyma *v1beta2.Kyma) {
+func cleanupKymaAfterAll(kyma *v1beta2.Kyma) {
 	kymaName := types.NamespacedName{
 		Namespace: kyma.Namespace,
 		Name:      kyma.Name,
 	}
 	AfterAll(func() {
-		By("When delete KCP Kyma")
-		Eventually(DeleteKymaByForceRemovePurgeFinalizer).
-			WithContext(ctx).
-			WithArguments(controlPlaneClient, kyma).
-			Should(Succeed())
-		By("Then SKR Kyma deleted")
-		Eventually(KymaDeleted).
-			WithContext(ctx).
-			WithArguments(runtimeClient, kymaName).
-			Should(Succeed())
-		By("Then KCP Kyma deleted")
-		Eventually(KymaDeleted).
-			WithContext(ctx).
-			WithArguments(controlPlaneClient, kymaName).
-			Should(Succeed())
+		It("Given KCP Kyma cluster", func() {
+			It("When Purge Finalizer is deleted", func() {
+				It("And Kyma is deleted", func() {
+					Eventually(removePurgeFinalizerAndDeleteKyma).
+						WithContext(ctx).
+						WithArguments(controlPlaneClient, kyma).
+						Should(Succeed())
+				})
+
+				It("Then SKR Kyma is deleted", func() {
+					Eventually(confirmNoKymaInstance).
+						WithContext(ctx).
+						WithArguments(runtimeClient, kymaName).
+						Should(Succeed())
+
+					It("And KCP Kyma is deleted", func() {
+						Eventually(confirmNoKymaInstance).
+							WithContext(ctx).
+							WithArguments(controlPlaneClient, kymaName).
+							Should(Succeed())
+					})
+				})
+			})
+		})
 	})
 }
 
-func DeleteKymaByForceRemovePurgeFinalizer(ctx context.Context, clnt client.Client, kyma *v1beta2.Kyma) error {
+func removePurgeFinalizerAndDeleteKyma(ctx context.Context, clnt client.Client, kyma *v1beta2.Kyma) error {
 	if err := syncKyma(ctx, clnt, kyma); err != nil {
 		return fmt.Errorf("sync kyma %w", err)
 	}
-
 	if !kyma.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(kyma, shared.PurgeFinalizer) {
 			controllerutil.RemoveFinalizer(kyma, shared.PurgeFinalizer)
@@ -76,7 +84,7 @@ func deleteKyma(ctx context.Context, clnt client.Client, kyma *v1beta2.Kyma, del
 	return nil
 }
 
-func KymaDeleted(ctx context.Context, clnt client.Client, name types.NamespacedName) error {
+func confirmNoKymaInstance(ctx context.Context, clnt client.Client, name types.NamespacedName) error {
 	kyma := &v1beta2.Kyma{}
 	err := clnt.Get(ctx, name, kyma)
 	if utils.IsNotFound(err) {

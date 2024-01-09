@@ -47,11 +47,11 @@ const (
 
 var (
 	errPodNotFound         = errors.New("could not find pod")
-	ErrKLMLogMsgNotFound   = errors.New("log msg was not found in KLM log")
-	ErrWatcherLogsNotFound = errors.New("watcher log was not found since")
+	errKLMLogMsgNotFound   = errors.New("log msg was not found in KLM log")
+	errWatcherLogsNotFound = errors.New("watcher log was not found since")
 )
 
-func (l *LogAsserter) CheckKLMLogs(ctx context.Context, msg string, since *apimetav1.Time) error {
+func (l *LogAsserter) ContainsKLMLogMessage(ctx context.Context, msg string, since *apimetav1.Time) error {
 	logs, err := fetchLogsFromPod(
 		ctx,
 		l.controlPlaneConfig,
@@ -68,10 +68,10 @@ func (l *LogAsserter) CheckKLMLogs(ctx context.Context, msg string, since *apime
 		return nil
 	}
 
-	return ErrKLMLogMsgNotFound
+	return errKLMLogMsgNotFound
 }
 
-func (l *LogAsserter) CheckRemoteWatcherLogs(ctx context.Context, since *apimetav1.Time) error {
+func (l *LogAsserter) ContainsWatcherLogs(ctx context.Context, since *apimetav1.Time) error {
 	_, err := fetchLogsFromPod(
 		ctx,
 		l.runtimeConfig,
@@ -81,7 +81,7 @@ func (l *LogAsserter) CheckRemoteWatcherLogs(ctx context.Context, since *apimeta
 		watcherPodContainer,
 		since)
 	if err != nil {
-		return errors.Join(err, ErrWatcherLogsNotFound)
+		return errors.Join(err, errWatcherLogsNotFound)
 	}
 	return nil
 }

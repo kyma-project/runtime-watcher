@@ -21,45 +21,52 @@ import (
 )
 
 var (
-	errSampleCrNotInExpectedState = errors.New("resource not in expected state")
-	errFetchingStatus             = errors.New("could not fetch status from resource")
-	errKymaNotInExpectedState     = errors.New("kyma CR not in expected state")
-	errModuleNotExisting          = errors.New("module does not exists in KymaCR")
+	errSampleCRState     = errors.New("resource not in expected state")
+	errFetchingStatus    = errors.New("could not fetch status from resource")
+	errKymaState         = errors.New("unexpected state of Kyma CR")
+	errModuleNotExisting = errors.New("module does not exists in Kyma CR")
 )
 
 const (
 	defaultRemoteKymaName = "default"
 )
 
-func InitEmptyKymaBeforeAll(kyma *v1beta2.Kyma) {
+func initEmptyKymaBeforeAll(kyma *v1beta2.Kyma) {
 	kymaName := types.NamespacedName{
 		Namespace: kyma.Namespace,
 		Name:      kyma.Name,
 	}
 	BeforeAll(func() {
-		By("When a KCP Kyma CR is created on the KCP cluster")
-		Eventually(CreateKymaSecret).
-			WithContext(ctx).
-			WithArguments(controlPlaneClient, kymaName).
-			Should(Succeed())
-		Eventually(controlPlaneClient.Create).
-			WithContext(ctx).
-			WithArguments(kyma).
-			Should(Succeed())
-		By("Then the Kyma CR is in a \"Ready\" State on the KCP cluster ")
-		Eventually(KymaIsInState).
-			WithContext(ctx).
-			WithArguments(controlPlaneClient, kymaName, shared.StateReady).
-			Should(Succeed())
-		By("And the Kyma CR is in \"Ready\" State on the SKR cluster")
-		Eventually(CheckRemoteKymaCR).
-			WithContext(ctx).
-			WithArguments(runtimeClient, []v1beta2.Module{}, shared.StateReady).
-			Should(Succeed())
+		It("Given KCP Kyma cluster", func() {
+			It("And a Kyma Secret is created", func() {
+				Eventually(createKymaSecret).
+					WithContext(ctx).
+					WithArguments(controlPlaneClient, kymaName).
+					Should(Succeed())
+				It("And a Kyma CR is created", func() {
+					Eventually(controlPlaneClient.Create).
+						WithContext(ctx).
+						WithArguments(kyma).
+						Should(Succeed())
+				})
+			})
+			It(`Then the Kyma CR is in a "Ready" State on the KCP cluster `, func() {
+				Eventually(kymaIsInState).
+					WithContext(ctx).
+					WithArguments(controlPlaneClient, kymaName, shared.StateReady).
+					Should(Succeed())
+				It(`And the Kyma CR is in a "Ready" State on the SKR cluster `, func() {
+					Eventually(checkRemoteKymaCR).
+						WithContext(ctx).
+						WithArguments(runtimeClient, []v1beta2.Module{}, shared.StateReady).
+						Should(Succeed())
+				})
+			})
+		})
 	})
 }
 
-func CreateKymaSecret(ctx context.Context, k8sClient client.Client, name types.NamespacedName) error {
+func createKymaSecret(ctx context.Context, k8sClient client.Client, name types.NamespacedName) error {
 	patchedRuntimeConfig := strings.ReplaceAll(string(*runtimeConfig), localHostname, k3dHostname)
 	secret := &apicorev1.Secret{
 		ObjectMeta: apimetav1.ObjectMeta{
@@ -74,7 +81,7 @@ func CreateKymaSecret(ctx context.Context, k8sClient client.Client, name types.N
 	return k8sClient.Create(ctx, secret)
 }
 
-func KymaIsInState(ctx context.Context, clnt client.Client, name types.NamespacedName, state shared.State) error {
+func kymaIsInState(ctx context.Context, clnt client.Client, name types.NamespacedName, state shared.State) error {
 	gvk := schema.GroupVersionKind{
 		Group:   v1beta2.GroupVersion.Group,
 		Version: v1beta2.GroupVersion.Version,
@@ -97,7 +104,7 @@ func CRIsInState(ctx context.Context, clnt client.Client, name types.NamespacedN
 
 	if stateFromCR != expectedState {
 		return fmt.Errorf("%w: expect %s, but in %s",
-			errSampleCrNotInExpectedState, expectedState, stateFromCR)
+			errSampleCRState, expectedState, stateFromCR)
 	}
 	return nil
 }
@@ -111,7 +118,7 @@ func GetCR(ctx context.Context, clnt client.Client, name types.NamespacedName, g
 	return obj, nil
 }
 
-func CheckRemoteKymaCR(ctx context.Context, clnt client.Client, modules []v1beta2.Module, expected shared.State) error {
+func checkRemoteKymaCR(ctx context.Context, clnt client.Client, modules []v1beta2.Module, expected shared.State) error {
 	kyma := &v1beta2.Kyma{}
 	err := clnt.Get(ctx, client.ObjectKey{Name: defaultRemoteKymaName, Namespace: remoteNamespace}, kyma)
 	if err != nil {
@@ -133,7 +140,7 @@ func CheckRemoteKymaCR(ctx context.Context, clnt client.Client, modules []v1beta
 	}
 	if kyma.Status.State != expected {
 		return fmt.Errorf("%w: expect %s, but in %s",
-			errKymaNotInExpectedState, expected, kyma.Status.State)
+			errKymaState, expected, kyma.Status.State)
 	}
 	return nil
 }

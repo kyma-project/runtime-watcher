@@ -27,6 +27,10 @@ const (
 	remoteNamespace       = "kyma-system"
 	localHostname         = "0.0.0.0"
 	k3dHostname           = "host.k3d.internal"
+	kymaName              = "kyma-sample"
+	kymaChannel           = "regular"
+	watcherSecretName     = "skr-webhook-tls"
+	watcherName           = "skr-webhook"
 )
 
 type ResourceName = types.NamespacedName
@@ -34,22 +38,23 @@ type ResourceName = types.NamespacedName
 var errWatcherDeploymentNotReady = errors.New("watcher Deployment is not ready")
 
 var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
-	kyma := utils.NewKymaWithSyncLabel("kyma-sample", "kcp-system", "regular",
+
+	kyma := utils.NewKymaWithSyncLabel(kymaName, controlPlaneNamespace, kymaChannel,
 		v1beta2.SyncStrategyLocalSecret)
 	GinkgoWriter.Printf("kyma before create %v\n", kyma)
 	incomingRequestMsg := fmt.Sprintf("event received from SKR, adding %s/%s to queue",
 		kyma.GetNamespace(), kyma.GetName())
 
-	InitEmptyKymaBeforeAll(kyma)
-	CleanupKymaAfterAll(kyma)
+	initEmptyKymaBeforeAll(kyma)
+	cleanupKymaAfterAll(kyma)
 
 	skrSecret := ResourceName{
-		Name:      "skr-webhook-tls",
+		Name:      watcherSecretName,
 		Namespace: remoteNamespace,
 	}
 	watcher := ResourceName{
 		Namespace: remoteNamespace,
-		Name:      "skr-webhook",
+		Name:      watcherName,
 	}
 
 	Context("Given SKR Cluster with TLS Secret", func() {
@@ -101,11 +106,11 @@ var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
 		})
 		It("Then new reconciliation gets triggered for KCP Kyma CR", func() {
 			logAssert := utils.NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient, runtimeClient)
-			Eventually(logAssert.CheckKLMLogs).
+			Eventually(logAssert.ContainsKLMLogMessage).
 				WithContext(ctx).
 				WithArguments(incomingRequestMsg, timeNow).
 				Should(Succeed())
-			Eventually(logAssert.CheckRemoteWatcherLogs).
+			Eventually(logAssert.ContainsWatcherLogs).
 				WithContext(ctx).
 				WithArguments(timeNow).
 				Should(Succeed())
@@ -127,11 +132,11 @@ var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
 
 		It("Then new reconciliation gets triggered for KCP Kyma CR", func() {
 			logAssert := utils.NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient, runtimeClient)
-			Eventually(logAssert.CheckKLMLogs).
+			Eventually(logAssert.ContainsKLMLogMessage).
 				WithContext(ctx).
 				WithArguments(incomingRequestMsg, patchingTimestamp).
 				Should(Succeed())
-			Eventually(logAssert.CheckRemoteWatcherLogs).
+			Eventually(logAssert.ContainsWatcherLogs).
 				WithContext(ctx).
 				WithArguments(patchingTimestamp).
 				Should(Succeed())
