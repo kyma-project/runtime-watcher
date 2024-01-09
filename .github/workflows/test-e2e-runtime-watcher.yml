@@ -49,6 +49,8 @@ jobs:
           path: runtime-watcher
       - name: Set up Go
         uses: actions/setup-go@v4
+        working-directory: runtime-watcher
+        run: go version
         with:
           go-version-file: 'runtime-watcher/go.mod'
           cache-dependency-path: 'runtime-watcher/go.sum'
