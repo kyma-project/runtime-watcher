@@ -33,12 +33,12 @@ const (
 )
 
 var (
-	OperationsToTest = []admissionv1.Operation{ //nolint:gochecknoglobals
+	OperationsToTest = []admissionv1.Operation{
 		admissionv1.Connect,
 		admissionv1.Update,
 		admissionv1.Create, admissionv1.Delete,
 	}
-	ChangeObjTypes = []ChangeObj{ //nolint:gochecknoglobals
+	ChangeObjTypes = []ChangeObj{
 		NoChange,
 		SpecChange,
 		StatusChange, NoSpecField,

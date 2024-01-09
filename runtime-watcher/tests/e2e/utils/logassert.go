@@ -22,7 +22,12 @@ type LogAsserter struct {
 	runtimeClient      client.Client
 }
 
-func NewLogAsserter(controlPlaneConfig, runtimeConfig *rest.Config, controlPlaneClient, runtimeClient client.Client) *LogAsserter {
+func NewLogAsserter(
+	controlPlaneConfig,
+	runtimeConfig *rest.Config,
+	controlPlaneClient,
+	runtimeClient client.Client,
+) *LogAsserter {
 	return &LogAsserter{
 		controlPlaneConfig: controlPlaneConfig,
 		runtimeConfig:      runtimeConfig,
@@ -33,10 +38,11 @@ func NewLogAsserter(controlPlaneConfig, runtimeConfig *rest.Config, controlPlane
 
 const (
 	controlPlaneNamespace = "kcp-system"
-	watcherPodContainer   = "server"
+	remoteNamespace       = "kyma-system"
 	klmPodPrefix          = "klm-controller-manager"
 	klmPodContainer       = "manager"
-	remoteNamespace       = "kyma-system"
+	watcherPodPrefix      = "skr-webhook"
+	watcherPodContainer   = "server"
 )
 
 var (
@@ -46,7 +52,13 @@ var (
 )
 
 func (l *LogAsserter) CheckKLMLogs(ctx context.Context, msg string, since *apimetav1.Time) error {
-	logs, err := fetchLogsFromPod(ctx, l.controlPlaneConfig, l.controlPlaneClient, controlPlaneNamespace, klmPodPrefix, klmPodContainer,
+	logs, err := fetchLogsFromPod(
+		ctx,
+		l.controlPlaneConfig,
+		l.controlPlaneClient,
+		controlPlaneNamespace,
+		klmPodPrefix,
+		klmPodContainer,
 		since)
 	if err != nil {
 		return err
@@ -60,7 +72,14 @@ func (l *LogAsserter) CheckKLMLogs(ctx context.Context, msg string, since *apime
 }
 
 func (l *LogAsserter) CheckRemoteWatcherLogs(ctx context.Context, since *apimetav1.Time) error {
-	_, err := fetchLogsFromPod(ctx, l.runtimeConfig, l.runtimeClient, remoteNamespace, "skr-webhook", watcherPodContainer, since)
+	_, err := fetchLogsFromPod(
+		ctx,
+		l.runtimeConfig,
+		l.runtimeClient,
+		remoteNamespace,
+		watcherPodPrefix,
+		watcherPodContainer,
+		since)
 	if err != nil {
 		return errors.Join(err, ErrWatcherLogsNotFound)
 	}

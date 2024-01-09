@@ -1,4 +1,3 @@
-//nolint:gochecknoglobals
 package internal_test
 
 import (
