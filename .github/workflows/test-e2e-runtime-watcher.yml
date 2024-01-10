@@ -56,8 +56,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version-file: 'runtime-watcher/runtime-watcher/go.mod'
-          cache-dependency-path: 'runtime-watcher/runtime-watcher/go.sum'
+          go-version-file: 'runtime-watcher/go.mod'
+          cache-dependency-path: 'runtime-watcher/go.sum'
       - run: go version
       - name: Install Istio CLI
         run: |
@@ -162,7 +162,7 @@ jobs:
           repository: kyma-project/template-operator
           path: template-operator
       - name: Run e2e tests
-        working-directory: runtime-watcher/runtime-watcher
+        working-directory: runtime-watcher
         run: |
           pwd
           ls -A
