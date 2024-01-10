@@ -156,7 +156,6 @@ jobs:
           repository: kyma-project/template-operator
           path: template-operator
       - name: Run e2e tests
-        working-directory: runtime-watcher
         run: |
           pwd
           make -C tests/e2e watcher-enqueue
