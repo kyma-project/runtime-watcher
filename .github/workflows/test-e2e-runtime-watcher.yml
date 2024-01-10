@@ -49,10 +49,10 @@ jobs:
           path: runtime-watcher
       - name: Set up Go
         uses: actions/setup-go@v4
-        run: go version
         with:
           go-version-file: 'runtime-watcher/runtime-watcher/go.mod'
           cache-dependency-path: 'runtime-watcher/runtime-watcher/go.sum'
+      - run: go version
       - name: Install Istio CLI
         run: |
           curl -L https://istio.io/downloadIstio | TARGET_ARCH=x86_64 sh -
