@@ -43,10 +43,18 @@ jobs:
           echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
           sudo apt update -y
           sudo apt install kubectl -y
+      - run: |
+          pwd
+          ls -A
+          echo $GITHUB_WORKSPACE
       - name: Checkout runtime-watcher
         uses: actions/checkout@v4
         with:
           path: runtime-watcher
+      - run: |
+          pwd
+          ls -A
+          echo $GITHUB_WORKSPACE
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
