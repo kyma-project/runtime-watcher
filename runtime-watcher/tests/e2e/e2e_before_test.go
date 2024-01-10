@@ -37,13 +37,13 @@ func initEmptyKymaBeforeAll(kyma *v1beta2.Kyma) {
 		Name:      kyma.Name,
 	}
 	BeforeAll(func() {
-		It("Given KCP Kyma cluster", func() {
+		Context("Given KCP Kyma cluster", func() {
 			It("And a Kyma Secret is created", func() {
 				Eventually(createKymaSecret).
 					WithContext(ctx).
 					WithArguments(controlPlaneClient, kymaName).
 					Should(Succeed())
-				It("And a Kyma CR is created", func() {
+				By("And a Kyma CR is created", func() {
 					Eventually(controlPlaneClient.Create).
 						WithContext(ctx).
 						WithArguments(kyma).
@@ -55,7 +55,7 @@ func initEmptyKymaBeforeAll(kyma *v1beta2.Kyma) {
 					WithContext(ctx).
 					WithArguments(controlPlaneClient, kymaName, shared.StateReady).
 					Should(Succeed())
-				It(`And the Kyma CR is in a "Ready" State on the SKR cluster `, func() {
+				By(`And the Kyma CR is in a "Ready" State on the SKR cluster `, func() {
 					Eventually(checkRemoteKymaCR).
 						WithContext(ctx).
 						WithArguments(runtimeClient, []v1beta2.Module{}, shared.StateReady).

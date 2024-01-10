@@ -156,6 +156,7 @@ jobs:
               exit 1
             fi
           done
+          kubectl get deploy klm-controller-manager -n kcp-system
       - name: Checkout template-operator
         uses: actions/checkout@v4
         with:

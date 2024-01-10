@@ -22,28 +22,25 @@ func cleanupKymaAfterAll(kyma *v1beta2.Kyma) {
 		Name:      kyma.Name,
 	}
 	AfterAll(func() {
-		It("Given KCP Kyma cluster", func() {
-			It("When Purge Finalizer is deleted", func() {
-				It("And Kyma is deleted", func() {
-					Eventually(removePurgeFinalizerAndDeleteKyma).
-						WithContext(ctx).
-						WithArguments(controlPlaneClient, kyma).
-						Should(Succeed())
-				})
+		It("When Purge Finalizer is deleted", func() {
+			By("And Kyma is deleted", func() {
+				Eventually(removePurgeFinalizerAndDeleteKyma).
+					WithContext(ctx).
+					WithArguments(controlPlaneClient, kyma).
+					Should(Succeed())
+			})
+		})
+		It("Then SKR Kyma is deleted", func() {
+			Eventually(confirmNoKymaInstance).
+				WithContext(ctx).
+				WithArguments(runtimeClient, kymaName).
+				Should(Succeed())
 
-				It("Then SKR Kyma is deleted", func() {
-					Eventually(confirmNoKymaInstance).
-						WithContext(ctx).
-						WithArguments(runtimeClient, kymaName).
-						Should(Succeed())
-
-					It("And KCP Kyma is deleted", func() {
-						Eventually(confirmNoKymaInstance).
-							WithContext(ctx).
-							WithArguments(controlPlaneClient, kymaName).
-							Should(Succeed())
-					})
-				})
+			By("And KCP Kyma is deleted", func() {
+				Eventually(confirmNoKymaInstance).
+					WithContext(ctx).
+					WithArguments(controlPlaneClient, kymaName).
+					Should(Succeed())
 			})
 		})
 	})
