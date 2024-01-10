@@ -49,8 +49,6 @@ jobs:
           echo $GITHUB_WORKSPACE
       - name: Checkout runtime-watcher
         uses: actions/checkout@v4
-        with:
-          path: runtime-watcher
       - run: |
           pwd
           ls -A
@@ -164,9 +162,8 @@ jobs:
           repository: kyma-project/template-operator
           path: template-operator
       - name: Run e2e tests
+        working-directory: runtime-watcher/runtime-watcher
         run: |
           pwd
           ls -A
-          pushd runtime-watcher
           make -C tests/e2e watcher-enqueue
-          popd
