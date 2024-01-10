@@ -38,8 +38,7 @@ type ResourceName = types.NamespacedName
 var errWatcherDeploymentNotReady = errors.New("watcher Deployment is not ready")
 
 var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
-
-	kyma := utils.NewKymaWithSyncLabel(kymaName, controlPlaneNamespace, kymaChannel,
+	kyma := utils.NewKyma(kymaName, controlPlaneNamespace, kymaChannel,
 		v1beta2.SyncStrategyLocalSecret)
 	GinkgoWriter.Printf("kyma before create %v\n", kyma)
 	incomingRequestMsg := fmt.Sprintf("event received from SKR, adding %s/%s to queue",
