@@ -159,4 +159,6 @@ jobs:
         run: |
           pwd
           ls -A
+          pushd runtime-watcher
           make -C tests/e2e watcher-enqueue
+          popd
