@@ -158,4 +158,5 @@ jobs:
       - name: Run e2e tests
         run: |
           pwd
+          ls -A
           make -C tests/e2e watcher-enqueue
