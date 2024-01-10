@@ -37,8 +37,8 @@ func initEmptyKymaBeforeAll(kyma *v1beta2.Kyma) {
 		Name:      kyma.Name,
 	}
 	BeforeAll(func() {
-		Context("Given KCP Kyma cluster", func() {
-			It("And a Kyma Secret is created", func() {
+		By("Given KCP Kyma cluster", func() {
+			By("When a Kyma Secret is created", func() {
 				Eventually(createKymaSecret).
 					WithContext(ctx).
 					WithArguments(controlPlaneClient, kymaName).
@@ -50,7 +50,7 @@ func initEmptyKymaBeforeAll(kyma *v1beta2.Kyma) {
 						Should(Succeed())
 				})
 			})
-			It(`Then the Kyma CR is in a "Ready" State on the KCP cluster `, func() {
+			By(`Then the Kyma CR is in a "Ready" State on the KCP cluster `, func() {
 				Eventually(kymaIsInState).
 					WithContext(ctx).
 					WithArguments(controlPlaneClient, kymaName, shared.StateReady).

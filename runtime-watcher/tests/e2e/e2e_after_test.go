@@ -22,7 +22,7 @@ func cleanupKymaAfterAll(kyma *v1beta2.Kyma) {
 		Name:      kyma.Name,
 	}
 	AfterAll(func() {
-		It("When Purge Finalizer is deleted", func() {
+		By("When Purge Finalizer is deleted", func() {
 			By("And Kyma is deleted", func() {
 				Eventually(removePurgeFinalizerAndDeleteKyma).
 					WithContext(ctx).
@@ -30,7 +30,7 @@ func cleanupKymaAfterAll(kyma *v1beta2.Kyma) {
 					Should(Succeed())
 			})
 		})
-		It("Then SKR Kyma is deleted", func() {
+		By("Then SKR Kyma is deleted", func() {
 			Eventually(confirmNoKymaInstance).
 				WithContext(ctx).
 				WithArguments(runtimeClient, kymaName).
