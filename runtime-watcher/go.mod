@@ -1,8 +1,6 @@
 module github.com/kyma-project/runtime-watcher/skr
 
-go 1.21.1
-
-toolchain go1.21.5
+go 1.21.5
 
 require (
 	github.com/go-logr/logr v1.4.1
