@@ -108,6 +108,11 @@ jobs:
           pwd
           echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           echo "IMAGE_REPO=dev" >> $GITHUB_ENV
+      - name: Checkout lifecycle-manager
+        uses: actions/checkout@v4
+        with:
+          repository: kyma-project/lifecycle-manager
+          path: lifecycle-manager
       - name: Patch watcher image
         working-directory: lifecycle-manager
         run: |
