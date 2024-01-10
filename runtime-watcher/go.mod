@@ -1,13 +1,13 @@
 module github.com/kyma-project/runtime-watcher/skr
 
-go 1.21.5
+go 1.21.1
 
 require (
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/uuid v1.5.0
-	github.com/kyma-project/lifecycle-manager/api v0.0.0-20240102150518-e87c8162f91c
-	github.com/kyma-project/runtime-watcher/listener v0.0.0-20231228082443-84d7d7cbb582
+	github.com/kyma-project/lifecycle-manager/api v0.0.0-20240110155705-79908fc3d263
+	github.com/kyma-project/runtime-watcher/listener v0.0.0-20240110155904-c7718c5ed638
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/prometheus/client_golang v1.18.0
