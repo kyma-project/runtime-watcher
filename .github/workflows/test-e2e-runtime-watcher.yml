@@ -113,6 +113,9 @@ jobs:
         with:
           repository: kyma-project/lifecycle-manager
           path: lifecycle-manager
+      - run: |
+          pwd
+          ls -A
       - name: Patch watcher image
         working-directory: lifecycle-manager
         run: |
