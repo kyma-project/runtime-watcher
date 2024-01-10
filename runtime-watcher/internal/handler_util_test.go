@@ -33,15 +33,17 @@ const (
 )
 
 var (
-	OperationsToTest = []admissionv1.Operation{
+	operationsToTest = []admissionv1.Operation{
 		admissionv1.Connect,
 		admissionv1.Update,
-		admissionv1.Create, admissionv1.Delete,
+		admissionv1.Create,
+		admissionv1.Delete,
 	}
-	ChangeObjTypes = []ChangeObj{
+	changeObjTypes = []ChangeObj{
 		NoChange,
 		SpecChange,
-		StatusChange, NoSpecField,
+		StatusChange,
+		NoSpecField,
 	}
 )
 

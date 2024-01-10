@@ -29,7 +29,7 @@ const (
 	k3dHostname           = "host.k3d.internal"
 	kymaName              = "kyma-sample"
 	kymaChannel           = "regular"
-	watcherSecretName     = "skr-webhook-tls"
+	watcherSecretName     = "skr-webhook-tls" //nolint:gosec
 	watcherName           = "skr-webhook"
 )
 

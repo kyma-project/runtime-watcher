@@ -66,9 +66,9 @@ var baseTestCase = testCase{
 func createTableEntries() []TableEntry {
 	tableEntries := make([]TableEntry, 0)
 	// add all operations
-	for _, operationToTest := range OperationsToTest {
+	for _, operationToTest := range operationsToTest {
 		// add all changed object types
-		for _, changeType := range ChangeObjTypes {
+		for _, changeType := range changeObjTypes {
 			currentTestCase := baseTestCase
 			currentTestCase.params.operation = operationToTest
 			currentTestCase.params.changeObjType = changeType
