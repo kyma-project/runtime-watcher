@@ -59,19 +59,7 @@ jobs:
           sudo mv cmctl /usr/local/bin
       - name: Install k3d
         run: wget -qO - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$K3D_VERSION bash
-      - name: Create SKR cluster
-        run: |
-          k3d cluster create skr -p 10080:80@loadbalancer -p 10443:443@loadbalancer --k3s-arg '--disable=traefik@server:0'
-      - name: Create KCP cluster
-        run: |
-          kyma provision k3d --name=kcp -p 9443:443@loadbalancer -p 9080:80@loadbalancer -p 9081:8080@loadbalancer --ci --registry-port 5111
-      - name: Update Kubeconfigs
-        run: k3d kubeconfig merge -a -d
-      - name: Export Kubeconfig env vars
-        run: |
-          echo "KCP_KUBECONFIG=$(k3d kubeconfig write kcp)" >> $GITHUB_ENV
-          echo "SKR_KUBECONFIG=$(k3d kubeconfig write skr)" >> $GITHUB_ENV
-      - name: Patch /etc/hosts for k3d registry
+      - name: Patch /etc/hosts with k3d registry
         run: |
           FILE=/etc/hosts
           if [ -f "$FILE" ]; then
@@ -81,7 +69,18 @@ jobs:
               exit 1
           fi
           echo "/etc/hosts file patched"
-      - name: Switch kubeconfig context to KCP cluster
+      - name: Create SKR cluster
+        run: |
+          k3d cluster create skr -p 10080:80@loadbalancer -p 10443:443@loadbalancer --k3s-arg '--disable=traefik@server:0'
+      - name: Create KCP cluster
+        run: |
+          kyma provision k3d --name=kcp -p 9443:443@loadbalancer -p 9080:80@loadbalancer -p 9081:8080@loadbalancer --ci --registry-port 5111
+      - name: Export kubeconfigs
+        run: |
+          k3d kubeconfig merge -a -d
+          echo "KCP_KUBECONFIG=$(k3d kubeconfig write kcp)" >> $GITHUB_ENV
+          echo "SKR_KUBECONFIG=$(k3d kubeconfig write skr)" >> $GITHUB_ENV
+      - name: Switch context to KCP
         run: kubectl config use-context k3d-kcp
       - name: Deploy istio
         run: |
@@ -90,6 +89,11 @@ jobs:
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$CM_VERSION/cert-manager.yaml
           cmctl check api --wait=2m
+      - name: Set up go environment
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'runtime-watcher/go.mod'
+          cache-dependency-path: 'runtime-watcher/go.sum'
       - name: Checkout runtime-watcher
         uses: actions/checkout@v4
       - name: Checkout lifecycle-manager
@@ -102,7 +106,7 @@ jobs:
         with:
           repository: kyma-project/template-operator
           path: template-operator
-      - name: Set image tag and repository env vars
+      - name: Set PR image tag and registry env vars
         if: ${{ github.event_name == 'pull_request' }}
         run: |
           echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
@@ -142,12 +146,7 @@ jobs:
         run: |
           kubectl get pods -A
           kubectl get deploy klm-controller-manager -n kcp-system -oyaml
-      - name: Set up go environment
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: 'runtime-watcher/go.mod'
-          cache-dependency-path: 'runtime-watcher/go.sum'
-      - name: Run e2e test suite
+      - name: Run E2E test suite
         working-directory: runtime-watcher
         run: |
           make -C tests/e2e watcher-enqueue
