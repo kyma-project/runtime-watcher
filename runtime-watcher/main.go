@@ -43,7 +43,7 @@ var buildVersion = "not_provided"
 func main() {
 	var printVersion bool
 	flag.BoolVar(&printVersion, "version", false, "Prints the watcher version and exits")
-	logger := ctrl.Log.WithName("skr-webhook")
+	logger := ctrl.Log.WithName("skr-webhook").V(0)
 	opts := zap.Options{
 		Development: true,
 	}
