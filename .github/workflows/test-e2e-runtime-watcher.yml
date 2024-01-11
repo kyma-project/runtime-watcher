@@ -57,9 +57,8 @@ jobs:
           tar xzf cmctl.tar.gz
           sudo mv cmctl /usr/local/bin
       - name: Install k3d
-        run: wget -qO - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$K3D_VERSION bash
-      - name: Patch /etc/hosts with k3d registry
-        run: |
+        run: | 
+          wget -qO - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$K3D_VERSION bash
           FILE=/etc/hosts
           if [ -f "$FILE" ]; then
               sudo echo "127.0.0.1 k3d-kcp-registry" | sudo tee -a $FILE
@@ -123,7 +122,7 @@ jobs:
             value: --skr-watcher-image-tag=$VERSION_TAG" >> patch_watcher_img.yaml
           kustomize edit add patch --path patch_watcher_img.yaml --kind Deployment
           popd
-          build config/watcher_local_test
+          kustomize build config/watcher_local_test
       - name: Deploy lifecycle-manager
         working-directory: lifecycle-manager
         run: |
