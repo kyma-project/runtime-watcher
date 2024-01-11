@@ -35,51 +35,43 @@ jobs:
       IMAGE_REPO: prod
       GOSUMDB: off
     steps:
-      - name: Install prerequisites
+      - name: Install kubectl
         run: |
           curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
           echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
           sudo apt update -y
           sudo apt install kubectl -y
-      - name: Checkout runtime-watcher
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: 'runtime-watcher/go.mod'
-          cache-dependency-path: 'runtime-watcher/go.sum'
-      - run: go version
-      - name: Install Istio CLI
+      - name: Install istioctl
         run: |
           curl -L https://istio.io/downloadIstio | TARGET_ARCH=x86_64 sh -
           chmod +x istio-$ISTIO_VERSION/bin/istioctl
           mv istio-$ISTIO_VERSION/bin/istioctl /usr/local/bin
-      - name: Install Kyma CLI
+      - name: Install kyma-cli
         run: |
           wget https://storage.googleapis.com/kyma-cli-unstable/kyma-linux
           chmod +x kyma-linux && mv kyma-linux /usr/local/bin/kyma-unstable
           echo "PATH=/usr/local/bin/kyma-unstable" >> $GITHUB_OUTPUT
       - run: ln -s /usr/local/bin/kyma-unstable /usr/local/bin/kyma
-      - name: Install Cert Manager Command Line Tool
+      - name: Install cmctl
         run: |
           OS=$(go env GOOS); ARCH=$(go env GOARCH); curl -fsSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/latest/download/cmctl-$OS-$ARCH.tar.gz
           tar xzf cmctl.tar.gz
           sudo mv cmctl /usr/local/bin
       - name: Install k3d
         run: wget -qO - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$K3D_VERSION bash
-      - name: Provision SKR cluster
+      - name: Create SKR cluster
         run: |
           k3d cluster create skr -p 10080:80@loadbalancer -p 10443:443@loadbalancer --k3s-arg '--disable=traefik@server:0'
-      - name: Provision KCP cluster
+      - name: Create KCP cluster
         run: |
           kyma provision k3d --name=kcp -p 9443:443@loadbalancer -p 9080:80@loadbalancer -p 9081:8080@loadbalancer --ci --registry-port 5111
       - name: Update Kubeconfigs
         run: k3d kubeconfig merge -a -d
-      - name: Export required Kubeconfig Env vars
+      - name: Export Kubeconfig env vars
         run: |
           echo "KCP_KUBECONFIG=$(k3d kubeconfig write kcp)" >> $GITHUB_ENV
           echo "SKR_KUBECONFIG=$(k3d kubeconfig write skr)" >> $GITHUB_ENV
-      - name: Patch /etc/hosts
+      - name: Patch /etc/hosts for k3d registry
         run: |
           FILE=/etc/hosts
           if [ -f "$FILE" ]; then
@@ -94,21 +86,34 @@ jobs:
       - name: Deploy Istio on KCP Cluster
         run: |
           istioctl install --set profile=demo -y
-      - name: Deploy Cert Manager on KCP Cluster
+      - name: Deploy cert-manager
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$CM_VERSION/cert-manager.yaml
           cmctl check api --wait=2m
-      - name: Override Kustomize Controller Image TAG and Image repository environment variables in Pull Request to PR Image
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo "IMAGE_REPO=dev" >> $GITHUB_ENV
+      - name: Set up go environment
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'runtime-watcher/go.mod'
+          cache-dependency-path: 'runtime-watcher/go.sum'
+      - run: go version
+      - name: Checkout runtime-watcher
+        uses: actions/checkout@v4
       - name: Checkout lifecycle-manager
         uses: actions/checkout@v4
         with:
           repository: kyma-project/lifecycle-manager
           path: lifecycle-manager
-      - name: Patch watcher image
+      - name: Checkout template-operator
+        uses: actions/checkout@v4
+        with:
+          repository: kyma-project/template-operator
+          path: template-operator
+      - name: Set image tag and repository env vars
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "IMAGE_REPO=dev" >> $GITHUB_ENV
+      - name: Patch LM deployment with PR watcher image
         working-directory: lifecycle-manager
         run: |
           pushd config/watcher_local_test
@@ -139,13 +144,11 @@ jobs:
               exit 1
             fi
           done
-          kubectl get deploy klm-controller-manager -n kcp-system
-      - name: Checkout template-operator
-        uses: actions/checkout@v4
-        with:
-          repository: kyma-project/template-operator
-          path: template-operator
-      - name: Run e2e tests
+      - name: Check cluster state
+        run: |
+          kubectl get pods -A
+          kubectl get deploy klm-controller-manager -n kcp-system -oyaml
+      - name: Run e2e test suite
         working-directory: runtime-watcher
         run: |
           make -C tests/e2e watcher-enqueue
