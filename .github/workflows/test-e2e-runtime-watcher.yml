@@ -6,18 +6,17 @@ on:
     branches: [ "main" ]
 jobs:
   wait-for-img:
-    name: "Wait for Image Build"
+    name: "Wait for image build"
     runs-on: ubuntu-latest
     steps:
       - uses: autotelic/action-wait-for-status-check@v1
         id: wait-for-build
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Context for which we should look for the matching status
           statusName: ${{ (github.event_name == 'pull_request') && 'pull-runtime-watcher-img-build' || 'main-runtime-watcher-build' }}
           timeoutSeconds: 900
           intervalSeconds: 10
-      - name: Exit If Failing Build Requirement
+      - name: Exit if build failed
         if: steps.wait-for-build.outputs.state != 'success'
         run: |
           echo "Image build did not succeed, skipping E2E Test!"
@@ -51,7 +50,7 @@ jobs:
           wget https://storage.googleapis.com/kyma-cli-unstable/kyma-linux
           chmod +x kyma-linux && mv kyma-linux /usr/local/bin/kyma-unstable
           echo "PATH=/usr/local/bin/kyma-unstable" >> $GITHUB_OUTPUT
-      - run: ln -s /usr/local/bin/kyma-unstable /usr/local/bin/kyma
+          ln -s /usr/local/bin/kyma-unstable /usr/local/bin/kyma
       - name: Install cmctl
         run: |
           OS=$(go env GOOS); ARCH=$(go env GOARCH); curl -fsSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/latest/download/cmctl-$OS-$ARCH.tar.gz
@@ -111,7 +110,7 @@ jobs:
         run: |
           echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           echo "IMAGE_REPO=dev" >> $GITHUB_ENV
-      - name: Patch LM deployment with PR watcher image
+      - name: Patch lifecycle-manager deployment
         working-directory: lifecycle-manager
         run: |
           pushd config/watcher_local_test
@@ -122,10 +121,9 @@ jobs:
           - op: add
             path: /spec/template/spec/containers/0/args/-
             value: --skr-watcher-image-tag=$VERSION_TAG" >> patch_watcher_img.yaml
-          cat patch_watcher_img.yaml
           kustomize edit add patch --path patch_watcher_img.yaml --kind Deployment
-          cat kustomization.yaml
           popd
+          build config/watcher_local_test
       - name: Deploy lifecycle-manager
         working-directory: lifecycle-manager
         run: |
