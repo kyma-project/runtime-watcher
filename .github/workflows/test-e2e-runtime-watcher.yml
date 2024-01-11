@@ -22,7 +22,7 @@ jobs:
           echo "Image build did not succeed, skipping E2E Test!"
           exit 1
   e2e-integration:
-    name: "E2E"
+    name: "Run E2E tests"
     needs: [wait-for-img]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -30,8 +30,6 @@ jobs:
       K3D_VERSION: v5.4.7
       ISTIO_VERSION: 1.17.1
       CM_VERSION: v1.12.3
-      VERSION_TAG: latest
-      IMAGE_REPO: prod
       GOSUMDB: off
     steps:
       - name: Install kubectl
@@ -104,14 +102,11 @@ jobs:
         with:
           go-version-file: 'runtime-watcher/go.mod'
           cache-dependency-path: 'runtime-watcher/go.sum'
-      - name: Set PR image tag and registry env vars
+      - name: Add kustomize patch with PR image
         if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo "IMAGE_REPO=dev" >> $GITHUB_ENV
-      - name: Patch lifecycle-manager deployment
         working-directory: lifecycle-manager
         run: |
+          IMAGE_TAG=PR-${{ github.event.pull_request.number }}
           pushd config/watcher_local_test
           echo \
           "- op: add
@@ -119,7 +114,7 @@ jobs:
             value: --watcher-dev-registry=true
           - op: add
             path: /spec/template/spec/containers/0/args/-
-            value: --skr-watcher-image-tag=$VERSION_TAG" >> patch_watcher_img.yaml
+            value: --skr-watcher-image-tag=$IMAGE_TAG" >> patch_watcher_img.yaml
           kustomize edit add patch --path patch_watcher_img.yaml --kind Deployment
           popd
           kustomize build config/watcher_local_test
@@ -129,7 +124,7 @@ jobs:
           maxRetry=5
           for retry in $(seq 1 $maxRetry)
           do
-            if make local-deploy-with-watcher IMG=europe-docker.pkg.dev/kyma-project/$IMAGE_REPO/lifecycle-manager:latest; then
+            if make local-deploy-with-watcher IMG=europe-docker.pkg.dev/kyma-project/prod/lifecycle-manager:latest; then
               echo "KLM deployed successfully"
               exit 0
             elif [[ $retry -lt $maxRetry ]]; then
@@ -144,7 +139,7 @@ jobs:
         run: |
           kubectl get pods -A
           kubectl get deploy klm-controller-manager -n kcp-system -oyaml
-      - name: Run E2E test suite
+      - name: Run tests
         working-directory: runtime-watcher
         run: |
           make -C tests/e2e watcher-enqueue
