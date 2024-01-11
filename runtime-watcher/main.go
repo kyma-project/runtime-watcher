@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -61,6 +62,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	logger.Info("starting the Runtime Watcher", "Version:", buildVersion)
+	logger.Error(errors.New("testing error logger"), "error logger works")
 
 	config, err := serverconfig.ParseFromEnv(logger)
 	if err != nil {
@@ -74,10 +76,14 @@ func main() {
 		logger.Error(err, "rest client could not be determined for skr-webhook")
 		return
 	}
+
+	logger.Info("rest client initialized from config")
+
 	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 	requestParser := requestparser.NewRequestParser(decoder)
 	metrics := watchermetrics.NewMetrics()
 	metrics.RegisterAll()
+	logger.Info("metrics registered")
 	http.Handle("/metrics", promhttp.Handler())
 	metricsServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.MetricsPort),
@@ -87,6 +93,7 @@ func main() {
 	if err != nil {
 		logger.Error(err, "failed to wire up metrics endpoint")
 	}
+	logger.Info("metrics server started")
 
 	handler := internal.NewHandler(restClient, logger, config, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
