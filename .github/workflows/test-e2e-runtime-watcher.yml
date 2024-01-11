@@ -1,5 +1,4 @@
 name: TestSuite E2E
-
 on:
   push:
     branches: [ "main" ]
@@ -23,7 +22,6 @@ jobs:
         run: |
           echo "Image build did not succeed, skipping E2E Test!"
           exit 1
-
   e2e-integration:
     name: "E2E"
     needs: [wait-for-img]
@@ -43,16 +41,8 @@ jobs:
           echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
           sudo apt update -y
           sudo apt install kubectl -y
-      - run: |
-          pwd
-          ls -A
-          echo $GITHUB_WORKSPACE
       - name: Checkout runtime-watcher
         uses: actions/checkout@v4
-      - run: |
-          pwd
-          ls -A
-          echo $GITHUB_WORKSPACE
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -111,7 +101,6 @@ jobs:
       - name: Override Kustomize Controller Image TAG and Image repository environment variables in Pull Request to PR Image
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          pwd
           echo "VERSION_TAG=PR-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           echo "IMAGE_REPO=dev" >> $GITHUB_ENV
       - name: Checkout lifecycle-manager
@@ -119,15 +108,10 @@ jobs:
         with:
           repository: kyma-project/lifecycle-manager
           path: lifecycle-manager
-      - run: |
-          pwd
-          ls -A
       - name: Patch watcher image
         working-directory: lifecycle-manager
         run: |
-          pwd
           pushd config/watcher_local_test
-          pwd
           echo \
           "- op: add
             path: /spec/template/spec/containers/0/args/-
@@ -141,7 +125,6 @@ jobs:
       - name: Deploy lifecycle-manager
         working-directory: lifecycle-manager
         run: |
-          pwd
           maxRetry=5
           for retry in $(seq 1 $maxRetry)
           do
@@ -165,6 +148,4 @@ jobs:
       - name: Run e2e tests
         working-directory: runtime-watcher
         run: |
-          pwd
-          ls -A
           make -C tests/e2e watcher-enqueue
