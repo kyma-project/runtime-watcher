@@ -33,6 +33,9 @@ linters-settings:
       - prefix(github.com/kyma-project)
   cyclop:
     max-complexity: 20
+  funlen:
+    statements: 60
+    lines: 80
 issues:
   exclude-rules:
     - path: "_test\\.go"

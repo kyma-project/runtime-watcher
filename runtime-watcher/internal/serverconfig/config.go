@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 )
@@ -33,8 +34,6 @@ type ServerConfig struct {
 }
 
 func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
-	logger = logger.V(1)
-
 	config := ServerConfig{}
 
 	config.Port = defaultWebhookPort
@@ -99,4 +98,17 @@ func validatePortRange(port int) error {
 
 func flagError(flagName string) error {
 	return fmt.Errorf("failed parsing %s env variable", flagName)
+}
+
+func (s *ServerConfig) PrettyPrint() string {
+	configValues := []string{
+		fmt.Sprintf("%s: %d", envWebhookPort, s.Port),
+		fmt.Sprintf("%s: %d", envMetricsPort, s.MetricsPort),
+		fmt.Sprintf("%s: %s", envCACert, s.CACertPath),
+		fmt.Sprintf("%s: %s", envTLSCert, s.TLSCertPath),
+		fmt.Sprintf("%s: %s", envTLSKey, s.TLSKeyPath),
+		fmt.Sprintf("%s: %s", envKCPAddress, s.KCPAddress),
+		fmt.Sprintf("%s: %s", envKCPContract, s.KCPContract),
+	}
+	return strings.Join(configValues, "\n")
 }

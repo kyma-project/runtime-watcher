@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -60,15 +59,14 @@ func main() {
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	logger.Info("starting the Runtime Watcher", "Version:", buildVersion)
-	logger.Error(errors.New("testing error logger"), "error logger works")
+	logger.Info("Starting Runtime Watcher", "Version:", buildVersion)
 
 	config, err := serverconfig.ParseFromEnv(logger)
 	if err != nil {
 		logger.Error(err, "necessary bootstrap settings missing")
 		return
 	}
+	logger.Info(fmt.Sprintf("Server config successfully parsed: %s", config.PrettyPrint()))
 
 	restConfig := ctrl.GetConfigOrDie()
 	restClient, err := client.New(restConfig, client.Options{})
@@ -76,24 +74,26 @@ func main() {
 		logger.Error(err, "rest client could not be determined for skr-webhook")
 		return
 	}
-
-	logger.Info("rest client initialized from config")
+	logger.Info("REST client initialized")
 
 	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 	requestParser := requestparser.NewRequestParser(decoder)
 	metrics := watchermetrics.NewMetrics()
 	metrics.RegisterAll()
-	logger.Info("metrics registered")
+	logger.Info("All metrics registered")
+
 	http.Handle("/metrics", promhttp.Handler())
 	metricsServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.MetricsPort),
 		ReadHeaderTimeout: internal.HTTPTimeout,
 	}
-	err = metricsServer.ListenAndServe()
-	if err != nil {
-		logger.Error(err, "failed to wire up metrics endpoint")
-	}
-	logger.Info("metrics server started")
+	go func() {
+		err = metricsServer.ListenAndServe()
+		if err != nil {
+			logger.Error(err, "failed to serve metrics endpoint")
+		}
+	}()
+	logger.Info("Metrics server started")
 
 	handler := internal.NewHandler(restClient, logger, config, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
@@ -101,9 +101,8 @@ func main() {
 		Addr:        fmt.Sprintf(":%d", config.Port),
 		ReadTimeout: internal.HTTPTimeout,
 	}
-	logger.Info("starting web server", "Port:", config.Port)
+	logger.Info("Starting server for validation endpoint", "Port:", config.Port)
 	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)
-
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")
 		return
