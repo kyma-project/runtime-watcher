@@ -135,10 +135,16 @@ jobs:
               exit 1
             fi
           done
-      - name: Check cluster state
+      - name: Check KCP cluster state
         run: |
           kubectl get pods -A
           kubectl get deploy klm-controller-manager -n kcp-system -oyaml
+      - name: Check SKR cluster state
+        run: |
+          kubectl config use-context k3d-skr
+          kubectl get pods -A
+          kubectl get deploy skr-webhook -n kyma-system -oyaml
+          kubectl config use-context k3d-kcp
       - name: Run tests
         working-directory: runtime-watcher
         run: |
