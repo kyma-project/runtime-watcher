@@ -83,19 +83,13 @@ jobs:
           echo "/etc/hosts file patched"
       - name: Switch kubeconfig context to KCP cluster
         run: kubectl config use-context k3d-kcp
-      - name: Deploy Istio on KCP Cluster
+      - name: Deploy istio
         run: |
           istioctl install --set profile=demo -y
       - name: Deploy cert-manager
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$CM_VERSION/cert-manager.yaml
           cmctl check api --wait=2m
-      - name: Set up go environment
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: 'runtime-watcher/go.mod'
-          cache-dependency-path: 'runtime-watcher/go.sum'
-      - run: go version
       - name: Checkout runtime-watcher
         uses: actions/checkout@v4
       - name: Checkout lifecycle-manager
@@ -148,6 +142,11 @@ jobs:
         run: |
           kubectl get pods -A
           kubectl get deploy klm-controller-manager -n kcp-system -oyaml
+      - name: Set up go environment
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'runtime-watcher/go.mod'
+          cache-dependency-path: 'runtime-watcher/go.sum'
       - name: Run e2e test suite
         working-directory: runtime-watcher
         run: |
