@@ -89,11 +89,6 @@ jobs:
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$CM_VERSION/cert-manager.yaml
           cmctl check api --wait=2m
-      - name: Set up go environment
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: 'runtime-watcher/go.mod'
-          cache-dependency-path: 'runtime-watcher/go.sum'
       - name: Checkout runtime-watcher
         uses: actions/checkout@v4
       - name: Checkout lifecycle-manager
@@ -106,6 +101,11 @@ jobs:
         with:
           repository: kyma-project/template-operator
           path: template-operator
+      - name: Set up go environment
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'runtime-watcher/go.mod'
+          cache-dependency-path: 'runtime-watcher/go.sum'
       - name: Set PR image tag and registry env vars
         if: ${{ github.event_name == 'pull_request' }}
         run: |
@@ -124,6 +124,7 @@ jobs:
             value: --skr-watcher-image-tag=$VERSION_TAG" >> patch_watcher_img.yaml
           cat patch_watcher_img.yaml
           kustomize edit add patch --path patch_watcher_img.yaml --kind Deployment
+          cat kustomization.yaml
           popd
       - name: Deploy lifecycle-manager
         working-directory: lifecycle-manager
