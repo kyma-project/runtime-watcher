@@ -68,6 +68,7 @@ type responseInterface interface {
 }
 
 func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
+	h.logger.Info("Handle request - START")
 	h.metrics.UpdateAdmissionRequestsTotal()
 	start := time.Now()
 	admissionReview, err := h.requestParser.ParseAdmissionReview(request)
@@ -77,7 +78,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	h.logger.Info(fmt.Sprintf("incoming admission review for: %s", admissionReview.Request.Kind.String()))
+	h.logger.Info(fmt.Sprintf("Incoming admission review for: %s", admissionReview.Request.Kind.String()))
 
 	moduleName, err := getModuleName(request.URL.Path)
 	if err != nil {
@@ -90,7 +91,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 
 	responseBytes := h.prepareResponse(admissionReview, validationMsg)
 	if responseBytes == nil {
-		h.logger.Info("empty response from incoming admission review")
+		h.logger.Info("Empty response from incoming admission review")
 		return
 	}
 	if _, err = writer.Write(responseBytes); err != nil {
@@ -100,6 +101,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 
 	duration := time.Since(start)
 	h.metrics.UpdateRequestDuration(duration)
+	h.logger.Info("Handle request - END")
 }
 
 func getModuleName(urlPath string) (string, error) {
