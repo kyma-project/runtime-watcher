@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20240111012304-a9993807558c
 	github.com/kyma-project/runtime-watcher/listener v0.0.0-20240112082505-aa7030fb1255
-	github.com/onsi/ginkgo/v2 v2.14.0
+	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.30.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/stretchr/testify v1.8.4
