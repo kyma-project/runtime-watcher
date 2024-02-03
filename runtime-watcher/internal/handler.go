@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/sethgrid/pester"
 	"io"
 	"net/http"
 	"os"
@@ -255,14 +256,19 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 		return h.logAndReturnKCPErr(err, watchermetrics.ReasonRequest)
 	}
 
+	resilientClient := pester.NewExtendedClient(httpsClient)
+	resilientClient.Backoff = pester.ExponentialBackoff
+	resilientClient.MaxRetries = 3
+	resilientClient.KeepLog = true
+
 	postBody, err := json.Marshal(watcherEvent)
 	if err != nil {
 		return h.logAndReturnKCPErr(err, watchermetrics.ReasonRequest)
 	}
-	resp, err := httpsClient.Post(url, "application/json", bytes.NewBuffer(postBody))
+	resp, err := resilientClient.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		err = errors.Join(errKcpRequest, err)
-		h.logger.Error(err, err.Error(), "postBody", watcherEvent)
+		h.logger.Error(err, resilientClient.LogString(), "postBody", watcherEvent)
 		h.metrics.UpdateFailedKCPTotal(watchermetrics.ReasonResponse)
 		return err
 	}
