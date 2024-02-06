@@ -20,6 +20,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.17.0
 )
 
+require github.com/sethgrid/pester v1.2.0 // indirect
+
 require (
 	cloud.google.com/go/compute v1.23.2 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
