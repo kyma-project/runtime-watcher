@@ -17,10 +17,10 @@ require (
 	k8s.io/apiextensions-apiserver v0.29.1
 	k8s.io/apimachinery v0.29.1
 	k8s.io/client-go v0.29.1
-	sigs.k8s.io/controller-runtime v0.17.0
+	sigs.k8s.io/controller-runtime v0.17.2
 )
 
-require github.com/sethgrid/pester v1.2.0 // indirect
+require github.com/sethgrid/pester v1.2.0
 
 require (
 	cloud.google.com/go/compute v1.23.2 // indirect
