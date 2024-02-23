@@ -67,7 +67,10 @@ e2e-coverage: ginkgo ## Generate the effective Acceptance Criteria for all the t
 
 ##@ E2E Tests
 
-test: watcher-enqueue
+test: watcher-enqueue watcher-metrics
 
 watcher-enqueue:
 	go test -timeout 20m -ginkgo.v -ginkgo.focus "Enqueue Event from Watcher"
+
+watcher-metrics:
+	go test -timeout 20m -ginkgo.v -ginkgo.focus "Watcher Metrics"

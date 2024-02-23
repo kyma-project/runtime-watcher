@@ -22,14 +22,17 @@ jobs:
           echo "Image build did not succeed, skipping E2E Test!"
           exit 1
   e2e-integration:
-    name: "E2E (watcher-enqueue)"
+    strategy:
+      matrix:
+        e2e-test: ["watcher-enqueue", "watcher-metrics"]
+    name: "E2E"
     needs: [wait-for-img]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       K3D_VERSION: v5.4.7
       ISTIO_VERSION: 1.17.1
-      CM_VERSION: v1.12.3
+      CM_VERSION: v1.13.3
       GOSUMDB: off
     steps:
       - name: Install kubectl
@@ -139,7 +142,11 @@ jobs:
         run: |
           kubectl get pods -A
           kubectl get deploy klm-controller-manager -n kcp-system -oyaml
+      - name: Expose Metrics Endpoint
+        if: ${{ matrix.e2e-test == 'watcher-metrics'}}
+        run: |
+          kubectl patch svc klm-metrics-service -p '{"spec": {"type": "LoadBalancer"}}' -n kcp-system
       - name: Run tests
         working-directory: runtime-watcher
         run: |
-          make -C tests/e2e watcher-enqueue
+          make -C tests/e2e ${{ matrix.e2e-test }}
