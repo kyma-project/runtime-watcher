@@ -142,10 +142,6 @@ jobs:
         run: |
           kubectl get pods -A
           kubectl get deploy klm-controller-manager -n kcp-system -oyaml
-      - name: Expose Metrics Endpoint
-        if: ${{ matrix.e2e-test == 'watcher-metrics'}}
-        run: |
-          kubectl patch svc klm-metrics-service -p '{"spec": {"type": "LoadBalancer"}}' -n kcp-system
       - name: Run tests
         working-directory: runtime-watcher
         run: |
