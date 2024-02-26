@@ -20,20 +20,22 @@ func PortForwardSKRMetricsService() error {
 		return fmt.Errorf("failed to switch context %w", err)
 	}
 
-	errCh := make(chan error)
-	go portForwardMetricsService(errCh)
-
-	err := <-errCh
-
-	return err
-}
-
-func portForwardMetricsService(ch chan error) {
-	cmd := exec.Command("kubectl", "port-forward", "services/skr-webhook-metrics", "2112:2112",
+	cmd = exec.Command("kubectl", "port-forward", "services/skr-webhook-metrics", "2112:2112",
 		"-n", "kyma-system")
-	if _, err := cmd.CombinedOutput(); err != nil {
-		ch <- fmt.Errorf("failed to do port forwarding %w", err)
-	}
+
+	errChan := make(chan error)
+	go func() {
+		if err := cmd.Start(); err != nil {
+			core.GinkgoWriter.Printf(err.Error())
+			errChan <- fmt.Errorf("failed to do port forwarding %w", err)
+			return
+		}
+	}()
+
+	err := <-errChan
+	core.GinkgoWriter.Println("HEREEE")
+	core.GinkgoWriter.Println(err.Error())
+	return nil
 }
 
 func GetWatcherRequestDurationMetric(ctx context.Context) (float64, error) {
