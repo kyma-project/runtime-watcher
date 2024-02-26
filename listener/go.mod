@@ -1,6 +1,6 @@
 module github.com/kyma-project/runtime-watcher/listener
 
-go 1.21.1
+go 1.22
 
 require (
 	github.com/go-logr/logr v1.4.1
