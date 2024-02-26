@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	exec2 "os/exec"
+	"os/exec"
 	"regexp"
 	"strconv"
 
@@ -14,25 +14,32 @@ import (
 	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 )
 
-func ExposeSKRMetricsEndpoint() error {
-	cmd := exec2.Command("kubectl", "config", "use-context", "k3d-skr")
+func PortForwardSKRMetricsService() error {
+	cmd := exec.Command("kubectl", "config", "use-context", "k3d-skr")
 	if _, err := cmd.CombinedOutput(); err != nil {
-		return err
+		return fmt.Errorf("failed to switch context %w", err)
 	}
 
-	cmd = exec2.Command("kubectl", "patch", "svc", "skr-webhook-metrics", "-p",
-		"[{\"op\": \"replace\", \"path\": \"/spec/ports/0/nodePort\", \"value\":2112}]",
-		"--type=json", "-n", "kyma-system")
-	if _, err := cmd.CombinedOutput(); err != nil {
-		return err
-	}
+	errCh := make(chan error)
+	go portForwardMetricsService(errCh)
 
-	return nil
+	err := <-errCh
+
+	return err
+}
+
+func portForwardMetricsService(ch chan error) {
+	cmd := exec.Command("kubectl", "port-forward", "services/skr-webhook-metrics", "2112:2112",
+		"-n", "kyma-system")
+	if _, err := cmd.CombinedOutput(); err != nil {
+		ch <- fmt.Errorf("failed to do port forwarding %w", err)
+	}
 }
 
 func GetWatcherRequestDurationMetric(ctx context.Context) (float64, error) {
 	metricsBody, err := getMetricsBody(ctx)
 	core.GinkgoWriter.Println(metricsBody)
+	core.GinkgoWriter.Println(err.Error())
 
 	if err != nil {
 		return 0, err

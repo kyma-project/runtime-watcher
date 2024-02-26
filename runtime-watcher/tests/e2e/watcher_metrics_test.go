@@ -22,7 +22,7 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 
 	Context("Given SKR Cluster", func() {
 		It("When Metrics Endpoint is exposed", func() {
-			Expect(ExposeSKRMetricsEndpoint()).To(Succeed())
+			Expect(PortForwardSKRMetricsService()).To(Succeed())
 
 			By("And Runtime Watcher deployment is ready", func() {
 				Eventually(deploymentReady).
