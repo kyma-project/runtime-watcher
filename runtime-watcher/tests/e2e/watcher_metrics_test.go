@@ -30,12 +30,25 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 					WithArguments(runtimeClient, watcher).
 					Should(Succeed())
 			})
+
+			By("And spec of SKR Kyma CR is changed", func() {
+				Eventually(changeRemoteKymaChannel).
+					WithContext(ctx).
+					WithArguments(runtimeClient, "fast").
+					Should(Succeed())
+			})
 		})
 
 		It("Then Watcher Request Duration Metric is recorded", func() {
 			Eventually(GetWatcherRequestDurationMetric).
 				WithContext(ctx).
 				Should(BeNumerically(">", float64(0)))
+
+			By("And kcp requests metric should be incremented", func() {
+				Eventually(GetKcpRequestsMetric).
+					WithContext(ctx).
+					Should(BeNumerically(">", 0))
+			})
 		})
 	})
 })
