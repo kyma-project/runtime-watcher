@@ -44,8 +44,14 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 				WithContext(ctx).
 				Should(BeNumerically(">", float64(0)))
 
-			By("And kcp requests metric should be incremented", func() {
+			By("And kcp requests metric is incremented", func() {
 				Eventually(GetKcpRequestsMetric).
+					WithContext(ctx).
+					Should(BeNumerically(">", 0))
+			})
+
+			By("And admission requests metric is incremented", func() {
+				Eventually(GetAdmissionRequestsMetric).
 					WithContext(ctx).
 					Should(BeNumerically(">", 0))
 			})
