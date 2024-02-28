@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ParseFromEnv_PortUnsetShouldUseDefaultValue(t *testing.T) {
@@ -16,7 +17,7 @@ func Test_ParseFromEnv_PortUnsetShouldUseDefaultValue(t *testing.T) {
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 8443, result.Port)
 }
 
@@ -27,7 +28,7 @@ func Test_ParseFromEnv_InvalidPortShouldUseDefaultValue(t *testing.T) {
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 8443, result.Port)
 }
 
@@ -38,7 +39,7 @@ func Test_ParseFromEnv_InvalidPortRangeShouldUseDefaultValue(t *testing.T) {
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 8443, result.Port)
 }
 
@@ -49,7 +50,7 @@ func Test_ParseFromEnv_ValidPort(t *testing.T) {
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1234, result.Port)
 }
 
@@ -124,7 +125,7 @@ func Test_ParseFromEnv_ValidConfig(t *testing.T) {
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1234, result.Port)
 	assert.Equal(t, "ca_cert_path", result.CACertPath)
 	assert.Equal(t, "tls_cert_path", result.TLSCertPath)

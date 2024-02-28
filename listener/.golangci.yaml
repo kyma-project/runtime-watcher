@@ -33,6 +33,19 @@ linters-settings:
       - prefix(github.com/kyma-project)
   cyclop:
     max-complexity: 20
+  revive:
+    enable-all-rules: false
+    severity: error
+    rules:
+      - name: comment-spacings
+        disabled: true
+      - name: dot-imports
+        severity: warning
+        disabled: true
+      - name: line-length-limit
+        severity: warning
+        disabled: true
+        arguments: [ 120 ]
 issues:
   exclude-rules:
     - path: "_test\\.go"
