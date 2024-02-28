@@ -37,7 +37,6 @@ linters-settings:
     statements: 60
     lines: 80
   revive:
-    enable-all-rules: false
     severity: error
     rules:
       - name: comment-spacings

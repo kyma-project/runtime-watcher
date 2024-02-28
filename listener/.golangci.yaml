@@ -34,7 +34,6 @@ linters-settings:
   cyclop:
     max-complexity: 20
   revive:
-    enable-all-rules: false
     severity: error
     rules:
       - name: comment-spacings
