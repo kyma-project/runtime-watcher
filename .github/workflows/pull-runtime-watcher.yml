@@ -15,9 +15,9 @@ jobs:
           go-version: '1.21'
           cache: false
       - name: Lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4.0.0
         with:
-          version: v1.54.2
+          version: v1.56.2
           args: --verbose
           working-directory: ./runtime-watcher
       - name: Build
