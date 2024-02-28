@@ -16,11 +16,11 @@ import (
 const hostname = "http://localhost:8082"
 
 type unmarshalTestCase struct {
-	name          string
-	urlPath       string
-	expectedEvent *types.WatchEvent
-	errMsg        string
-	httpStatus    int
+	name               string
+	urlPath            string
+	expectedEvent      *types.WatchEvent
+	expectedErrMsg     string
+	expectedHTTPStatus int
 }
 
 func TestUnmarshalSKREvent(t *testing.T) {
@@ -60,12 +60,12 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			currentWatcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
 			if err != nil {
-				require.Equal(t, testCase.errMsg, err.Message)
-				require.Equal(t, testCase.httpStatus, err.HTTPErrorCode)
+				require.Equal(t, testCase.expectedErrMsg, err.Message)
+				require.Equal(t, testCase.expectedHTTPStatus, err.HTTPErrorCode)
 				return
 			}
-			require.Equal(t, testCase.errMsg, "")
-			require.Equal(t, testCase.httpStatus, http.StatusOK)
+			require.Equal(t, testCase.expectedErrMsg, "")
+			require.Equal(t, testCase.expectedHTTPStatus, http.StatusOK)
 			require.Equal(t, testCase.expectedEvent, currentWatcherEvent)
 		})
 	}

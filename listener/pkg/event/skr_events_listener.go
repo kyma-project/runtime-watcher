@@ -102,7 +102,7 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		// http method support: POST only is allowed
 		if req.Method != http.MethodPost {
-			errorMessage := fmt.Sprintf("%s method is not allowed on this path", req.Method)
+			errorMessage := req.Method + " method is not allowed on this path"
 			l.Logger.Error(nil, errorMessage)
 			http.Error(writer, errorMessage, http.StatusMethodNotAllowed)
 			return
