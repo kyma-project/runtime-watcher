@@ -20,7 +20,10 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 	}
 
 	Context("Given SKR Cluster", func() {
-		It("When Runtime Watcher deployment is ready", func() {
+		It("When SKR Webhook metrics endpoint is exposed", func() {
+			Expect(ExposeSKRMetricsServiceEndpoint()).To(Succeed())
+
+			By("Runtime Watcher deployment is ready")
 			Eventually(deploymentReady).
 				WithContext(ctx).
 				WithArguments(runtimeClient, watcher).
@@ -50,6 +53,24 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 					WithContext(ctx).
 					Should(BeNumerically(">", 0))
 			})
+		})
+
+		It("When kyma does not have owned by annotation", func() {
+			Eventually(AddSkipReconciliationLabelToKyma).
+				WithContext(ctx).
+				WithArguments(controlPlaneClient, kyma.Name, kyma.Namespace).
+				Should(Succeed())
+
+			Eventually(UpdateKymaOwnerAnnotation).
+				WithContext(ctx).
+				WithArguments(runtimeClient, defaultRemoteKymaName, remoteNamespace, "invalid").
+				Should(Succeed())
+		})
+
+		It("Then Watcher Failed Kcp Metric is 1", func() {
+			Eventually(GetWatcherFailedKcpTotalMetric).
+				WithContext(ctx).
+				Should(Equal(1))
 		})
 	})
 })

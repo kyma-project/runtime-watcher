@@ -152,11 +152,6 @@ jobs:
         run: |
           kubectl get pods -A
           kubectl get deploy klm-controller-manager -n kcp-system -oyaml
-      - name: Expose SKR Metrics Service Endpoint
-        if: ${{ matrix.e2e-test == 'watcher-metrics' }}
-        run: |
-          kubectl config use-context k3d-skr"
-          kubectl patch svc skr-webhook-metrics -p {"spec": {"type": "LoadBalancer"}} -n kyma-system
       - name: Run tests
         working-directory: runtime-watcher
         run: |

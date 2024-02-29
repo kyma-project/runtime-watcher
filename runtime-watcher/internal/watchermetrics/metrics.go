@@ -11,7 +11,7 @@ type WatcherMetrics struct {
 	admissionRequestsErrorTotalCounter prometheus.Counter
 	admissionRequestsTotalCounter      prometheus.Counter
 	kcpRequestsTotalCounter            prometheus.Counter
-	failedKCPRequestsTotalCounter      prometheus.CounterVec
+	failedKCPRequestsTotalCounter      *prometheus.CounterVec
 }
 
 const (
@@ -48,7 +48,7 @@ func NewMetrics() *WatcherMetrics {
 			Name: KcpRequestsTotal,
 			Help: "Indicates total requests to KCP count",
 		}),
-		failedKCPRequestsTotalCounter: *prometheus.NewCounterVec(prometheus.CounterOpts{
+		failedKCPRequestsTotalCounter: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: FailedKCPRequestsTotal,
 			Help: "Indicates total failed requests to KCP count",
 		}, []string{kcpErrReasonLabel}),

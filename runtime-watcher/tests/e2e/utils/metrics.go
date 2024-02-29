@@ -5,11 +5,29 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 	"regexp"
 	"strconv"
 
+	"github.com/onsi/ginkgo/v2"
+
 	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 )
+
+func ExposeSKRMetricsServiceEndpoint() error {
+	cmd := exec.Command("kubectl", "config", "use-context", "k3d-skr")
+	if _, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to switch context %w", err)
+	}
+
+	cmd = exec.Command("kubectl", "patch", "svc", "skr-webhook-metrics", "-p",
+		"{\"spec\": {\"type\": \"LoadBalancer\"}}", "-n", "kyma-system")
+	if _, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to patch metrics service %w", err)
+	}
+
+	return nil
+}
 
 func GetWatcherRequestDurationMetric(ctx context.Context) (float64, error) {
 	metricsBody, err := getMetricsBody(ctx)
@@ -29,6 +47,16 @@ func GetWatcherRequestDurationMetric(ctx context.Context) (float64, error) {
 		return 0, fmt.Errorf("couldn't parse metric %s value", watchermetrics.RequestDuration)
 	}
 	return duration, nil
+}
+
+func GetWatcherFailedKcpTotalMetric(ctx context.Context) (int, error) {
+	metricsBody, err := getMetricsBody(ctx)
+	ginkgo.GinkgoWriter.Println(metricsBody)
+	if err != nil {
+		return 0, err
+	}
+	regex := regexp.MustCompile(`watcher_failed_kcp_total (\d+)`)
+	return parseCount(regex, metricsBody)
 }
 
 func GetKcpRequestsMetric(ctx context.Context) (int, error) {
@@ -72,6 +100,7 @@ func getMetricsBody(ctx context.Context) (string, error) {
 
 func parseCount(re *regexp.Regexp, bodyString string) (int, error) {
 	match := re.FindStringSubmatch(bodyString)
+	ginkgo.GinkgoWriter.Println(match)
 	if len(match) > 1 {
 		count, err := strconv.Atoi(match[1])
 		if err != nil {

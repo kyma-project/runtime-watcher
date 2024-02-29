@@ -1,10 +1,13 @@
 package utils
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	apimetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kyma-project/lifecycle-manager/api/shared"
 	"github.com/kyma-project/lifecycle-manager/api/v1beta2"
@@ -72,4 +75,36 @@ func IsNotFound(err error) bool {
 		}
 	}
 	return false
+}
+
+func AddSkipReconciliationLabelToKyma(ctx context.Context, clnt client.Client, kymaName, kymaNamespace string) error {
+	kyma := &v1beta2.Kyma{}
+	err := clnt.Get(ctx, client.ObjectKey{Namespace: kymaNamespace, Name: kymaName}, kyma)
+	if err != nil {
+		return fmt.Errorf("failed to get kyma %w", err)
+	}
+
+	kyma.Labels["operator.kyma-project.io/skip-reconciliation"] = "true"
+	if err := clnt.Update(ctx, kyma); err != nil {
+		return fmt.Errorf("failed to update kyma, %w", err)
+	}
+
+	return nil
+}
+
+func UpdateKymaOwnerAnnotation(ctx context.Context, clnt client.Client,
+	kymaName, kymaNamespace, newOwner string,
+) error {
+	kyma := &v1beta2.Kyma{}
+	err := clnt.Get(ctx, client.ObjectKey{Name: kymaName, Namespace: kymaNamespace}, kyma)
+	if err != nil {
+		return fmt.Errorf("failed to get Kyma %w", err)
+	}
+
+	kyma.Annotations["operator.kyma-project.io/owned-by"] = newOwner
+	if err := clnt.Update(ctx, kyma); err != nil {
+		return fmt.Errorf("failed to update kyma, %w", err)
+	}
+
+	return nil
 }
