@@ -103,7 +103,7 @@ func GetAdmissionHTTPRequest(operation admissionv1.Operation, watchedName, modul
 	if err != nil {
 		return nil, err
 	}
-	return httptest.NewRequest(http.MethodGet, fmt.Sprintf("/validate/%s", moduleName),
+	return httptest.NewRequest(http.MethodGet, "/validate/"+moduleName,
 		bytes.NewBuffer(bytesRequest)), nil
 }
 

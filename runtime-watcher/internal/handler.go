@@ -80,7 +80,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	h.logger.Info(fmt.Sprintf("Incoming admission review for: %s", admissionReview.Request.Kind.String()))
+	h.logger.Info("Incoming admission review for: " + admissionReview.Request.Kind.String())
 
 	moduleName, err := getModuleName(request.URL.Path)
 	if err != nil {
@@ -110,11 +110,11 @@ func getModuleName(urlPath string) (string, error) {
 	var moduleName string
 	_, err := fmt.Sscanf(urlPath, urlPathPattern, &moduleName)
 	if err != nil && !errors.Is(err, io.EOF) {
-		return "", fmt.Errorf("could not parse url path")
+		return "", errors.New("could not parse url path")
 	}
 
 	if err != nil && errors.Is(err, io.EOF) || moduleName == "" {
-		return "", fmt.Errorf("module name must not be empty")
+		return "", errors.New("module name must not be empty")
 	}
 
 	return moduleName, nil
