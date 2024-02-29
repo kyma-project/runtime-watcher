@@ -66,7 +66,7 @@ func main() {
 		logger.Error(err, "necessary bootstrap settings missing")
 		return
 	}
-	logger.Info(fmt.Sprintf("Server config successfully parsed: %s", config.PrettyPrint()))
+	logger.Info("Server config successfully parsed: " + config.PrettyPrint())
 
 	restConfig := ctrl.GetConfigOrDie()
 	restClient, err := client.New(restConfig, client.Options{})
