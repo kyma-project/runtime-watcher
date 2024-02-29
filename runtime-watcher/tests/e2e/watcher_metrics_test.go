@@ -11,7 +11,6 @@ import (
 var _ = Describe("Watcher Metrics", Ordered, func() {
 	kyma := NewKyma(kymaName, controlPlaneNamespace, kymaChannel,
 		v1beta2.SyncStrategyLocalSecret)
-	GinkgoWriter.Printf("kyma before create %v\n", kyma)
 	initEmptyKymaBeforeAll(kyma)
 	cleanupKymaAfterAll(kyma)
 

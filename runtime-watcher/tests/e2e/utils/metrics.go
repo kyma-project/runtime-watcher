@@ -52,7 +52,7 @@ func GetKcpRequestsMetric(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	regex := regexp.MustCompile(watchermetrics.KcpRequestsTotal + ` (\d+)`)
+	regex := regexp.MustCompile(`watcher_kcp_requests_total (\d+)`)
 	return parseCount(regex, metricsBody)
 }
 
@@ -62,7 +62,7 @@ func GetAdmissionRequestsMetric(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	regex := regexp.MustCompile(watchermetrics.AdmissionRequestsTotal + ` (\d+)`)
+	regex := regexp.MustCompile(`watcher_admission_request_total (\d+)`)
 	return parseCount(regex, metricsBody)
 }
 
