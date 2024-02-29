@@ -5,27 +5,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os/exec"
 	"regexp"
 	"strconv"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 )
-
-func ExposeSKRMetricsServiceEndpoint() error {
-	cmd := exec.Command("kubectl", "config", "use-context", "k3d-skr")
-	if _, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to switch context %w", err)
-	}
-
-	cmd = exec.Command("kubectl", "patch", "svc", "skr-webhook-metrics", "-p",
-		"{\"spec\": {\"type\": \"LoadBalancer\"}}", "-n", "kyma-system")
-	if _, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to patch metrics service %w", err)
-	}
-
-	return nil
-}
 
 func GetWatcherRequestDurationMetric(ctx context.Context) (float64, error) {
 	metricsBody, err := getMetricsBody(ctx)

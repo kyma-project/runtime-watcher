@@ -20,15 +20,11 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 	}
 
 	Context("Given SKR Cluster", func() {
-		It("When Metrics Endpoint is exposed", func() {
-			Expect(ExposeSKRMetricsServiceEndpoint()).To(Succeed())
-
-			By("And Runtime Watcher deployment is ready", func() {
-				Eventually(deploymentReady).
-					WithContext(ctx).
-					WithArguments(runtimeClient, watcher).
-					Should(Succeed())
-			})
+		It("When Runtime Watcher deployment is ready", func() {
+			Eventually(deploymentReady).
+				WithContext(ctx).
+				WithArguments(runtimeClient, watcher).
+				Should(Succeed())
 
 			By("And spec of SKR Kyma CR is changed", func() {
 				Eventually(changeRemoteKymaChannel).
