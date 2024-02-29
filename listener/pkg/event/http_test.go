@@ -68,7 +68,7 @@ func TestHandler(t *testing.T) {
 	// SETUP
 	log := setupLogger()
 	skrEventsListener := newTestListener(":8082", "kyma", log,
-		func(r *http.Request, watcherEvtObject *types.WatchEvent) error {
+		func(_ *http.Request, _ *types.WatchEvent) error {
 			return nil
 		})
 
@@ -98,7 +98,7 @@ func TestHandler(t *testing.T) {
 		"mismatching status code: expected %d, got %d", http.StatusOK, resp.StatusCode)
 	testEvt.mu.Lock()
 	defer testEvt.mu.Unlock()
-	assert.NotEqual(t, nil, testEvt.evt,
+	assert.NotNil(t, testEvt.evt,
 		"error reading event from channel: expected non nil event, got %v", testEvt.evt)
 	testWatcherEvtContents := listenerEvent.UnstructuredContent(testWatcherEvt)
 	for key, value := range testWatcherEvtContents {
@@ -112,14 +112,14 @@ func TestMiddleware(t *testing.T) {
 	// SETUP
 	log := setupLogger()
 	skrEventsListener := newTestListener(":8082", "kyma", log,
-		func(r *http.Request, watcherEvtObject *types.WatchEvent) error {
+		func(_ *http.Request, _ *types.WatchEvent) error {
 			return nil
 		})
 
 	const successfulResponseString = "SUCCESS"
 	const requestSizeLimitInBytes = 16384 // 16KB
 	handlerUnderTest := http.MaxBytesHandler(skrEventsListener.RequestSizeLimitingMiddleware(
-		func(writer http.ResponseWriter, request *http.Request) {
+		func(writer http.ResponseWriter, _ *http.Request) {
 			_, err := writer.Write([]byte(successfulResponseString))
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
