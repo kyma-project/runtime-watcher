@@ -9,8 +9,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/onsi/ginkgo/v2/dsl/core"
-
 	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 )
 
@@ -49,13 +47,12 @@ func GetWatcherRequestDurationMetric(ctx context.Context) (float64, error) {
 	return duration, nil
 }
 
-func GetWatcherFailedKcpTotalMetric(ctx context.Context) (int, error) {
+func GetWatcherFailedKcpTotalMetric(ctx context.Context, failureReason watchermetrics.KcpErrReason) (int, error) {
 	metricsBody, err := getMetricsBody(ctx)
-	core.GinkgoWriter.Println(metricsBody)
 	if err != nil {
 		return 0, err
 	}
-	regex := regexp.MustCompile(`watcher_failed_kcp_total (\d+)`)
+	regex := regexp.MustCompile(fmt.Sprintf(`watcher_failed_kcp_total{error_reason="%s"} (\d+)`, failureReason))
 	return parseCount(regex, metricsBody)
 }
 
