@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/dsl/core"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
 )
@@ -51,7 +51,7 @@ func GetWatcherRequestDurationMetric(ctx context.Context) (float64, error) {
 
 func GetWatcherFailedKcpTotalMetric(ctx context.Context) (int, error) {
 	metricsBody, err := getMetricsBody(ctx)
-	ginkgo.GinkgoWriter.Println(metricsBody)
+	core.GinkgoWriter.Println(metricsBody)
 	if err != nil {
 		return 0, err
 	}
@@ -100,7 +100,6 @@ func getMetricsBody(ctx context.Context) (string, error) {
 
 func parseCount(re *regexp.Regexp, bodyString string) (int, error) {
 	match := re.FindStringSubmatch(bodyString)
-	ginkgo.GinkgoWriter.Println(match)
 	if len(match) > 1 {
 		count, err := strconv.Atoi(match[1])
 		if err != nil {

@@ -61,10 +61,17 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 				WithArguments(controlPlaneClient, kyma.Name, kyma.Namespace).
 				Should(Succeed())
 
-			Eventually(UpdateKymaOwnerAnnotation).
+			Eventually(RemoveKymaAnnotations).
 				WithContext(ctx).
-				WithArguments(runtimeClient, defaultRemoteKymaName, remoteNamespace, "invalid").
+				WithArguments(runtimeClient, defaultRemoteKymaName, remoteNamespace).
 				Should(Succeed())
+
+			By("And spec of SKR Kyma CR is changed", func() {
+				Eventually(changeRemoteKymaChannel).
+					WithContext(ctx).
+					WithArguments(runtimeClient, "regular").
+					Should(Succeed())
+			})
 		})
 
 		It("Then Watcher Failed Kcp Metric is 1", func() {

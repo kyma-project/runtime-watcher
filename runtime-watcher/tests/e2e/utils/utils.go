@@ -84,7 +84,7 @@ func AddSkipReconciliationLabelToKyma(ctx context.Context, clnt client.Client, k
 		return fmt.Errorf("failed to get kyma %w", err)
 	}
 
-	kyma.Labels["operator.kyma-project.io/skip-reconciliation"] = "true"
+	kyma.Labels[shared.SkipReconcileLabel] = "true"
 	if err := clnt.Update(ctx, kyma); err != nil {
 		return fmt.Errorf("failed to update kyma, %w", err)
 	}
@@ -92,8 +92,8 @@ func AddSkipReconciliationLabelToKyma(ctx context.Context, clnt client.Client, k
 	return nil
 }
 
-func UpdateKymaOwnerAnnotation(ctx context.Context, clnt client.Client,
-	kymaName, kymaNamespace, newOwner string,
+func RemoveKymaAnnotations(ctx context.Context, clnt client.Client,
+	kymaName, kymaNamespace string,
 ) error {
 	kyma := &v1beta2.Kyma{}
 	err := clnt.Get(ctx, client.ObjectKey{Name: kymaName, Namespace: kymaNamespace}, kyma)
@@ -101,10 +101,9 @@ func UpdateKymaOwnerAnnotation(ctx context.Context, clnt client.Client,
 		return fmt.Errorf("failed to get Kyma %w", err)
 	}
 
-	kyma.Annotations["operator.kyma-project.io/owned-by"] = newOwner
+	kyma.Annotations = nil
 	if err := clnt.Update(ctx, kyma); err != nil {
 		return fmt.Errorf("failed to update kyma, %w", err)
 	}
-
 	return nil
 }
