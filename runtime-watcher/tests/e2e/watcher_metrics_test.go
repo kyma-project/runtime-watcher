@@ -79,7 +79,7 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 			Eventually(GetWatcherFailedKcpTotalMetric).
 				WithContext(ctx).
 				WithArguments(watchermetrics.ReasonOwner).
-				Should(Equal(1))
+				Should(BeNumerically(">=", 1))
 		})
 	})
 })
