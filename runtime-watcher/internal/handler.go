@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+
 	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"

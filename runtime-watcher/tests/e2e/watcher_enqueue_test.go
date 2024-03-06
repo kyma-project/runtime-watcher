@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kyma-project/runtime-watcher/skr/tests/e2e/utils"
 	apicorev1 "k8s.io/api/core/v1"
 
 	apiappsv1 "k8s.io/api/apps/v1"
@@ -19,6 +18,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "github.com/kyma-project/runtime-watcher/skr/tests/e2e/utils"
 )
 
 const (
@@ -38,7 +39,7 @@ type ResourceName = types.NamespacedName
 var errWatcherDeploymentNotReady = errors.New("watcher Deployment is not ready")
 
 var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
-	kyma := utils.NewKyma(kymaName, controlPlaneNamespace, kymaChannel,
+	kyma := NewKyma(kymaName, controlPlaneNamespace, kymaChannel,
 		v1beta2.SyncStrategyLocalSecret)
 	GinkgoWriter.Printf("kyma before create %v\n", kyma)
 	incomingRequestMsg := fmt.Sprintf("event received from SKR, adding %s/%s to queue",
@@ -104,7 +105,8 @@ var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
 				Should(Succeed())
 		})
 		It("Then new reconciliation gets triggered for KCP Kyma CR", func() {
-			logAssert := utils.NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient, runtimeClient)
+			logAssert := NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient,
+				runtimeClient)
 			Eventually(logAssert.ContainsKLMLogMessage).
 				WithContext(ctx).
 				WithArguments(incomingRequestMsg, timeNow).
@@ -130,7 +132,8 @@ var _ = Describe("Enqueue Event from Watcher", Ordered, func() {
 		})
 
 		It("Then new reconciliation gets triggered for KCP Kyma CR", func() {
-			logAssert := utils.NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient, runtimeClient)
+			logAssert := NewLogAsserter(controlPlaneRESTConfig, runtimeRESTConfig, controlPlaneClient,
+				runtimeClient)
 			Eventually(logAssert.ContainsKLMLogMessage).
 				WithContext(ctx).
 				WithArguments(incomingRequestMsg, patchingTimestamp).
