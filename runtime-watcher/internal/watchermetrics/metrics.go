@@ -11,15 +11,15 @@ type WatcherMetrics struct {
 	admissionRequestsErrorTotalCounter prometheus.Counter
 	admissionRequestsTotalCounter      prometheus.Counter
 	kcpRequestsTotalCounter            prometheus.Counter
-	failedKCPRequestsTotalCounter      prometheus.CounterVec
+	failedKCPRequestsTotalCounter      *prometheus.CounterVec
 }
 
 const (
-	requestDuration                          = "watcher_request_duration"
-	failedKCPRequestsTotal                   = "watcher_failed_kcp_total"
-	kcpRequestsTotal                         = "watcher_kcp_requests_total"
-	admissionRequestsErrorTotal              = "watcher_admission_request_error_total"
-	admissionRequestsTotal                   = "watcher_admission_request_total"
+	RequestDuration                          = "watcher_request_duration"
+	FailedKCPRequestsTotal                   = "watcher_failed_kcp_total"
+	KcpRequestsTotal                         = "watcher_kcp_requests_total"
+	AdmissionRequestsErrorTotal              = "watcher_admission_request_error_total"
+	AdmissionRequestsTotal                   = "watcher_admission_request_total"
 	kcpErrReasonLabel                        = "error_reason"
 	ReasonSubresource           KcpErrReason = "invalid-subresource"
 	ReasonOwner                 KcpErrReason = "unknown-owner"
@@ -33,23 +33,23 @@ type KcpErrReason string
 func NewMetrics() *WatcherMetrics {
 	metrics := &WatcherMetrics{
 		requestDurationGauge: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: requestDuration,
+			Name: RequestDuration,
 			Help: "Indicates average request handling duration",
 		}),
 		admissionRequestsErrorTotalCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: admissionRequestsErrorTotal,
+			Name: AdmissionRequestsErrorTotal,
 			Help: "Indicates total admission requests parsing error count",
 		}),
 		admissionRequestsTotalCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: admissionRequestsTotal,
+			Name: AdmissionRequestsTotal,
 			Help: "Indicates total incoming admission requests count",
 		}),
 		kcpRequestsTotalCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: kcpRequestsTotal,
+			Name: KcpRequestsTotal,
 			Help: "Indicates total requests to KCP count",
 		}),
-		failedKCPRequestsTotalCounter: *prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: failedKCPRequestsTotal,
+		failedKCPRequestsTotalCounter: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: FailedKCPRequestsTotal,
 			Help: "Indicates total failed requests to KCP count",
 		}, []string{kcpErrReasonLabel}),
 	}
