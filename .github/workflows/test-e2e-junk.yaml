@@ -57,3 +57,9 @@ jobs:
 
       - name: Patch lifecycle-manager
         uses: ./.github/actions/patch-lifecycle-manager
+
+      - name: Deploy lifecycle-manager
+        uses: kyma-project/lifecycle-manager/.github/actions/deploy-lifecycle-manager
+        with:
+          klm_version_tag: latest
+          klm_image_repo: dev
