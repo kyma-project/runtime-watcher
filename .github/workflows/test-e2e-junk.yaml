@@ -63,7 +63,7 @@ jobs:
           klm_version_tag: latest
           klm_image_repo: prod
 
-      - name: Run '${{ matrix.e2e-test }}' tests
+      - name: Run '${{ matrix.e2e-test }}' test
         working-directory: runtime-watcher
         run: |
           make -C tests/e2e ${{ matrix.e2e-test }}
