@@ -48,10 +48,11 @@ jobs:
           cache-dependency-path: runtime-watcher/go.sum
 
       - name: Setup test clusters
-        uses: ./.github/actions/setup-test-clusters
+        uses: kyma-project/lifecycle-manager/.github/actions/setup-test-clusters@main
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           cert_manager_version: ${{ steps.configuration.outputs.cert_manager_version }}
+          additional_skr_args: "-p 9090:9090@loadbalancer;-p 2112:2112@loadbalancer"
 
       - name: Patch lifecycle-manager
         uses: ./.github/actions/patch-lifecycle-manager
