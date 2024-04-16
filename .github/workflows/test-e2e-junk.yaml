@@ -62,4 +62,4 @@ jobs:
         uses: kyma-project/lifecycle-manager/.github/actions/deploy-lifecycle-manager@main
         with:
           klm_version_tag: latest
-          klm_image_repo: dev
+          klm_image_repo: prod
