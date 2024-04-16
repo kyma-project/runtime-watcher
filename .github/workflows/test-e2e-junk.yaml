@@ -37,15 +37,14 @@ jobs:
           path: template-operator
 
       - name: Get configuration
-        uses: kyma-project/lifecycle-manager/.github/actions/get-configuration
+        uses: kyma-project/lifecycle-manager/.github/actions/get-configuration@main
         id: configuration
   
       - name: Setup tools
-        uses: kyma-project/lifecycle-manager/.github/actions/setup-tools
+        uses: kyma-project/lifecycle-manager/.github/actions/setup-tools@main
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           istio_version: ${{ steps.configuration.outputs.istio_version }}
           k3d_version: ${{ steps.configuration.outputs.k3d_version }}
           go-version-file: runtime-watcher/go.mod
           cache-dependency-path: runtime-watcher/go.sum
-
