@@ -56,4 +56,4 @@ jobs:
           cert_manager_version: ${{ steps.configuration.outputs.cert_manager_version }}
 
       - name: Patch lifecycle-manager
-        uses: ./runtime-watcher/.github/actions/patch-lifecycle-manager
+        uses: ./.github/actions/patch-lifecycle-manager
