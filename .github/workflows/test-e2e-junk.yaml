@@ -54,3 +54,6 @@ jobs:
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           cert_manager_version: ${{ steps.configuration.outputs.cert_manager_version }}
+
+      - name: Patch lifecycle-manager
+        uses: ./runtime-watcher/.github/actions/patch-lifecycle-manager
