@@ -34,12 +34,6 @@ jobs:
           repository: kyma-project/lifecycle-manager
           path: lifecycle-manager
 
-      - name: Checkout template-operator
-        uses: actions/checkout@v4
-        with:
-          repository: kyma-project/template-operator
-          path: template-operator
-
       - name: Get configuration
         uses: kyma-project/lifecycle-manager/.github/actions/get-configuration@main
         id: configuration
