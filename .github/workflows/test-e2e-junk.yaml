@@ -9,15 +9,19 @@ jobs:
     name: Wait for image build
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Done..."
-      # - uses: kyma-project/lifecycle-manager/.github/actions/wait-for-image-build@main
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     statusName: pull-runtime-watcher-img-build
+      - uses: kyma-project/lifecycle-manager/.github/actions/wait-for-image-build@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          statusName: pull-runtime-watcher-img-build
 
   e2e-integration:
     name: E2E
-    needs: wait-for-image-build  
+    needs: wait-for-image-build
+    strategy:
+      matrix:
+        e2e-test:
+          - watcher-enqueue
+          - watcher-metrics
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -63,3 +67,8 @@ jobs:
         with:
           klm_version_tag: latest
           klm_image_repo: prod
+
+      - name: Run '${{ matrix.e2e-test }}' tests
+        working-directory: runtime-watcher
+        run: |
+          make -C tests/e2e ${{ matrix.e2e-test }}
