@@ -48,3 +48,9 @@ jobs:
           k3d_version: ${{ steps.configuration.outputs.k3d_version }}
           go-version-file: runtime-watcher/go.mod
           cache-dependency-path: runtime-watcher/go.sum
+
+      - name: Setup test clusters
+        uses: kyma-project/lifecycle-manager/.github/actions/setup-test-clusters@main
+        with:
+          k8s_version: ${{ steps.configuration.outputs.k8s_version }}
+          cert_manager_version: ${{ steps.configuration.outputs.cert_manager_version }}
