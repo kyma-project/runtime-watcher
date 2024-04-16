@@ -9,7 +9,29 @@ jobs:
     name: Wait for image build
     runs-on: ubuntu-latest
     steps:
-      - uses: kyma-project/lifecycle-manager/.github/actions/wait-for-image-build@main
+      - run: echo "Done..."
+      # - uses: kyma-project/lifecycle-manager/.github/actions/wait-for-image-build@main
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     statusName: pull-runtime-watcher-img-build
+
+  e2e-integration:
+    name: E2E
+    needs: wait-for-image-build  
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout runtime-watcher
+        uses: actions/checkout@v4
+
+      - name: Checkout lifecycle-manager
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          statusName: pull-runtime-watcher-img-build
+          repository: kyma-project/lifecycle-manager
+          path: lifecycle-manager
+
+      - name: Checkout template-operator
+        uses: actions/checkout@v4
+        with:
+          repository: kyma-project/template-operator
+          path: template-operator
