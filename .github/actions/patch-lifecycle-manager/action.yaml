@@ -1,0 +1,20 @@
+name: Patch lifecycle-manager
+description: Patches lifecycle-manager to use the PR specific watcher image.
+runs:
+  using: composite
+  steps:
+    - name: Patch lifecycle-manager
+      working-directory: lifecycle-manager
+      shell: bash
+      run: |
+        pushd config/watcher_local_test
+        echo \
+        "- op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --watcher-dev-registry=true
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --skr-watcher-image-tag=PR-${{ github.event.pull_request.number }}" >> patch_watcher_img.yaml
+        kustomize edit add patch --path patch_watcher_img.yaml --kind Deployment
+        popd
+        kustomize build config/watcher_local_test
