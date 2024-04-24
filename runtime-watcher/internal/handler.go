@@ -306,6 +306,7 @@ func extractOwner(watched WatchedObject) (types.NamespacedName, error) {
 		return types.NamespacedName{}, fmt.Errorf("no '%s' annotation found for watched resource %s",
 			ownedBy, watched.NamespacedName())
 	}
+
 	ownerKey := watched.Annotations[ownedBy]
 	ownerParts := strings.Split(ownerKey, "/")
 	if len(ownerParts) != namespaceNameEntityCount {
