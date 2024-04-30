@@ -11,7 +11,6 @@ import (
 	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
@@ -22,9 +21,9 @@ const (
 	requestSizeLimitInBytes = 16384 // 16KB
 )
 
-func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
-	listener := NewSKREventListener(addr, componentName, verify)
-	return listener, &source.Channel{Source: listener.ReceivedEvents}
+// TODO: Remove this function and use the constructor instead.
+func RegisterListenerComponent(addr, componentName string, verify Verify) *SKREventListener {
+	return NewSKREventListener(addr, componentName, verify)
 }
 
 // Verify is a function which is being called to verify an incoming request to the listener.
