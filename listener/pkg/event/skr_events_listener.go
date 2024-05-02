@@ -21,11 +21,6 @@ const (
 	requestSizeLimitInBytes = 16384 // 16KB
 )
 
-// TODO: Remove this function and use the constructor instead.
-func RegisterListenerComponent(addr, componentName string, verify Verify) *SKREventListener {
-	return NewSKREventListener(addr, componentName, verify)
-}
-
 // Verify is a function which is being called to verify an incoming request to the listener.
 // If the verification fails an error should be returned and the request will be dropped,
 // otherwise it should return nil.
