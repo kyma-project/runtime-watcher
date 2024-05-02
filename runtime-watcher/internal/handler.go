@@ -231,11 +231,6 @@ func (h *Handler) checkForChange(resource *Resource, oldObj, obj WatchedObject) 
 			obj.Namespace, obj.Name)
 	}
 
-	if oldObj.Labels != nil && obj.Labels != nil && oldObj.Labels["foo"] != obj.Labels["foo"] {
-		h.logger.Info(fmt.Sprintf("Label foo changed from %s to %s", oldObj.Labels["foo"], obj.Labels["foo"]))
-	}
-	registerChange = registerChange || !reflect.DeepEqual(oldObj.Labels, obj.Labels)
-
 	return registerChange, nil
 }
 
