@@ -1,4 +1,4 @@
-module github.com/kyma-project/runtime-watcher/listener
+module github.com/Tomasz-Smelcerz-SAP/runtime-watcher/listener
 
 go 1.22.2
 
