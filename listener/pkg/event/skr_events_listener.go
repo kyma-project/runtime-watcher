@@ -11,7 +11,6 @@ import (
 	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
@@ -21,11 +20,6 @@ const (
 	paramContractVersion    = "1"
 	requestSizeLimitInBytes = 16384 // 16KB
 )
-
-func RegisterListenerComponent(addr, componentName string, verify Verify) (*SKREventListener, *source.Channel) {
-	listener := NewSKREventListener(addr, componentName, verify)
-	return listener, &source.Channel{Source: listener.ReceivedEvents}
-}
 
 // Verify is a function which is being called to verify an incoming request to the listener.
 // If the verification fails an error should be returned and the request will be dropped,
