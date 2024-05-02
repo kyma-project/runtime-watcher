@@ -17,7 +17,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X 'main.buildVersi
 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
-
 COPY --from=builder /app/webhook .
 USER 65532:65532
 
