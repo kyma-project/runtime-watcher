@@ -323,7 +323,7 @@ func (h *Handler) getHTTPSClient() (*http.Client, error) {
 		return nil, fmt.Errorf("%s :%w", msg, err)
 	}
 
-	rootCertPool, err := cacertificatehandler.GetCertificatePool(h.config.CACertPath, h.logger)
+	rootCertPool, err := cacertificatehandler.GetCertificatePool(h.config.CACertPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get certificate pool:%w", err)
 	}
