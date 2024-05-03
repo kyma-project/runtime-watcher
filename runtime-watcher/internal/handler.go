@@ -3,14 +3,11 @@ package internal
 import (
 	"bytes"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -26,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
 
+	"github.com/kyma-project/runtime-watcher/skr/internal/cacertificatehandler"
 	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
 	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
 	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
@@ -324,19 +322,11 @@ func (h *Handler) getHTTPSClient() (*http.Client, error) {
 		msg := "could not load tls certificate"
 		return nil, fmt.Errorf("%s :%w", msg, err)
 	}
-	caCertBytes, err := os.ReadFile(h.config.CACertPath)
+
+	rootCertPool, err := cacertificatehandler.GetCertificatePool(h.config.CACertPath, h.logger)
 	if err != nil {
-		msg := "could not load CA certificate"
-		return nil, fmt.Errorf("%s :%w", msg, err)
+		return nil, fmt.Errorf("failed to get certificate pool:%w", err)
 	}
-	publicPemBlock, _ := pem.Decode(caCertBytes)
-	rootPubCrt, errParse := x509.ParseCertificate(publicPemBlock.Bytes)
-	if errParse != nil {
-		msg := "failed to parse public key"
-		return nil, fmt.Errorf("%s :%w", msg, errParse)
-	}
-	rootCertPool := x509.NewCertPool()
-	rootCertPool.AddCert(rootPubCrt)
 
 	httpsClient.Timeout = HTTPTimeout
 	//nolint:gosec
