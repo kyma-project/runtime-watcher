@@ -97,7 +97,7 @@ func (p *CertProvider) CleanUp() error {
 	return p.removeTempFiles()
 }
 
-func createCertTemplate(isCA bool) (*x509.Certificate, error) {
+func CreateCertTemplate(isCA bool) (*x509.Certificate, error) {
 	sn, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), certSerialNumberUpperLimit))
 	if err != nil {
 		return nil, fmt.Errorf("serial number generation failed: %w", err)
@@ -120,7 +120,7 @@ func createCertTemplate(isCA bool) (*x509.Certificate, error) {
 	return template, nil
 }
 
-func createCert(template, parent *x509.Certificate, privateKey *rsa.PrivateKey, rootKey *rsa.PrivateKey) (
+func CreateCert(template, parent *x509.Certificate, privateKey *rsa.PrivateKey, rootKey *rsa.PrivateKey) (
 	*tls.Certificate, error,
 ) {
 	certBytes, err := x509.CreateCertificate(rand.Reader, template, parent, &privateKey.PublicKey, rootKey)
@@ -146,11 +146,11 @@ func (p *CertProvider) GenerateCerts() error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
 	}
-	rootTemplate, err := createCertTemplate(true)
+	rootTemplate, err := CreateCertTemplate(true)
 	if err != nil {
 		return err
 	}
-	p.RootCert, err = createCert(rootTemplate, rootTemplate, rootKey, rootKey)
+	p.RootCert, err = CreateCert(rootTemplate, rootTemplate, rootKey, rootKey)
 	if err != nil {
 		return err
 	}
@@ -163,12 +163,12 @@ func (p *CertProvider) GenerateCerts() error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
 	}
-	serverTemplate, err := createCertTemplate(false)
+	serverTemplate, err := CreateCertTemplate(false)
 	if err != nil {
 		return err
 	}
 	serverTemplate.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
-	p.ServerCert, err = createCert(serverTemplate, rootTemplate, serverKey, rootKey)
+	p.ServerCert, err = CreateCert(serverTemplate, rootTemplate, serverKey, rootKey)
 	if err != nil {
 		return err
 	}
@@ -177,12 +177,12 @@ func (p *CertProvider) GenerateCerts() error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
 	}
-	clientTemplate, err := createCertTemplate(false)
+	clientTemplate, err := CreateCertTemplate(false)
 	if err != nil {
 		return err
 	}
 	clientTemplate.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
-	clientCert, err := createCert(clientTemplate, rootTemplate, clientKey, rootKey)
+	clientCert, err := CreateCert(clientTemplate, rootTemplate, clientKey, rootKey)
 	if err != nil {
 		return err
 	}
