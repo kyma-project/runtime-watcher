@@ -97,7 +97,7 @@ func (p *CertProvider) CleanUp() error {
 	return p.removeTempFiles()
 }
 
-func CreateCertTemplate(isCA bool) (*x509.Certificate, error) {
+func createCertTemplate(isCA bool) (*x509.Certificate, error) {
 	sn, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), certSerialNumberUpperLimit))
 	if err != nil {
 		return nil, fmt.Errorf("serial number generation failed: %w", err)
@@ -141,12 +141,20 @@ func CreateCert(template, parent *x509.Certificate, privateKey *rsa.PrivateKey, 
 	return &cert, nil
 }
 
-func (p *CertProvider) GenerateCerts() error {
+func GenerateRootKey() (*rsa.PrivateKey, error) {
 	rootKey, err := rsa.GenerateKey(rand.Reader, privateKeyBits)
 	if err != nil {
-		return fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
+		return nil, fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
 	}
-	rootTemplate, err := CreateCertTemplate(true)
+	return rootKey, nil
+}
+
+func (p *CertProvider) GenerateCerts() error {
+	rootKey, err := GenerateRootKey()
+	if err != nil {
+		return err
+	}
+	rootTemplate, err := createCertTemplate(true)
 	if err != nil {
 		return err
 	}
@@ -163,7 +171,7 @@ func (p *CertProvider) GenerateCerts() error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
 	}
-	serverTemplate, err := CreateCertTemplate(false)
+	serverTemplate, err := createCertTemplate(false)
 	if err != nil {
 		return err
 	}
@@ -177,7 +185,7 @@ func (p *CertProvider) GenerateCerts() error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
 	}
-	clientTemplate, err := CreateCertTemplate(false)
+	clientTemplate, err := createCertTemplate(false)
 	if err != nil {
 		return err
 	}
