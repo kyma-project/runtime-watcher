@@ -120,7 +120,7 @@ func createCertTemplate(isCA bool) (*x509.Certificate, error) {
 	return template, nil
 }
 
-func createCert(template, parent *x509.Certificate, privateKey *rsa.PrivateKey, rootKey *rsa.PrivateKey) (
+func CreateCert(template, parent *x509.Certificate, privateKey *rsa.PrivateKey, rootKey *rsa.PrivateKey) (
 	*tls.Certificate, error,
 ) {
 	certBytes, err := x509.CreateCertificate(rand.Reader, template, parent, &privateKey.PublicKey, rootKey)
@@ -141,16 +141,24 @@ func createCert(template, parent *x509.Certificate, privateKey *rsa.PrivateKey, 
 	return &cert, nil
 }
 
-func (p *CertProvider) GenerateCerts() error {
+func GenerateRootKey() (*rsa.PrivateKey, error) {
 	rootKey, err := rsa.GenerateKey(rand.Reader, privateKeyBits)
 	if err != nil {
-		return fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
+		return nil, fmt.Errorf("%s: %w", errMsgCreatingPrivateKey, err)
+	}
+	return rootKey, nil
+}
+
+func (p *CertProvider) GenerateCerts() error {
+	rootKey, err := GenerateRootKey()
+	if err != nil {
+		return err
 	}
 	rootTemplate, err := createCertTemplate(true)
 	if err != nil {
 		return err
 	}
-	p.RootCert, err = createCert(rootTemplate, rootTemplate, rootKey, rootKey)
+	p.RootCert, err = CreateCert(rootTemplate, rootTemplate, rootKey, rootKey)
 	if err != nil {
 		return err
 	}
@@ -168,7 +176,7 @@ func (p *CertProvider) GenerateCerts() error {
 		return err
 	}
 	serverTemplate.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
-	p.ServerCert, err = createCert(serverTemplate, rootTemplate, serverKey, rootKey)
+	p.ServerCert, err = CreateCert(serverTemplate, rootTemplate, serverKey, rootKey)
 	if err != nil {
 		return err
 	}
@@ -182,7 +190,7 @@ func (p *CertProvider) GenerateCerts() error {
 		return err
 	}
 	clientTemplate.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
-	clientCert, err := createCert(clientTemplate, rootTemplate, clientKey, rootKey)
+	clientCert, err := CreateCert(clientTemplate, rootTemplate, clientKey, rootKey)
 	if err != nil {
 		return err
 	}
