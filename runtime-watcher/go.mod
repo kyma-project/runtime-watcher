@@ -10,7 +10,7 @@ require (
 	github.com/kyma-project/runtime-watcher/listener v0.0.0-20240112082505-aa7030fb1255
 	github.com/onsi/ginkgo/v2 v2.17.3
 	github.com/onsi/gomega v1.33.1
-	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	k8s.io/api v0.30.0
