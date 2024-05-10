@@ -19,33 +19,40 @@ import (
 )
 
 func TestGetCertificatePool1(t *testing.T) {
-	certPath := "ca.cert"
+	t.Parallel()
 	tests := []struct {
 		name             string
 		certificateCount int
+		certPath         string
 	}{
 		{
 			name:             "certificate pool with one certificate",
 			certificateCount: 1,
+			certPath:         "ca-1.cert",
 		},
 		{
 			name:             "certificate pool with two certificates",
 			certificateCount: 2,
+			certPath:         "ca-2.cert",
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		testCase := tt
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			err := writeCertificatesToFile(certPath, tt.certificateCount)
+			file, err := os.CreateTemp("", testCase.certPath)
 			require.NoError(t, err)
 
-			got, err := cacertificatehandler.GetCertificatePool(certPath)
+			err = writeCertificatesToFile(file, testCase.certificateCount)
+			require.NoError(t, err)
+
+			got, err := cacertificatehandler.GetCertificatePool(file.Name())
 			require.NoError(t, err)
 			require.False(t, got.Equal(x509.NewCertPool()))
 
-			certificates, err := getCertificates(certPath)
+			certificates, err := getCertificates(file.Name())
 			require.NoError(t, err)
-			err = os.Remove(certPath)
+			err = os.Remove(file.Name())
 			require.NoError(t, err)
 			expectedCertPool := x509.NewCertPool()
 			for _, certificate := range certificates {
@@ -95,7 +102,9 @@ func createCertificate() *x509.Certificate {
 	return cert
 }
 
-func writeCertificatesToFile(certPath string, certificateCount int) error {
+func writeCertificatesToFile(certFile *os.File, certificateCount int) error {
+	var certs []byte
+
 	for i := 0; i < certificateCount; i++ {
 		rootKey, err := tlstest.GenerateRootKey()
 		if err != nil {
@@ -111,19 +120,12 @@ func writeCertificatesToFile(certPath string, certificateCount int) error {
 			Type:  "CERTIFICATE",
 			Bytes: cert.Certificate[0],
 		})
-		file, err := os.OpenFile(certPath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o600)
-		if err != nil {
-			return fmt.Errorf("failed to open file: %w", err)
-		}
-
-		_, err = file.Write(certBytes)
-		if err != nil {
-			return fmt.Errorf("failed to write to file: %w", err)
-		}
-
-		if err := file.Close(); err != nil {
-			return fmt.Errorf("failed to close file: %w", err)
-		}
+		certs = append(certs, certBytes...)
 	}
+
+	if _, err := certFile.Write(certs); err != nil {
+		return fmt.Errorf("failed to write certificates to file: %w", err)
+	}
+
 	return nil
 }
