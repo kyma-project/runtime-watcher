@@ -18,27 +18,42 @@ import (
 	"github.com/kyma-project/runtime-watcher/skr/internal/tlstest"
 )
 
-func TestGetCertificatePool(t *testing.T) {
-	t.Parallel()
-
+func TestGetCertificatePool1(t *testing.T) {
 	certPath := "ca.cert"
-	err := writeCertificatesToFile(certPath)
-	require.NoError(t, err)
-
-	got, err := cacertificatehandler.GetCertificatePool(certPath)
-	require.NoError(t, err)
-	require.False(t, got.Equal(x509.NewCertPool()))
-
-	certificates, err := getCertificates(certPath)
-	require.NoError(t, err)
-	err = os.Remove(certPath)
-	require.NoError(t, err)
-
-	expectedCertPool := x509.NewCertPool()
-	for _, certificate := range certificates {
-		expectedCertPool.AddCert(certificate)
+	tests := []struct {
+		name             string
+		certificateCount int
+	}{
+		{
+			name:             "certificate pool with one certificate",
+			certificateCount: 1,
+		},
+		{
+			name:             "certificate pool with two certificates",
+			certificateCount: 2,
+		},
 	}
-	require.True(t, got.Equal(expectedCertPool))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := writeCertificatesToFile(certPath, tt.certificateCount)
+			require.NoError(t, err)
+
+			got, err := cacertificatehandler.GetCertificatePool(certPath)
+			require.NoError(t, err)
+			require.False(t, got.Equal(x509.NewCertPool()))
+
+			certificates, err := getCertificates(certPath)
+			require.NoError(t, err)
+			err = os.Remove(certPath)
+			require.NoError(t, err)
+			expectedCertPool := x509.NewCertPool()
+			for _, certificate := range certificates {
+				expectedCertPool.AddCert(certificate)
+			}
+			require.True(t, got.Equal(expectedCertPool))
+		})
+	}
 }
 
 func getCertificates(certPath string) ([]*x509.Certificate, error) {
@@ -80,44 +95,35 @@ func createCertificate() *x509.Certificate {
 	return cert
 }
 
-func writeCertificatesToFile(certPath string) error {
-	certificate := createCertificate()
-	rootKey, err := tlstest.GenerateRootKey()
-	if err != nil {
-		return fmt.Errorf("failed to generate root key: %w", err)
-	}
+func writeCertificatesToFile(certPath string, certificateCount int) error {
+	for i := 0; i < certificateCount; i++ {
+		rootKey, err := tlstest.GenerateRootKey()
+		if err != nil {
+			return fmt.Errorf("failed to generate root key: %w", err)
+		}
 
-	cert, err := tlstest.CreateCert(certificate, certificate, rootKey, rootKey)
-	if err != nil {
-		return fmt.Errorf("failed to create certificate: %w", err)
-	}
-	certBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: cert.Certificate[0],
-	})
-	file, err := os.OpenFile(certPath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %w", err)
-	}
+		certificate := createCertificate()
+		cert, err := tlstest.CreateCert(certificate, certificate, rootKey, rootKey)
+		if err != nil {
+			return fmt.Errorf("failed to create certificate: %w", err)
+		}
+		certBytes := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.Certificate[0],
+		})
+		file, err := os.OpenFile(certPath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o600)
+		if err != nil {
+			return fmt.Errorf("failed to open file: %w", err)
+		}
 
-	_, err = file.Write(certBytes)
-	if err != nil {
-		return fmt.Errorf("failed to write to file: %w", err)
-	}
+		_, err = file.Write(certBytes)
+		if err != nil {
+			return fmt.Errorf("failed to write to file: %w", err)
+		}
 
-	certificate = createCertificate()
-	cert, err = tlstest.CreateCert(certificate, certificate, rootKey, rootKey)
-	if err != nil {
-		return fmt.Errorf("failed to create certificate: %w", err)
-	}
-	certBytes = pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: cert.Certificate[0],
-	})
-
-	_, err = file.Write(certBytes)
-	if err != nil {
-		return fmt.Errorf("failed to write to file: %w", err)
+		if err := file.Close(); err != nil {
+			return fmt.Errorf("failed to close file: %w", err)
+		}
 	}
 	return nil
 }
