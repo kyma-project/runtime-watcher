@@ -124,8 +124,9 @@ func writeCertificatesToFile(certFile *os.File, certificateCount int) error {
 	}
 
 	if _, err := certFile.Write(certs); err != nil {
+		certFile.Close()
 		return fmt.Errorf("failed to write certificates to file: %w", err)
 	}
 
-	return nil
+	return certFile.Close()
 }
