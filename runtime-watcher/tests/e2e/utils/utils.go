@@ -24,7 +24,7 @@ const (
 	instanceIDLabelValue     = "test-instance"
 )
 
-func NewKyma(name, namespace, channel, syncStrategy string) *v1beta2.Kyma {
+func NewKyma(name, namespace, channel string) *v1beta2.Kyma {
 	return &v1beta2.Kyma{
 		TypeMeta: apimetav1.TypeMeta{
 			APIVersion: v1beta2.GroupVersion.String(),
@@ -34,8 +34,7 @@ func NewKyma(name, namespace, channel, syncStrategy string) *v1beta2.Kyma {
 			Name:      name,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				skrDomainAnnotationKey:        skrDomainAnnotationValue,
-				shared.SyncStrategyAnnotation: syncStrategy,
+				skrDomainAnnotationKey: skrDomainAnnotationValue,
 			},
 			Labels: map[string]string{
 				shared.InstanceIDLabel: instanceIDLabelValue,

@@ -1,7 +1,6 @@
 package e2e_test
 
 import (
-	"github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -10,8 +9,7 @@ import (
 )
 
 var _ = Describe("Watcher Metrics", Ordered, func() {
-	kyma := NewKyma(kymaName, controlPlaneNamespace, kymaChannel,
-		v1beta2.SyncStrategyLocalSecret)
+	kyma := NewKyma(kymaName, controlPlaneNamespace, kymaChannel)
 	initEmptyKymaBeforeAll(kyma)
 	cleanupKymaAfterAll(kyma)
 
