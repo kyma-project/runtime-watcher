@@ -6,11 +6,12 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/uuid v1.6.0
-	github.com/kyma-project/lifecycle-manager/api v0.0.0-20240612083628-285c5e099d20
-	github.com/kyma-project/runtime-watcher/listener v0.0.0-20240112082505-aa7030fb1255
+	github.com/kyma-project/lifecycle-manager/api v0.0.0-20240801074524-4126788fae7f
+	github.com/kyma-project/runtime-watcher/listener v0.0.0-20240731120725-a2ef0fe19aac
 	github.com/onsi/ginkgo/v2 v2.19.1
 	github.com/onsi/gomega v1.34.1
 	github.com/prometheus/client_golang v1.19.1
+	github.com/sethgrid/pester v1.2.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	k8s.io/api v0.30.3
@@ -19,8 +20,6 @@ require (
 	k8s.io/client-go v0.30.3
 	sigs.k8s.io/controller-runtime v0.18.4
 )
-
-require github.com/sethgrid/pester v1.2.0
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
