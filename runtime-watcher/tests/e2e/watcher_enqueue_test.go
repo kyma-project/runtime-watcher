@@ -24,7 +24,7 @@ import (
 
 const (
 	controlPlaneNamespace = "kcp-system"
-	watcherCrName         = "klm-kyma-watcher"
+	watcherCrName         = "klm-watcher"
 	remoteNamespace       = "kyma-system"
 	localHostname         = "0.0.0.0"
 	k3dHostname           = "host.k3d.internal"
