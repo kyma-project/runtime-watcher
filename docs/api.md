@@ -62,3 +62,7 @@ spec:
       matchLabels:
         "operator.kyma-project.io/watcher-gateway": "default"
 ```
+
+## Labels
+
+- **`operator.kyma-project.io/managed-by`:** This label specifies the module that manages and listens the Watcher CR's corresponding webhook. The value of this label is used to generate the path in KCP for the Watcher webhook's requests - `/validate/<label-value>`.
