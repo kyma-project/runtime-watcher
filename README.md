@@ -28,3 +28,5 @@ The [Listener package](https://github.com/kyma-project/runtime-watcher/tree/main
 
 The release process is described in the [How To Release](./docs/how_to_release.md) document.
 For further details on Runtime Watcher's architecture, see the [Architecture](./docs/architecture.md) document.
+
+No change test.
