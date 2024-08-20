@@ -10,7 +10,7 @@ require (
 	github.com/kyma-project/runtime-watcher/listener v0.0.0-20240731120725-a2ef0fe19aac
 	github.com/onsi/ginkgo/v2 v2.20.0
 	github.com/onsi/gomega v1.34.1
-	github.com/prometheus/client_golang v1.19.1
+	github.com/prometheus/client_golang v1.20.0
 	github.com/sethgrid/pester v1.2.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
@@ -156,7 +156,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20231026200631-000cd05d5491 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
