@@ -2,27 +2,19 @@ linters:
   enable-all: true
   disable:
     - contextcheck # too many false positives
-    - deadcode # deprecated (since v1.49.0) and replaced by 'unused'
     - depguard # requires whitelisting imported pkgs
-    - exhaustivestruct # deprecated (since v1.46.0) and replaced by 'exhaustruct'
     - exhaustruct # TODO enable and fix, use regex to exclude certain cases
+    - exportloopref # deprecated (since v1.60.2), replaced by copyloopvar
     - gci # keep disabled for now since it will autofix all imports and result in a git dirty state
     - godox # TODO enable and fix
-    - goerr113 # too strict
-    - golint # deprecated (since v1.41.0) and replaced by 'revive'
-    - ifshort # deprecated (since v1.48.0)
-    - interfacer # deprecated (since v1.38.0)
+    - err113 # too strict
+    - gomnd # deprecated (since v1.58.0), renamed to mnd
     - ireturn # TODO enable and fix
-    - maligned # deprecated (since v1.38.0)
     - musttag # deprecated
     - nlreturn # too strict and mostly code is not more readable
     - noctx # TODO enable and fix
-    - nosnakecase  # deprecated (since v1.48.1) and replaced by 'revive'
     - rowserrcheck # deprecated
-    - scopelint # deprecated (since v1.39.0) and replaced by 'exportloopref'
-    - structcheck # deprecated (since v1.49.0) and replaced by 'unused'
     - sqlclosecheck # not needed for this project
-    - varcheck # deprecated (since v1.49.0) and replaced by 'unused'
     - wastedassign # deprecated
     - wsl # too strict and mostly code is not more readable
 linters-settings:

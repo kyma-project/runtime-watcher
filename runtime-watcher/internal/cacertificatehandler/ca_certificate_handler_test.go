@@ -105,7 +105,7 @@ func createCertificate() *x509.Certificate {
 func writeCertificatesToFile(certFile *os.File, certificateCount int) error {
 	var certs []byte
 
-	for i := 0; i < certificateCount; i++ {
+	for range certificateCount {
 		rootKey, err := tlstest.GenerateRootKey()
 		if err != nil {
 			return fmt.Errorf("failed to generate root key: %w", err)
