@@ -27,7 +27,6 @@ jobs:
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             echo "tag=latest" >> $GITHUB_OUTPUT
           fi
-
       - name: Echo the tag
         run: echo ${{ steps.get_tag.outputs.TAG }}
   build-image:
@@ -35,6 +34,6 @@ jobs:
     uses: kyma-project/test-infra/.github/workflows/image-builder.yml@main
     with:
       name: runtime-watcher
-      dockerfile: ./runtime-watcher/Dockerfile
+      dockerfile: Dockerfile
       context: ./runtime-watcher
       tags: ${{ needs.compute-tag.outputs.tag }}
