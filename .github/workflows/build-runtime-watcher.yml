@@ -27,6 +27,7 @@ jobs:
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             echo "tag=latest" >> $GITHUB_OUTPUT
           fi
+
       - name: Echo the tag
         run: echo ${{ steps.get_tag.outputs.TAG }}
   build-image:
