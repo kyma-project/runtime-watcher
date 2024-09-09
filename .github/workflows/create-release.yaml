@@ -19,9 +19,6 @@ jobs:
   validate-release:
     name: Validate release
     runs-on: ubuntu-latest
-    outputs:
-      current_release_tag: ${{ steps.get_current_release_tag.outputs.current_release_tag }}
-      last_release_tag: ${{ steps.get_last_release_tag.outputs.last_release_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,7 +55,7 @@ jobs:
           git tag ${{ github.event.inputs.name }}
           git push origin ${{ github.event.inputs.name }} --tags
     outputs:
-      release_id: ${{ steps.draft_release.outputs.release_id }}
+      release_id: ${{ steps.draft-release.outputs.release_id }}
   builds:
     needs: draft-release
     uses: ./.github/workflows/build-image.yml
