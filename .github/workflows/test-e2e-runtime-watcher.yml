@@ -6,15 +6,15 @@ on:
       k8s_version:
         description: With Kubernetes version
         required: false
-  workflow_run:
-    workflows: ["Build Image"]
-    types:
-      - completed
-    branches-ignore:
-      - main
+  pull_request_target:
+    types: [ opened, edited, synchronize, reopened, ready_for_review ]
 jobs:
+  build-image:
+    name: Build Image
+    uses: ./.github/workflows/build-image.yml
   e2e-integration:
     name: E2E
+    needs: build-image
     strategy:
       matrix:
         e2e-test:
