@@ -17,7 +17,8 @@ fi
 GITHUB_URL=https://api.github.com/repos/$CODE_REPOSITORY
 GITHUB_AUTH_HEADER="Authorization: Bearer $GITHUB_TOKEN"
 CHANGELOG_FILE="CHANGELOG.md"
-
+echo "$GITHUB_URL"
+echo "$GITHUB_AUTH_HEADER"
 echo "## What has changed" >> $CHANGELOG_FILE
 
 git log "$LAST_RELEASE_TAG"..HEAD --pretty=tformat:"%h" --reverse | while read -r commit
@@ -35,5 +36,5 @@ done
     echo "$DOCKER_IMAGE_URL"
 } >> $CHANGELOG_FILE
 
-echo $CHANGELOG_FILE
+cat $CHANGELOG_FILE
 
