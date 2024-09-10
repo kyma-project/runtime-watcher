@@ -1,4 +1,4 @@
-name: "Create release"
+name: "Test Changelog"
 
 env:
   IMAGE_REPO: europe-docker.pkg.dev/kyma-project/prod/runtime-watcher-skr

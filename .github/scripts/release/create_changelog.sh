@@ -6,8 +6,8 @@ set -E
 set -o pipefail
 
 CURRENT_RELEASE_TAG=$1
-LAST_RELEASE_TAG=$2
-DOCKER_IMAGE_URL=$3
+DOCKER_IMAGE_URL=$2
+LAST_RELEASE_TAG=$3
 
 if [ "${LAST_RELEASE_TAG}"  == "" ]
 then
