@@ -11,7 +11,7 @@ runs:
         echo \
         "- op: add
           path: /spec/template/spec/containers/0/args/-
-          value: --watcher-dev-registry=true
+          value: --skr-watcher-image-registry=europe-docker.pkg.dev/kyma-project/dev
         - op: add
           path: /spec/template/spec/containers/0/args/-
           value: --skr-watcher-image-tag=PR-${{ github.event.pull_request.number }}" >> patch_watcher_img.yaml
