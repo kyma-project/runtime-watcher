@@ -18,14 +18,14 @@ spec:
 
 ### **spec.labelsToWatch**
 
-> **NOTE:** The resources you're watching must have the `operator.kyma-project.io/watched-by` label. The label also informs where to route requests to.
+> **NOTE:** The resources you're watching must have the `operator.kyma-project.io/watched-by` label.
 
 With the **spec.labelsToWatch** attribute, you can filter the specified Group/Version/Kind (GVK) in **spec.resourceToWatch**. For example, if the specified GVK is `secrets`, then it is useful to filter them by a specific label, otherwise, the Runtime Watcher would send an event to the KCP for every Create/Read/Update/Delete (CRUD) event of any Secret in the Kyma cluster.
 
 ```yaml
 spec:
   labelsToWatch:
-    "operator.kyma-project.io/watched-by": "lifecycle-manager"
+    "operator.kyma-project.io/watched-by": "kyma"
     "example.label.to.watch": "true"
   resourceToWatch:
     group: ""
