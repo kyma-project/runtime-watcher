@@ -18,6 +18,9 @@ linters:
     - wastedassign # deprecated
     - wsl # too strict and mostly code is not more readable
 linters-settings:
+  gomoddirectives:
+    replace-allow-list:
+      - golang.org/x/text
   gci:
     sections:
       - standard
