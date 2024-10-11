@@ -20,6 +20,7 @@ linters:
 linters-settings:
   gomoddirectives:
     replace-allow-list:
+      https://github.com/kyma-project/runtime-watcher/pull/403
       - golang.org/x/text
   gci:
     sections:
