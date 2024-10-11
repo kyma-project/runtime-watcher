@@ -2,6 +2,9 @@ module github.com/kyma-project/runtime-watcher/skr
 
 go 1.23.2
 
+// TODO: https://github.com/kyma-project/runtime-watcher/issues/402
+replace golang.org/x/text v0.17.0 => golang.org/x/text v0.19.0
+
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
