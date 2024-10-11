@@ -1,5 +1,7 @@
 name: TestSuite E2E
 
+env:
+  IMAGE_REPO: europe-docker.pkg.dev/kyma-project/dev/runtime-watcher
 on:
   workflow_dispatch:
     inputs:
