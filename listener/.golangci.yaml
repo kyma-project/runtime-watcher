@@ -20,7 +20,7 @@ linters:
 linters-settings:
   gomoddirectives:
     replace-allow-list:
-      - golang.org/x/text
+      - golang.org/x/net
   gci:
     sections:
       - standard

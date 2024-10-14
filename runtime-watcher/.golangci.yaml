@@ -18,10 +18,6 @@ linters:
     - wastedassign # deprecated
     - wsl # too strict and mostly code is not more readable
 linters-settings:
-  gomoddirectives:
-    replace-allow-list:
-      # TODO: https://github.com/kyma-project/runtime-watcher/pull/403
-      - golang.org/x/text
   gci:
     sections:
       - standard
