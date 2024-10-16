@@ -8,7 +8,7 @@ replace golang.org/x/net v0.26.0 => golang.org/x/net v0.29.0
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
-	github.com/prometheus/client_golang v1.20.4
+	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	k8s.io/apimachinery v0.31.1
