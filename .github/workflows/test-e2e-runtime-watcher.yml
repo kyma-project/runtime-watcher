@@ -55,6 +55,7 @@ jobs:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           istio_version: ${{ steps.configuration.outputs.istio_version }}
           k3d_version: ${{ steps.configuration.outputs.k3d_version }}
+          modulectl_version: ${{ steps.configuration.outputs.modulectl_version }}
           go-version-file: runtime-watcher/go.mod
           cache-dependency-path: runtime-watcher/go.sum
 
