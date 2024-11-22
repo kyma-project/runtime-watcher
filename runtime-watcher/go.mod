@@ -15,7 +15,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	k8s.io/api v0.31.3
-	k8s.io/apiextensions-apiserver v0.31.2
+	k8s.io/apiextensions-apiserver v0.31.3
 	k8s.io/apimachinery v0.31.3
 	k8s.io/client-go v0.31.3
 	sigs.k8s.io/controller-runtime v0.19.1
@@ -45,6 +45,7 @@ require (
 	github.com/mandelsoft/goutils v0.0.0-20241005173814-114fa825bbdc // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mikefarah/yq/v4 v4.44.3 // indirect
+	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/sigstore/protobuf-specs v0.3.2 // indirect
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c // indirect
 	github.com/x448/float16 v0.8.4 // indirect
