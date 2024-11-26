@@ -9,7 +9,7 @@ require (
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20241104075232-9a9c10ebaf33
 	github.com/kyma-project/runtime-watcher/listener v0.0.0-20241016074354-1202c46411f6
 	github.com/onsi/ginkgo/v2 v2.22.0
-	github.com/onsi/gomega v1.35.1
+	github.com/onsi/gomega v1.36.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/sethgrid/pester v1.2.0
 	github.com/stretchr/testify v1.9.0
