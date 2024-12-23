@@ -10,6 +10,7 @@ The main Kyma use case for the Runtime Watcher is to reduce Lifecycle Manager's 
 
 Runtime Watcher is able to watch any kind of resources and subresources. It can watch on status or spec changes of those different resources. More details can be found in the [Watcher CR definition](https://github.com/kyma-project/lifecycle-manager/blob/main/api/v1beta2/watcher_types.go).
 
+Test
 
 ## Components
 
