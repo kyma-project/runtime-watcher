@@ -64,7 +64,11 @@ jobs:
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           cert_manager_version: ${{ steps.configuration.outputs.cert_manager_version }}
-          additional_skr_args: "-p 9090:9090@loadbalancer;-p 2112:2112@loadbalancer"
+
+      - name: Additional test cluster configuration
+        run: |
+          k3d cluster edit skr --port-add 9090:9090@loadbalancer
+          k3d cluster edit skr --port-add 2112:2112@loadbalancer
 
       - name: Patch lifecycle-manager
         uses: ./.github/actions/patch-lifecycle-manager
