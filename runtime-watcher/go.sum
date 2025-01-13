@@ -68,6 +68,8 @@ github.com/DataDog/gostackparse v0.7.0 h1:i7dLkXHvYzHV308hnkvVGDL3BR4FWl7IsXNPz/
 github.com/DataDog/gostackparse v0.7.0/go.mod h1:lTfqcJKqS9KnXQGnyQMCugq3u1FP6UZMfWR0aitKFMM=
 github.com/Masterminds/semver/v3 v3.3.0 h1:B8LGeaivUe71a5qox1ICM/JLl0NqZSW5CHyL+hmvYS0=
 github.com/Masterminds/semver/v3 v3.3.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
+github.com/Masterminds/semver/v3 v3.3.1 h1:QtNSWtVZ3nBfk8mAOu/B6v7FMJ+NHTIgUPi7rj+4nv4=
+github.com/Masterminds/semver/v3 v3.3.1/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/OneOfOne/xxhash v1.2.8 h1:31czK/TI9sNkxIKfaUfGlU47BAxQ0ztGgd9vPyqimf8=
@@ -529,6 +531,8 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/kyma-project/lifecycle-manager/api v0.0.0-20241104075232-9a9c10ebaf33 h1:5K0+QlacUYf1dR66SFkOtYOzPoT2UHqXsKkFUOLoDj0=
 github.com/kyma-project/lifecycle-manager/api v0.0.0-20241104075232-9a9c10ebaf33/go.mod h1:qzEk6KRo1DtFauXacrRNX9fBBm3C4DnS7gOj2kkOZEY=
+github.com/kyma-project/lifecycle-manager/api v0.0.0-20250110082954-314c5d928b9c h1:Oai1Ot8D+K+zWCI3+wcI+o4PbO494eu30c1VAg2WWjg=
+github.com/kyma-project/lifecycle-manager/api v0.0.0-20250110082954-314c5d928b9c/go.mod h1:flQzAJyHCHjie+EIY7CA+Z4kmRA72GiMRZqKE2xnoq8=
 github.com/kyma-project/runtime-watcher/listener v0.0.0-20241016074354-1202c46411f6 h1:lQ4J8KeqUDCJY/e0cd9p1uQxySPVDB6lza+rRjIrJ/8=
 github.com/kyma-project/runtime-watcher/listener v0.0.0-20241016074354-1202c46411f6/go.mod h1:DbPx0iy1Xdu1NhFxvWcKoUHYRjmvnP4yzSxF5g4z1rw=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
