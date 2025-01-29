@@ -272,6 +272,9 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 		h.metrics.UpdateFailedKCPTotal(watchermetrics.ReasonResponse)
 		return err
 	}
+	for range resilientClient.SuccessRetryNum - 1 {
+		h.metrics.UpdateFailedKCPTotal(watchermetrics.ReasonResponse)
+	}
 	defer resp.Body.Close()
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
