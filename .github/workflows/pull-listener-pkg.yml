@@ -3,7 +3,7 @@ name: pull-listener-pkg
 on: [pull_request, workflow_dispatch]
 
 jobs:
-  lint-build-test:
+  lint-build-test-listener-pkg:
     runs-on: ubuntu-latest
     defaults:
       run:

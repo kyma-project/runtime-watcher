@@ -3,7 +3,7 @@ name: pull-runtime-watcher
 on: [pull_request, workflow_dispatch]
 
 jobs:
-  lint-build-test:
+  lint-build-test-runtime-watcher:
     runs-on: ubuntu-latest
     defaults:
       run:
