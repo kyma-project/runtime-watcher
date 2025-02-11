@@ -12,7 +12,7 @@ BUILD_VERSION := from_makefile
 ENVTEST_K8S_VERSION = 1.24.1
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
-GOLANG_CI_LINT_VERSION ?= v1.60.3
+GOLANG_CI_LINT_VERSION ?= v1.63.4
 
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin

@@ -11,9 +11,6 @@ import (
 
 	"github.com/kyma-project/runtime-watcher/skr/internal/tlstest"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,7 +31,6 @@ var (
 	kcpMockServer *httptest.Server
 	testEnv       *envtest.Environment
 	k8sClient     client.Client
-	decoder       runtime.Decoder
 	certProvider  tlstest.CertProvider
 )
 
@@ -62,7 +58,6 @@ var _ = BeforeSuite(func() {
 
 	kcpTestHandler := BootStrapKcpMockHandlers(moduleName)
 	kcpRecorder = kcpTestHandler.Recorder
-	decoder = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 
 	// prepare TLS Certificates
 	certProvider, err := tlstest.NewCertProvider()
