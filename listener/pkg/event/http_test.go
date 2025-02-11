@@ -1,4 +1,3 @@
-//nolint:bodyclose
 package event_test
 
 import (
