@@ -1,5 +1,5 @@
 ## Run from root context!!
-FROM golang:1.23.6-alpine as builder
+FROM golang:1.24.0-alpine as builder
 
 WORKDIR /app
 
