@@ -72,7 +72,6 @@ jobs:
       - name: Additional test cluster configuration
         run: |
           k3d cluster edit skr --port-add 9090:9090@loadbalancer
-          k3d cluster edit skr --port-add 2112:2112@loadbalancer
 
       - name: Patch lifecycle-manager
         uses: ./.github/actions/patch-lifecycle-manager
