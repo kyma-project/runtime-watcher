@@ -1,5 +1,7 @@
 name: pull-listener-pkg
 
+permissions: { }
+
 on: [pull_request, workflow_dispatch]
 
 jobs:
