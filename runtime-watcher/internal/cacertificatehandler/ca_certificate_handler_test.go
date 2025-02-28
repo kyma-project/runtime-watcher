@@ -40,7 +40,7 @@ func TestGetCertificatePool1(t *testing.T) {
 		testCase := tt
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			file, err := os.CreateTemp("", testCase.certPath)
+			file, err := os.CreateTemp(t.TempDir(), testCase.certPath)
 			require.NoError(t, err)
 
 			err = writeCertificatesToFile(file, testCase.certificateCount)

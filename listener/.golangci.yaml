@@ -8,7 +8,6 @@ linters:
     - gci # keep disabled for now since it will autofix all imports and result in a git dirty state
     - godox # TODO enable and fix
     - err113 # too strict
-    - gomnd # deprecated (since v1.58.0), renamed to mnd
     - ireturn # TODO enable and fix
     - musttag # deprecated
     - nlreturn # too strict and mostly code is not more readable

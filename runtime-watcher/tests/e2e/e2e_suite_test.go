@@ -59,7 +59,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	ctx, cancel = context.WithCancel(context.TODO())
+	ctx, cancel = context.WithCancel(context.TODO()) //nolint:fatcontext // context is used in tests
 	logf.SetLogger(configLogger(9, zapcore.AddSync(GinkgoWriter)))
 
 	By("bootstrapping test environment")
