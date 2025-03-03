@@ -1,5 +1,9 @@
 name: Build Image
 
+permissions:
+  id-token: write # This is required for requesting the JWT token
+  contents: read # This is required for actions/checkout
+
 on:
   push:
     branches:
@@ -13,9 +17,6 @@ on:
         default: ""
   pull_request_target:
     types: [ opened, edited, synchronize, reopened, ready_for_review ]
-permissions:
-  id-token: write # This is required for requesting the JWT token
-  contents: read # This is required for actions/checkout
 
 jobs:
   get-custom-tags:

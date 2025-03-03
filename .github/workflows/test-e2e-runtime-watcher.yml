@@ -1,7 +1,10 @@
 name: TestSuite E2E
 
+permissions: { }
+
 env:
   IMAGE_REPO: europe-docker.pkg.dev/kyma-project/dev/runtime-watcher
+
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +13,7 @@ on:
         required: false
   pull_request:
     types: [ opened, edited, synchronize, reopened, ready_for_review ]
+
 jobs:
   wait-for-image-build:
     name: Wait for image build
@@ -68,7 +72,6 @@ jobs:
       - name: Additional test cluster configuration
         run: |
           k3d cluster edit skr --port-add 9090:9090@loadbalancer
-          k3d cluster edit skr --port-add 2112:2112@loadbalancer
 
       - name: Patch lifecycle-manager
         uses: ./.github/actions/patch-lifecycle-manager
