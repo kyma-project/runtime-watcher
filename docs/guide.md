@@ -2,12 +2,12 @@
 
 This document will guide you through the process of configuring the Watcher to watch a resource in the SKR and receive events in your components when the watched resource changes.
 
-The Watcher is deployed to the SKR as webhook and watches specified resources for changes. When a change occurs, the Watcher sends an event to the KCP. The event is then forwarded to the component that registered a listener in the KCP.
+The Watcher mechanism is deployed to the SKR as ValidatingWebhookConfiguration and a webhook handler, that watches specified resources for changes. When a change occurs, the webhook sends an event to the KCP. The event is then forwarded to the component that registered a listener in the KCP.
 
 ## Watcher CR
-To be able to setup a watch on a resource, you need to design a Watcher CR for it. The Watcher CR defines which resources the Watcher watches and where the events are forwarded in the KCP.
+To be able to setup a watch on a resource, you need to define and apply a Watcher CR for it. The Watcher CR defines which resources the Watcher notifies changes for and where the events are forwarded in the KCP.
 
-Here is the definition of the Watcher CR, in succeeding sections we will explain each field in detail:
+Here is the definition of the Watcher CR. Explanations for each field are described below:
 
 ```yaml
 apiVersion: operator.kyma-project.io/v1beta2
@@ -42,9 +42,9 @@ The `spec.resourceToWatch` field specifies the GVK of the resources the Watcher 
 These resources must also have the `operator.kyma-project.io/watched-by` label. The `spec.labelsToWatch` field allows you to filter the resources by a specific label value.
 **NOTE:** The Watcher does not provide a mechanism to add this label to the resources. You need to ensure that the resources you want to watch have this label.
 
-Lastly, the `spec.field` field specifies if the Watcher sends an event to the KCP when the `spec` or `status` of the watched resource changes.
+Lastly, by the `spec.field` field, you can choose between values `spec` or `status`, to set either set changes the `status` subresource as a notification trigger or the `spec` field.
 
-Here is an example of a Watcher CR that watches Secrets on the SKR:
+Here is an example of a Watcher CR that watches changes on Secrets' spec:
 ```yaml
 spec:
   resourceToWatch:
@@ -70,7 +70,7 @@ spec:
     port: 8080
 ```
 
-The service receiving the events can be any arbitrary service that is listening on the specified port, or it can be a k8s controller using the [Listener package](./Listener.md).
+The service receiving the events can be any arbitrary service that is listening on the specified port, or it can be a k8s controller using the [Listener package](./listener.md).
 
 This is the request body of the event that is sent to the service:
 ```json

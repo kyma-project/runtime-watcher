@@ -1,30 +1,7 @@
 
-# Kyma Listener
+## Kyma Listener Package
 
-Listener module that listens to events sent by the Kyma [Watcher](https://github.com/kyma-project/runtime-watcher/tree/main/runtime-watcher) component.
+Module intended to be used with controller-runtime based operators. The Listener offers a package to set up event listening for events sent by the Kyma [Watcher](https://github.com/kyma-project/runtime-watcher/tree/main/runtime-watcher) webhook from SKRs.
+It contains the [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/de040bddeba1a7875e3a0e626db4634134971022/listener/pkg/types/event.go#L8) type (mentioned in the [architecture overview](./architecture.md)) to be received from the configured channel and provides a [SKREventListener](https://github.com/kyma-project/runtime-watcher/blob/812f64dc4021b4f3c5d49aa15d1c45f5ede6ee05/listener/pkg/event/skr_events_listener.go#L30) type that implements the [Runnable](https://github.com/kubernetes-sigs/controller-runtime/blob/de4367fbd92c9d9d3a31e37107ff4fad0208f7a6/pkg/manager/manager.go#L293) interface to be registered and added to controller-runtime [Managers](https://github.com/kubernetes-sigs/controller-runtime/blob/de4367fbd92c9d9d3a31e37107ff4fad0208f7a6/pkg/manager/manager.go#L52).
 
-## Overview
-
-Typically, we use the Listener module with operators built using Kubebuilder, but we can use it for other operators as well.
-
-### Use
-
-1. For operators built using the Kubebuilder framework, leverage your `SetupWithManager()` method to initialize the Listener by calling `RegisterListenerComponent()`.
-
-2. Set up your controller to watch for changes sent through the `source.Channel{}` returned by the Listener module, and to react to them by calling the `(blder *Builder) Watches()` method and providing your `handler.EventHandler` implementation.
-
-3. To start the Listener, add it as a runnable to your controller-manager: Call `mgr.Add()` and pass the Listener returned by `RegisterListenerComponent()`.
-
-
-### Sample code
-
-```golang
-//register listener component
-runnableListener, eventChannel := listener.RegisterListenerComponent(listenerAddr, strings.ToLower(v1alpha1.KymaKind))
-
-//watch event channel
-controllerBuilder.Watches(eventChannel, &handler.EnqueueRequestForObject{})
-
-//start listener as a manager runnable
-mgr.Add(runnableListener)
-```
+See the [step-by-step guide](./guide.md) on how to setup and use this package in detail.
