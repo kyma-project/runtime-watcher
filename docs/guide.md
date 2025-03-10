@@ -1,4 +1,4 @@
-# KLM Watcher Setup Guide
+# Configuring Runtime Watcher
 
 This document will guide you through the process of configuring the Watcher to watch a resource in the SKR and receive events in your components when the watched resource changes.
 
@@ -42,9 +42,9 @@ The `spec.resourceToWatch` field specifies the GVK of the resources the Watcher 
 These resources must also have the `operator.kyma-project.io/watched-by` label. The `spec.labelsToWatch` field allows you to filter the resources by a specific label value.
 **NOTE:** The Watcher does not provide a mechanism to add this label to the resources. You need to ensure that the resources you want to watch have this label.
 
-Lastly, by the `spec.field` field, you can choose between values `spec` or `status`, to set either set changes the `status` subresource as a notification trigger or the `spec` field.
+Lastly, by the `spec.field` field, you can choose between the values `spec` or `status`. `status` triggers notifications when the `status` subresource is chaned while `spec` triggers notifications when the `spec` is changed.
 
-Here is an example of a Watcher CR that watches changes on Secrets' spec:
+Here is an example of a Watcher CR that watches changes on Secrets' `spec`:
 ```yaml
 spec:
   resourceToWatch:
@@ -92,6 +92,8 @@ This is the request body of the event that is sent to the service:
 ```
 
 The `owner` field contains namespaced name of the resource that owns the watched resource. It is the reference to the resource on KCP that should be reconciled when the event is received. It is parsed from the `operator.kyma-project.io/owned-by` label on the watched resource in the format `<namespace>/<name>`.
+
+The consumer of the event MUST validate that the provided owner resource belongs to the SKR the event is originating from.
 
 ### 1. Arbitrary Service Example
 
@@ -193,3 +195,18 @@ func (r *Reconciler) skrEventHandler() *handler.Funcs {
 ```
 
 The package provides a `SKREventListener` struct that implements the `Runnable` interface. The `SKREventListener` struct listens on the specified port and verifies the incoming events. The `ReceivedEvents` channel is used to receive the events. The `SKREventListener` struct is added to the manager, and the controller watches the `ReceivedEvents` channel to reconcile the owner resource through WatcherRawSource.
+
+## Summary
+
+In summary, the following is necessary to setup the watch mechanism:
+
+1. In KCP, provide a listener handling POST requests on `/v1/<operator-name>/event`
+    1. Validate that the owning resource (Owner) of the received event belongs to the SKR the event is originating from
+1. In KCP, create a Watcher CR defining:
+    1. Resource GVK to watch (`spec.resourceToWatch`)
+    1. Labels that must be present on the watched resources (`spec.labelsToWatch`)
+    1 Field to watch (`spec.field`)
+    1. Path to send events to (`metadata.labels[operator.kyma-project.io/managed-by]: <operator-name>`)
+    1. Service to route events to (`spec.serviceInfo`)
+1. In SKR, ensure the `spec.labelsToWatch` from the Watcher CR is present on the resource to watch
+1. In SKR, ensure the `operator.kyma-project.io/owned-by` label is present with the correct resource
