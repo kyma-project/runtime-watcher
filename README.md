@@ -24,7 +24,7 @@ The Runtime Watcher mechanism consists of multiple parts. First, it contains a V
 ### Listener package
 The [Listener package](https://github.com/kyma-project/runtime-watcher/tree/main/listener) simplifies setting up an endpoint for an operator residing in KCP, which should receive the WatchEvents sent by the SKR webhook to KCP. See [Kyma Listener Package](./docs/listener.md). 
 
-For more information on how to set up Runtime Watcher for an arbitrary resource, see [Configuring Runtime Watcher](./docs/guide.md).
+For more information on how to set up Runtime Watcher for an arbitrary resource, see [Configuring Runtime Watcher](./docs/watcher-setup-guide.md).
 
 ## Contributing
 
