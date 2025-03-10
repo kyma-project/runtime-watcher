@@ -19,10 +19,12 @@ The workflow of Runtime Watcher includes the following main components:
 [Watcher CRs](https://github.com/kyma-project/lifecycle-manager/blob/main/api/v1beta2/watcher_types.go) configure the [Virtual Services](https://istio.io/latest/docs/reference/config/networking/virtual-service/) in KCP, which are used as a reverse proxy to route incoming requests to the correct operator. Watcher CRs are also used to configure the Runtime Watcher deployed in each Kyma cluster. For more details, see the [Watcher CR](./docs/api.md) document.
 
 ### Runtime Watcher
-The Runtime Watcher mechanism consists of multiple parts. First, it contains a ValidationWebhookConfiguration with one or more webhooks to handle admission requests. It is used to validate CRUD actions on Kubernetes resources, for the general watch mechanism inside the SKR. These webhooks are configured by the Lifecycle Manager using the Watcher CRs. In addition, a deployment is attached to the webhook, which is the receiver for the validation requests. The deployment converts the validation requests into [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/de040bddeba1a7875e3a0e626db4634134971022/listener/pkg/types/event.go#L8), which are sent to KCP using a mTLS connection. To establish the connection from a Kyma shoot cluster (SKR) to KCP, Lifecycle Manager deploys a Secret with a TLS certificate in each Kyma cluster.
+The Runtime Watcher mechanism consists of multiple parts. First, it contains a ValidationWebhookConfiguration with one or more webhooks to handle admission requests. It is used to validate CRUD actions on Kubernetes resources, for the general watch mechanism inside the SKR. These webhooks are configured by Lifecycle Manager using the Watcher CRs. In addition, a deployment is attached to the webhook, which is the receiver for the validation requests. The deployment converts the validation requests into [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/de040bddeba1a7875e3a0e626db4634134971022/listener/pkg/types/event.go#L8), which are sent to KCP using an mTLS connection. To establish the connection from a Kyma shoot cluster (SKR) to KCP, Lifecycle Manager deploys a Secret with a TLS certificate in each Kyma cluster.
 
 ### Listener package
-The [Listener package](https://github.com/kyma-project/runtime-watcher/tree/main/listener) simplifies setting up an endpoint for an operator residing in KCP, which should receive the WatchEvents sent by the SKR webhook to KCP. Find detailed information on the listener package [here](./docs/listener.md) or read the step-by-step [setup guide](./docs/guide.md) to configure a Watcher setup for an arbitrary resource.
+The [Listener package](https://github.com/kyma-project/runtime-watcher/tree/main/listener) simplifies setting up an endpoint for an operator residing in KCP, which should receive the WatchEvents sent by the SKR webhook to KCP. See [Kyma Listener Package](./docs/listener.md). 
+
+For more information on how to set up Runtime Watcher for an arbitrary resource, see [Configuring Runtime Watcher](./docs/guide.md).
 
 ## Contributing
 
@@ -31,7 +33,7 @@ See the [Contributing Rules](CONTRIBUTING.md).
 ## Release Process (internal)
 
 The release process is described in the [How To Release](./docs/internal/how_to_release.md) document.
-For further details on Runtime Watcher's architecture, see the [Architecture](./docs/architecture.md) document.
+For more information on Runtime Watcher's architecture, see the [Architecture](./docs/architecture.md) document.
 
 ## Code of Conduct
 
