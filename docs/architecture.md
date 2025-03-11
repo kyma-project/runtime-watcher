@@ -28,7 +28,7 @@ Runtime Watcher is configured and deployed in a Kyma cluster in the Kyma reconci
 
 The Listener package is designed to streamline the process of establishing an endpoint for an operator located in KCP. This operator intends to receive Watcher Events that are transmitted from Runtime Watcher to KCP. When calling the `RegisterListenerComponent` function, it returns you a runnable listener, which is added to your reconile-manager, and a channel. See this [example of how the listener package is used in Lifecycle Manager](https://github.com/kyma-project/lifecycle-manager/blob/24d21bb642ceaf9dadffe7732bf7c3f70c085ffb/controllers/manifest_controller.go#L43-L50). The channel becomes the source for the operator. For example, the operator can fetch the incoming WatchEvents from the channel and requeue the corresponding resource in the reconcile loop. Furthermore, it is possible to provide a validation function to the `RegisterListenerComponent` which can be used to filter out not needed requests before processing them further. An example of the validation function is SAN pinning.
 
-To learn how to set up a listener, read the [Listener document](./Listener.md).
+For more information on how to set up a listener, see [Kyma Listener Package](./listener.md).
 
 #### Subject Alternative Name (SAN) pinning
 
