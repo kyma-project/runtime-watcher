@@ -35,7 +35,6 @@ updates:
         - "/listener"
         - "/runtime-watcher"
     labels:
-      - "docker"
       - "area/dependency"
     schedule:
       interval: "daily"
