@@ -241,7 +241,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	}
 
 	watcherEvent := &listenerTypes.WatchEvent{
-		Owner:      client.ObjectKey{Namespace: owner.Namespace, Name: owner.Name},
+		Owner:      owner,
 		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
