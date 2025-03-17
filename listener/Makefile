@@ -8,7 +8,7 @@ IMG := $(IMG_NAME):$(DOCKER_TAG)
 GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-GOLANG_CI_LINT_VERSION ?= v1.63.4
+GOLANG_CI_LINT_VERSION ?= v1.64.7
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))

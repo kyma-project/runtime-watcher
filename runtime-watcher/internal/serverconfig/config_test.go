@@ -2,7 +2,6 @@
 package serverconfig_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -13,7 +12,7 @@ import (
 
 func Test_ParseFromEnv_PortUnsetShouldUseDefaultValue(t *testing.T) {
 	setTestDefaults(t)
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
@@ -24,7 +23,7 @@ func Test_ParseFromEnv_PortUnsetShouldUseDefaultValue(t *testing.T) {
 func Test_ParseFromEnv_InvalidPortShouldUseDefaultValue(t *testing.T) {
 	setTestDefaults(t)
 	t.Setenv("WEBHOOK_PORT", "invalid value")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
@@ -35,7 +34,7 @@ func Test_ParseFromEnv_InvalidPortShouldUseDefaultValue(t *testing.T) {
 func Test_ParseFromEnv_InvalidPortRangeShouldUseDefaultValue(t *testing.T) {
 	setTestDefaults(t)
 	t.Setenv("WEBHOOK_PORT", "65536")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
@@ -46,7 +45,7 @@ func Test_ParseFromEnv_InvalidPortRangeShouldUseDefaultValue(t *testing.T) {
 func Test_ParseFromEnv_ValidPort(t *testing.T) {
 	setTestDefaults(t)
 	t.Setenv("WEBHOOK_PORT", "1234")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
@@ -59,7 +58,7 @@ func Test_ParseFromEnv_CACertUnsetShouldReturnError(t *testing.T) {
 	t.Setenv("TLS_KEY", "tmp")
 	t.Setenv("KCP_ADDR", "address")
 	t.Setenv("KCP_CONTRACT", "contract")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	_, err := serverconfig.ParseFromEnv(logger)
 
@@ -71,7 +70,7 @@ func Test_ParseFromEnv_TLSCertUnsetShouldReturnError(t *testing.T) {
 	t.Setenv("TLS_KEY", "tmp")
 	t.Setenv("KCP_ADDR", "address")
 	t.Setenv("KCP_CONTRACT", "contract")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	_, err := serverconfig.ParseFromEnv(logger)
 
@@ -83,7 +82,7 @@ func Test_ParseFromEnv_TLSKeyUnsetShouldReturnError(t *testing.T) {
 	t.Setenv("TLS_CERT", "tmp")
 	t.Setenv("KCP_ADDR", "address")
 	t.Setenv("KCP_CONTRACT", "contract")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	_, err := serverconfig.ParseFromEnv(logger)
 
@@ -95,7 +94,7 @@ func Test_ParseFromEnv_KCPAddressUnsetShouldReturnError(t *testing.T) {
 	t.Setenv("TLS_CERT", "tmp")
 	t.Setenv("TLS_KEY", "tmp")
 	t.Setenv("KCP_CONTRACT", "contract")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	_, err := serverconfig.ParseFromEnv(logger)
 
@@ -107,7 +106,7 @@ func Test_ParseFromEnv_KCPContractUnsetShouldReturnError(t *testing.T) {
 	t.Setenv("TLS_CERT", "tmp")
 	t.Setenv("TLS_KEY", "tmp")
 	t.Setenv("KCP_ADDR", "address")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	_, err := serverconfig.ParseFromEnv(logger)
 
@@ -121,7 +120,7 @@ func Test_ParseFromEnv_ValidConfig(t *testing.T) {
 	t.Setenv("TLS_KEY", "tls_key_path")
 	t.Setenv("KCP_ADDR", "kcp_address")
 	t.Setenv("KCP_CONTRACT", "kcp_contract")
-	logger := logr.FromContextOrDiscard(context.TODO())
+	logger := logr.FromContextOrDiscard(t.Context())
 
 	result, err := serverconfig.ParseFromEnv(logger)
 
