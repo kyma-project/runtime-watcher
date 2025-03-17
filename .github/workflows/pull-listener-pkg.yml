@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'listener/go.mod'
-          cache-dependency-path: 'runtime-watcher/go.sum'
+          cache-dependency-path: 'listener/go.sum'
       - name: Lint
         uses: golangci/golangci-lint-action@4696ba8babb6127d732c3c6dde519db15edab9ea # v6.5.1
         with:
