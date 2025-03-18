@@ -109,7 +109,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 		decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 		requestParser := requestparser.NewRequestParser(decoder)
 		metrics := watchermetrics.NewMetrics()
-		handler := internal.NewHandler(k8sClient, logger, config, *requestParser, *metrics)
+		handler := internal.NewHandler(logger, config, *requestParser, *metrics)
 		skrRecorder := httptest.NewRecorder()
 		handler.Handle(skrRecorder, request)
 
