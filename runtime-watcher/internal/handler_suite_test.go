@@ -13,7 +13,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -30,7 +29,6 @@ var (
 	kcpRecorder   *httptest.ResponseRecorder
 	kcpMockServer *httptest.Server
 	testEnv       *envtest.Environment
-	k8sClient     client.Client
 	certProvider  tlstest.CertProvider
 )
 
@@ -51,10 +49,6 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	Expect(err).NotTo(HaveOccurred())
-
-	k8sClient, err = client.New(cfg, client.Options{})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
 
 	kcpTestHandler := BootStrapKcpMockHandlers(moduleName)
 	kcpRecorder = kcpTestHandler.Recorder

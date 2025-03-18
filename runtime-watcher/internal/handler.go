@@ -41,14 +41,12 @@ const (
 	namespaceNameEntityCount = 2
 )
 
-func NewHandler(client client.Client,
-	logger logr.Logger,
+func NewHandler(logger logr.Logger,
 	config serverconfig.ServerConfig,
 	parser requestparser.RequestParser,
 	metrics watchermetrics.WatcherMetrics,
 ) *Handler {
 	return &Handler{
-		client:        client,
 		logger:        logger,
 		config:        config,
 		requestParser: parser,
@@ -57,7 +55,6 @@ func NewHandler(client client.Client,
 }
 
 type Handler struct {
-	client        client.Client
 	logger        logr.Logger
 	config        serverconfig.ServerConfig
 	requestParser requestparser.RequestParser

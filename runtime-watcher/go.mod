@@ -6,8 +6,8 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/uuid v1.6.0
-	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250110082954-314c5d928b9c
-	github.com/kyma-project/runtime-watcher/listener v0.0.0-20241016074354-1202c46411f6
+	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250318075553-30eaaad97ff1
+	github.com/kyma-project/runtime-watcher/listener v0.0.0-20250317130058-42ef0a646046
 	github.com/onsi/ginkgo/v2 v2.23.0
 	github.com/onsi/gomega v1.36.2
 	github.com/prometheus/client_golang v1.21.1
