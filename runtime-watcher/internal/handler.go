@@ -92,6 +92,11 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 		h.logger.Info("Empty response from incoming admission review")
 		return
 	}
+
+	for header, value := range h.config.ResponseHeaders {
+		writer.Header().Set(header, value)
+	}
+
 	if _, err = writer.Write(responseBytes); err != nil {
 		h.logger.Error(err, admissionError)
 		return
