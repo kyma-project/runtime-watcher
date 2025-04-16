@@ -11,30 +11,37 @@ import (
 )
 
 const (
-	minPort, maxPort   = 1, 65535
-	defaultWebhookPort = 8443
-	defaultMetricsPort = 2112
-	envWebhookPort     = "WEBHOOK_PORT"
-	envMetricsPort     = "METRICS_PORT"
-	envCACert          = "CA_CERT"
-	envTLSCert         = "TLS_CERT"
-	envTLSKey          = "TLS_KEY"
-	envKCPAddress      = "KCP_ADDR"
-	envKCPContract     = "KCP_CONTRACT"
+	minPort, maxPort              = 1, 65535
+	defaultWebhookPort            = 8443
+	defaultMetricsPort            = 2112
+	envWebhookPort                = "WEBHOOK_PORT"
+	envMetricsPort                = "METRICS_PORT"
+	envCACert                     = "CA_CERT"
+	envTLSCert                    = "TLS_CERT"
+	envTLSKey                     = "TLS_KEY"
+	envKCPAddress                 = "KCP_ADDR"
+	envKCPContract                = "KCP_CONTRACT"
+	strictTransportSecurityHeader = "Strict-Transport-Security"
+	strictTransportSecurityValue  = "max-age=31536000; includeSubDomains" // 31536000 seconds = 1 year
 )
 
 type ServerConfig struct {
-	Port        int
-	MetricsPort int
-	CACertPath  string
-	TLSCertPath string
-	TLSKeyPath  string
-	KCPAddress  string
-	KCPContract string
+	Port            int
+	MetricsPort     int
+	CACertPath      string
+	TLSCertPath     string
+	TLSKeyPath      string
+	KCPAddress      string
+	KCPContract     string
+	ResponseHeaders map[string]string
 }
 
 func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
-	config := ServerConfig{}
+	config := ServerConfig{
+		ResponseHeaders: map[string]string{
+			strictTransportSecurityHeader: strictTransportSecurityValue,
+		},
+	}
 
 	config.Port = defaultWebhookPort
 	webhookPort, found := os.LookupEnv(envWebhookPort)
