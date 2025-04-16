@@ -93,9 +93,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	for header, value := range h.config.ResponseHeaders {
-		writer.Header().Set(header, value)
-	}
+	h.setResponseHeaders(writer.Header().Set)
 
 	if _, err = writer.Write(responseBytes); err != nil {
 		h.logger.Error(err, admissionError)
@@ -105,6 +103,12 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 	duration := time.Since(start)
 	h.metrics.UpdateRequestDuration(duration)
 	h.logger.Info("Handle request - END")
+}
+
+func (h *Handler) setResponseHeaders(setter func(key, value string)) {
+	for header, value := range h.config.ResponseHeaders {
+		setter(header, value)
+	}
 }
 
 func getModuleName(urlPath string) (string, error) {
