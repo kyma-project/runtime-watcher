@@ -8,4 +8,3 @@ The package contains the [WatchEvents](https://github.com/kyma-project/runtime-w
 <img src="./../assets/watcher-flow.svg">
 
 For more information on how to set up and use the package, see [Configuring Runtime Watcher](./docs/watcher-setup-guide.md).
-c
