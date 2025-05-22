@@ -11,38 +11,30 @@ import (
 )
 
 const (
-	minPort, maxPort              = 1, 65535
-	defaultWebhookPort            = 8443
-	defaultMetricsPort            = 2112
-	envWebhookPort                = "WEBHOOK_PORT"
-	envMetricsPort                = "METRICS_PORT"
-	envCACert                     = "CA_CERT"
-	envTLSCert                    = "TLS_CERT"
-	envTLSKey                     = "TLS_KEY"
-	envKCPAddress                 = "KCP_ADDR"
-	envKCPContract                = "KCP_CONTRACT"
-	strictTransportSecurityHeader = "Strict-Transport-Security"
-	strictTransportSecurityValue  = "max-age=31536000; includeSubDomains" // 31536000 seconds = 1 year
+	minPort, maxPort   = 1, 65535
+	defaultWebhookPort = 8443
+	defaultMetricsPort = 2112
+	envWebhookPort     = "WEBHOOK_PORT"
+	envMetricsPort     = "METRICS_PORT"
+	envCACert          = "CA_CERT"
+	envTLSCert         = "TLS_CERT"
+	envTLSKey          = "TLS_KEY"
+	envKCPAddress      = "KCP_ADDR"
+	envKCPContract     = "KCP_CONTRACT" // 31536000 seconds = 1 year
 )
 
 type ServerConfig struct {
-	Port            int
-	MetricsPort     int
-	CACertPath      string
-	TLSCertPath     string
-	TLSKeyPath      string
-	KCPAddress      string
-	KCPContract     string
-	ResponseHeaders map[string]string
+	Port        int
+	MetricsPort int
+	CACertPath  string
+	TLSCertPath string
+	TLSKeyPath  string
+	KCPAddress  string
+	KCPContract string
 }
 
 func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
-	config := ServerConfig{
-		ResponseHeaders: map[string]string{
-			strictTransportSecurityHeader: strictTransportSecurityValue,
-		},
-	}
-
+	config := ServerConfig{}
 	config.Port = defaultWebhookPort
 	webhookPort, found := os.LookupEnv(envWebhookPort)
 	if found {
@@ -56,7 +48,6 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 			config.Port = port
 		}
 	}
-
 	config.MetricsPort = defaultMetricsPort
 	metricsPort, found := os.LookupEnv(envMetricsPort)
 	if found {
@@ -70,7 +61,6 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 			config.MetricsPort = port
 		}
 	}
-
 	config.CACertPath = os.Getenv(envCACert)
 	if config.CACertPath == "" {
 		return config, flagError(envCACert)
