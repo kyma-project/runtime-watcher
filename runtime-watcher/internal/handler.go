@@ -65,6 +65,11 @@ func NewHandler(logger logr.Logger,
 	}
 }
 
+const (
+	strictTransportSecurityHeader = "Strict-Transport-Security"
+	strictTransportSecurityValue  = "max-age=31536000; includeSubDomains"
+)
+
 func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 	h.logger.Info("Handle request - START")
 	h.metrics.UpdateAdmissionRequestsTotal()
@@ -93,8 +98,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	h.setResponseHeaders(writer.Header().Set)
-
+	writer.Header().Set(strictTransportSecurityHeader, strictTransportSecurityValue)
 	if _, err = writer.Write(responseBytes); err != nil {
 		h.logger.Error(err, admissionError)
 		return
@@ -103,12 +107,6 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 	duration := time.Since(start)
 	h.metrics.UpdateRequestDuration(duration)
 	h.logger.Info("Handle request - END")
-}
-
-func (h *Handler) setResponseHeaders(setter func(key, value string)) {
-	for header, value := range h.config.ResponseHeaders {
-		setter(header, value)
-	}
 }
 
 func getModuleName(urlPath string) (string, error) {
