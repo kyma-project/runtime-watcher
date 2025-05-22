@@ -1,53 +1,72 @@
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-    - contextcheck # too many false positives
-    - depguard # requires whitelisting imported pkgs
-    - exhaustruct # TODO enable and fix, use regex to exclude certain cases
-    - gci # keep disabled for now since it will autofix all imports and result in a git dirty state
-    - godox # TODO enable and fix
-    - err113 # too strict
-    - ireturn # TODO enable and fix
-    - musttag # deprecated
-    - nlreturn # too strict and mostly code is not more readable
-    - noctx # TODO enable and fix
-    - rowserrcheck # deprecated
-    - sqlclosecheck # not needed for this project
-    - tenv # replaced by usetesting
-    - wastedassign # deprecated
-    - wsl # too strict and mostly code is not more readable
-linters-settings:
-  gomoddirectives:
-    replace-allow-list:
-      - golang.org/x/net
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/kyma-project)
-  cyclop:
-    max-complexity: 20
-  revive:
-    severity: error
+    - contextcheck
+    - depguard
+    - err113
+    - exhaustruct
+    - godox
+    - ireturn
+    - musttag
+    - nlreturn
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - wastedassign
+    - wsl
+  settings:
+    cyclop:
+      max-complexity: 20
+    gomoddirectives:
+      replace-allow-list:
+        - golang.org/x/net
+    revive:
+      severity: error
+      rules:
+        - name: comment-spacings
+          disabled: true
+        - name: dot-imports
+          severity: warning
+          disabled: true
+        - name: line-length-limit
+          arguments:
+            - 120
+          severity: warning
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: comment-spacings
-        disabled: true
-      - name: dot-imports
-        severity: warning
-        disabled: true
-      - name: line-length-limit
-        severity: warning
-        disabled: true
-        arguments: [ 120 ]
+      - linters:
+          - forcetypeassert
+          - wrapcheck
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-rules:
-    - path: "_test\\.go"
-      linters:
-        - forcetypeassert
-        - wrapcheck
   max-issues-per-linter: 0
   max-same-issues: 0
-output:
-  sort-results: true
-run:
-  timeout: 5m
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/kyma-project)
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
