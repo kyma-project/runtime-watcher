@@ -14,16 +14,6 @@ import (
 	"time"
 )
 
-// CertProvider generates certificates for envTest mTLS setup.
-type CertProvider struct {
-	RootCert   *tls.Certificate
-	ServerCert *tls.Certificate
-
-	RootCertFile   *os.File
-	ClientCertFile *os.File
-	ClientKeyFile  *os.File
-}
-
 const (
 	privateKeyBits             = 2048
 	certSerialNumberUpperLimit = 128
@@ -39,6 +29,16 @@ const (
 	errMsgWritingTempFiles        = "writing of temp files failed"
 )
 
+// CertProvider generates certificates for envTest mTLS setup.
+type CertProvider struct {
+	RootCert   *tls.Certificate
+	ServerCert *tls.Certificate
+
+	RootCertFile   *os.File
+	ClientCertFile *os.File
+	ClientKeyFile  *os.File
+}
+
 // NewCertProvider creates a new CertProvider with TLS certificates generated on the fly.
 // Use the CleanUp() function to remove temporary certificate files when done.
 func NewCertProvider() (*CertProvider, error) {
@@ -52,72 +52,6 @@ func NewCertProvider() (*CertProvider, error) {
 		return nil, fmt.Errorf("%s: %w", errMsgCreatingNewCertProvider, err)
 	}
 	return &provider, nil
-}
-
-func (p *CertProvider) createTempFiles() error {
-	var err error
-	p.RootCertFile, err = os.CreateTemp("", "rootCA.*.pem")
-	if err != nil {
-		return fmt.Errorf("%s: %w", errMsgCreatingTempFiles, err)
-	}
-	p.ClientCertFile, err = os.CreateTemp("", "client.*.pem")
-	if err != nil {
-		return fmt.Errorf("%s: %w", errMsgCreatingTempFiles, err)
-	}
-	p.ClientKeyFile, err = os.CreateTemp("", "client.*.key")
-	if err != nil {
-		return fmt.Errorf("%s: %w", errMsgCreatingTempFiles, err)
-	}
-	return nil
-}
-
-func (p *CertProvider) removeTempFiles() error {
-	if p.RootCertFile != nil {
-		err := os.Remove(p.RootCertFile.Name())
-		if err != nil {
-			return fmt.Errorf("%s: %w", errMsgDeletingTempFiles, err)
-		}
-	}
-	if p.ClientCertFile != nil {
-		err := os.Remove(p.ClientCertFile.Name())
-		if err != nil {
-			return fmt.Errorf("%s: %w", errMsgDeletingTempFiles, err)
-		}
-	}
-	if p.ClientKeyFile != nil {
-		err := os.Remove(p.ClientKeyFile.Name())
-		if err != nil {
-			return fmt.Errorf("%s: %w", errMsgDeletingTempFiles, err)
-		}
-	}
-	return nil
-}
-
-func (p *CertProvider) CleanUp() error {
-	return p.removeTempFiles()
-}
-
-func createCertTemplate(isCA bool) (*x509.Certificate, error) {
-	sn, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), certSerialNumberUpperLimit))
-	if err != nil {
-		return nil, fmt.Errorf("serial number generation failed: %w", err)
-	}
-	template := &x509.Certificate{
-		SerialNumber: sn,
-		Subject: pkix.Name{
-			CommonName: "127.0.0.1",
-		},
-		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour),
-		IsCA:                  isCA,
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		BasicConstraintsValid: true,
-	}
-	if isCA {
-		template.KeyUsage = x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign
-	}
-	return template, nil
 }
 
 func CreateCert(template, parent *x509.Certificate, privateKey *rsa.PrivateKey, rootKey *rsa.PrivateKey) (
@@ -139,6 +73,10 @@ func CreateCert(template, parent *x509.Certificate, privateKey *rsa.PrivateKey, 
 		return nil, fmt.Errorf("%s: %w", errMsgCreatingTLSCertificates, err)
 	}
 	return &cert, nil
+}
+
+func (p *CertProvider) CleanUp() error {
+	return p.removeTempFiles()
 }
 
 func GenerateRootKey() (*rsa.PrivateKey, error) {
@@ -200,6 +138,68 @@ func (p *CertProvider) GenerateCerts() error {
 		return err
 	}
 	return writeKeyToFile(clientKey, p.ClientKeyFile.Name())
+}
+
+func (p *CertProvider) createTempFiles() error {
+	var err error
+	p.RootCertFile, err = os.CreateTemp("", "rootCA.*.pem")
+	if err != nil {
+		return fmt.Errorf("%s: %w", errMsgCreatingTempFiles, err)
+	}
+	p.ClientCertFile, err = os.CreateTemp("", "client.*.pem")
+	if err != nil {
+		return fmt.Errorf("%s: %w", errMsgCreatingTempFiles, err)
+	}
+	p.ClientKeyFile, err = os.CreateTemp("", "client.*.key")
+	if err != nil {
+		return fmt.Errorf("%s: %w", errMsgCreatingTempFiles, err)
+	}
+	return nil
+}
+
+func (p *CertProvider) removeTempFiles() error {
+	if p.RootCertFile != nil {
+		err := os.Remove(p.RootCertFile.Name())
+		if err != nil {
+			return fmt.Errorf("%s: %w", errMsgDeletingTempFiles, err)
+		}
+	}
+	if p.ClientCertFile != nil {
+		err := os.Remove(p.ClientCertFile.Name())
+		if err != nil {
+			return fmt.Errorf("%s: %w", errMsgDeletingTempFiles, err)
+		}
+	}
+	if p.ClientKeyFile != nil {
+		err := os.Remove(p.ClientKeyFile.Name())
+		if err != nil {
+			return fmt.Errorf("%s: %w", errMsgDeletingTempFiles, err)
+		}
+	}
+	return nil
+}
+
+func createCertTemplate(isCA bool) (*x509.Certificate, error) {
+	sn, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), certSerialNumberUpperLimit))
+	if err != nil {
+		return nil, fmt.Errorf("serial number generation failed: %w", err)
+	}
+	template := &x509.Certificate{
+		SerialNumber: sn,
+		Subject: pkix.Name{
+			CommonName: "127.0.0.1",
+		},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  isCA,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+	}
+	if isCA {
+		template.KeyUsage = x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign
+	}
+	return template, nil
 }
 
 func writeCertToFile(cert *tls.Certificate, fileName string) error {

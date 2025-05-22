@@ -41,6 +41,17 @@ const (
 	namespaceNameEntityCount = 2
 )
 
+type responseInterface interface {
+	IsEmpty() bool
+}
+
+type Handler struct {
+	logger        logr.Logger
+	config        serverconfig.ServerConfig
+	requestParser requestparser.RequestParser
+	metrics       watchermetrics.WatcherMetrics
+}
+
 func NewHandler(logger logr.Logger,
 	config serverconfig.ServerConfig,
 	parser requestparser.RequestParser,
@@ -52,17 +63,6 @@ func NewHandler(logger logr.Logger,
 		requestParser: parser,
 		metrics:       metrics,
 	}
-}
-
-type Handler struct {
-	logger        logr.Logger
-	config        serverconfig.ServerConfig
-	requestParser requestparser.RequestParser
-	metrics       watchermetrics.WatcherMetrics
-}
-
-type responseInterface interface {
-	IsEmpty() bool
 }
 
 func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
