@@ -3,7 +3,7 @@ module github.com/kyma-project/runtime-watcher/skr
 go 1.24.3
 
 require (
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250404084728-80de252cc832
