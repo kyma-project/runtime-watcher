@@ -29,9 +29,6 @@ func ExposeSKRMetricsServiceEndpoint() error {
 
 func GetWatcherRequestDurationMetric(ctx context.Context) (float64, error) {
 	metricsBody, err := getMetricsBody(ctx)
-
-	fmt.Println("Metrics Body: ", metricsBody) // Log the metrics body for debugging purposes
-	fmt.Println("Error: ", err)                // Log the error for debugging purposes
 	if err != nil {
 		return 0, err
 	}
