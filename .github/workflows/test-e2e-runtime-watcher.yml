@@ -79,8 +79,8 @@ jobs:
       - name: Deploy lifecycle-manager
         uses: kyma-project/lifecycle-manager/.github/actions/deploy-lifecycle-manager@main
         with:
-          klm_version_tag: latest
-          klm_image_repo: prod
+          klm_version_tag: PR-2512
+          klm_image_repo: dev
 
       - name: Run '${{ matrix.e2e-test }}' test
         working-directory: runtime-watcher
