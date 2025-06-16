@@ -5,7 +5,7 @@ checkmarx-one:
   exclude:
     - "**/*_test.go"
 bdba:
-  - europe-docker.pkg.dev/kyma-project/prod/runtime-watcher:1.1.18
+  - europe-docker.pkg.dev/kyma-project/prod/runtime-watcher:1.1.19
   - europe-docker.pkg.dev/kyma-project/prod/runtime-watcher:latest
 mend:
   language: golang-mod
