@@ -68,6 +68,9 @@ func NewHandler(logger logr.Logger,
 const (
 	strictTransportSecurityHeader = "Strict-Transport-Security"
 	strictTransportSecurityValue  = "max-age=31536000; includeSubDomains"
+
+	contentSecurityPolicy      = "Content-Security-Policy"
+	contentSecurityPolicyValue = "default-src 'self'"
 )
 
 func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
@@ -99,6 +102,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	writer.Header().Set(strictTransportSecurityHeader, strictTransportSecurityValue)
+	writer.Header().Set(contentSecurityPolicy, contentSecurityPolicyValue)
 	if _, err = writer.Write(responseBytes); err != nil {
 		h.logger.Error(err, admissionError)
 		return
