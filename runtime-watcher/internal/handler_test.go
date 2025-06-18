@@ -123,6 +123,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 		Expect(admissionReview.Response.Result.Message).To(Equal(testCase.results.resultMsg))
 		Expect(admissionReview.Response.Result.Status).To(Equal(testCase.results.resultStatus))
 		Expect(skrRecorder.Header().Get("Strict-Transport-Security")).To(Equal("max-age=31536000; includeSubDomains"))
+		Expect(skrRecorder.Header().Get("Content-Security-Policy")).To(Equal("default-src 'self'"))
 
 		// check listener event
 		Expect(kcpRecorder.Code).To(BeEquivalentTo(http.StatusOK))
