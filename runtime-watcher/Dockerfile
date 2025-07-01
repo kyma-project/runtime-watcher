@@ -1,4 +1,4 @@
-FROM golang:1.24.4-alpine as builder
+FROM --platform=$BUILDPLATFORM golang:1.24.4-alpine as builder
 
 WORKDIR /app
 
@@ -12,8 +12,10 @@ COPY internal/ internal/
 
 # TAG_default_tag comes from image builder: https://github.com/kyma-project/test-infra/tree/main/cmd/image-builder
 ARG TAG_default_tag=from_dockerfile
+ARG TARGETOS
+ARG TARGETARCH
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X 'main.buildVersion=${TAG_default_tag}'" -a -o webhook main.go 
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-X 'main.buildVersion=${TAG_default_tag}'" -a -o webhook main.go
 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
