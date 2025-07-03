@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"net/http"
@@ -91,6 +92,10 @@ func main() {
 	server := http.Server{
 		Addr:        fmt.Sprintf(":%d", config.Port),
 		ReadTimeout: internal.HTTPTimeout,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS13,
+			MaxVersion: tls.VersionTLS13,
+		},
 	}
 	logger.Info("Starting server for validation endpoint", "Port:", config.Port)
 	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)
