@@ -9,10 +9,10 @@ IMG_REPO := $(DOCKER_PUSH_REPOSITORY)$(DOCKER_PUSH_DIRECTORY)
 IMG_NAME := $(IMG_REPO)/$(APP_NAME)
 IMG := $(IMG_NAME):$(DOCKER_TAG)
 BUILD_VERSION := from_makefile
-ENVTEST_K8S_VERSION = 1.24.1
-ENVTEST ?= $(LOCALBIN)/setup-envtest
+ENVTEST_K8S_VERSION = $(shell yq e '.envtest_k8s' ./versions.yaml)
+ENVTEST_VERSION = $(shell yq e '.envtest' ./versions.yaml)
 GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
-GOLANG_CI_LINT_VERSION ?= v2.1.6
+GOLANG_CI_LINT_VERSION ?= v$(shell yq e '.golangciLint' ./../versions.yaml)
 
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
