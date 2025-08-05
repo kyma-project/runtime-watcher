@@ -16,7 +16,7 @@ runs:
       shell: bash
       run: |
         pwd
-        cat ./../versions.yaml
+        cat versions.yaml
         echo "golangci_lint_version=$(yq e '.golangciLint' versions.yaml)" >> $GITHUB_OUTPUT
     - name: Expose environment variables
       shell: bash
