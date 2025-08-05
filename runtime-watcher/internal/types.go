@@ -8,7 +8,8 @@ import (
 
 type Resource struct {
 	metav1.GroupVersionKind `json:"groupVersionKind"`
-	SubResource             string `json:"subResource"`
+
+	SubResource string `json:"subResource"`
 }
 
 type Metadata struct {
@@ -27,7 +28,8 @@ func (m Metadata) NamespacedName() string {
 }
 
 type WatchedObject struct {
-	Metadata   `json:"metadata"`
+	Metadata `json:"metadata"`
+
 	Spec       map[string]interface{} `json:"spec"`
 	APIVersion string                 `json:"apiVersion"`
 	Kind       string                 `json:"kind"`

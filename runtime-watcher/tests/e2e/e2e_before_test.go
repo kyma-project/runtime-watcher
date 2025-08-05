@@ -112,7 +112,8 @@ func CRIsInState(ctx context.Context, clnt client.Client, name types.NamespacedN
 func GetCR(ctx context.Context, clnt client.Client, name types.NamespacedName, gvk schema.GroupVersionKind) (*unstructured.Unstructured, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(gvk)
-	if err := clnt.Get(ctx, name, obj); err != nil {
+	err := clnt.Get(ctx, name, obj)
+	if err != nil {
 		return nil, err
 	}
 	return obj, nil

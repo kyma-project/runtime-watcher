@@ -15,6 +15,7 @@ linters:
     - sqlclosecheck
     - wastedassign
     - wsl
+    - wsl_v5 # needs to be discussed with the team if enforced grouping of statements is desired, but generally too strict
   settings:
     cyclop:
       max-complexity: 20
