@@ -48,10 +48,6 @@ tidy: ## Run go mod tidy against code.
 test: fmt vet envtest ## Run unit and envtest.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test `go list ./... | grep -v /tests/` -coverprofile cover.out -coverpkg=./...
 
-.PHONY: envtest-dir
-envtest-dir:
-	echo "$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)"
-
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
