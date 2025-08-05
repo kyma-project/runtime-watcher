@@ -9,10 +9,11 @@ IMG_REPO := $(DOCKER_PUSH_REPOSITORY)$(DOCKER_PUSH_DIRECTORY)
 IMG_NAME := $(IMG_REPO)/$(APP_NAME)
 IMG := $(IMG_NAME):$(DOCKER_TAG)
 BUILD_VERSION := from_makefile
-ENVTEST_K8S_VERSION = 1.24.1
+ENVTEST_K8S_VERSION = $(shell yq e '.envtest_k8s' ./../versions.yaml)
+ENVTEST_VERSION = $(shell yq e '.envtest' ./../versions.yaml)
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANG_CI_LINT = $(LOCALBIN)/golangci-lint
-GOLANG_CI_LINT_VERSION ?= v2.1.6
+GOLANG_CI_LINT_VERSION ?= v$(shell yq e '.golangciLint' ./../versions.yaml)
 
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -47,9 +48,14 @@ tidy: ## Run go mod tidy against code.
 test: fmt vet envtest ## Run unit and envtest.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test `go list ./... | grep -v /tests/` -coverprofile cover.out -coverpkg=./...
 
-envtest: $(ENVTEST) ## Install envtest.
+.PHONY: envtest-dir
+envtest-dir:
+	echo "$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)"
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-$(ENVTEST_VERSION)
 
 lint: ## Run golangci-lint against code.
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
