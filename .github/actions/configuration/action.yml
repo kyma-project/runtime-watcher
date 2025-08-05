@@ -7,6 +7,11 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Checkout lifecycle-manager
+      uses: actions/checkout@v4
+      with:
+        repository: kyma-project/lifecycle-manager
+        path: lifecycle-manager
     - name: Install yq
       uses: kyma-project/lifecycle-manager/.github/actions/install-yq
       with:
