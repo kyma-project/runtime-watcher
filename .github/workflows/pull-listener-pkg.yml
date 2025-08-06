@@ -26,6 +26,6 @@ jobs:
           args: --verbose
           working-directory: ./listener
       - name: Build
-        run: go build -v ./...
+        run: make build-verbose
       - name: Test
         run: make test

@@ -30,11 +30,15 @@ resolve: ## Run go mod tidy against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: build-verbose
+build-verbose:
+	go build -v ./...
+
 ##@ Testing
 
 .PHONY: test
 test: fmt vet ## Run tests.
-	go test ./... -v --race -coverprofile cover.out
+	GOFIPS140=v1.0.0 go test ./... -v --race -coverprofile cover.out
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
@@ -47,7 +51,7 @@ fmt: ## Run go fmt against code.
 
 .PHONY: lint
 lint: ## Run golangci-lint against code.
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
+	GOBIN=$(LOCALBIN) GOFIPS140=v1.0.0 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run -v -c .golangci.yaml
 
 .PHONY: docker-build
