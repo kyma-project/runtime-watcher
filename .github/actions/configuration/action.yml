@@ -1,0 +1,24 @@
+name: configuration
+description: Defines configuration variables such as versions read from the versions.yaml file. Exposes globally needed environment variables.
+outputs:
+  golangci_lint_version:
+    description: The version of golangci-lint to use. For example, 1.60.3.
+    value: ${{ steps.define-variables.outputs.golangci_lint_version }}
+runs:
+  using: composite
+  steps:
+    - name: Install yq
+      uses: kyma-project/lifecycle-manager/.github/actions/install-yq@main
+      with:
+        yq_version: 4.45.1
+    - name: Define variables
+      id: define-variables
+      shell: bash
+      run: |
+        pwd
+        cat versions.yaml
+        echo "golangci_lint_version=$(yq e '.golangciLint' versions.yaml)" >> $GITHUB_OUTPUT
+    - name: Expose environment variables
+      shell: bash
+      run: |
+        echo "GOSUMDB=off" >> $GITHUB_ENV

@@ -42,7 +42,8 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 		if err != nil {
 			logger.Error(err, flagError(envWebhookPort).Error())
 		}
-		if err = validatePortRange(port); err != nil {
+		err = validatePortRange(port)
+		if err != nil {
 			logger.Error(err, flagError(envWebhookPort).Error())
 		} else {
 			config.Port = port
@@ -55,7 +56,8 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 		if err != nil {
 			logger.Error(err, flagError(envMetricsPort).Error())
 		}
-		if err = validatePortRange(port); err != nil {
+		err = validatePortRange(port)
+		if err != nil {
 			logger.Error(err, flagError(envMetricsPort).Error())
 		} else {
 			config.MetricsPort = port

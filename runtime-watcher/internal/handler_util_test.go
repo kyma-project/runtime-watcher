@@ -49,6 +49,7 @@ var (
 
 type CustomRouter struct {
 	*http.ServeMux
+
 	Recorder *httptest.ResponseRecorder
 }
 

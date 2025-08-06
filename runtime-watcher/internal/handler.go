@@ -103,7 +103,8 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 
 	writer.Header().Set(strictTransportSecurityHeader, strictTransportSecurityValue)
 	writer.Header().Set(contentSecurityPolicy, contentSecurityPolicyValue)
-	if _, err = writer.Write(responseBytes); err != nil {
+	_, err = writer.Write(responseBytes)
+	if err != nil {
 		h.logger.Error(err, admissionError)
 		return
 	}
@@ -207,7 +208,8 @@ var (
 )
 
 func (h *Handler) unmarshalWatchedObject(rawBytes []byte, response responseInterface) {
-	if err := json.Unmarshal(rawBytes, response); err != nil {
+	err := json.Unmarshal(rawBytes, response)
+	if err != nil {
 		h.logger.Error(errors.Join(errAdmission, err), "failed to unmarshal admission review resource object")
 	}
 	if response.IsEmpty() {

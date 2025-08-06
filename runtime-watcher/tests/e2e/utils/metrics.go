@@ -14,13 +14,15 @@ import (
 
 func ExposeSKRMetricsServiceEndpoint() error {
 	cmd := exec.Command("kubectl", "config", "use-context", "k3d-skr")
-	if _, err := cmd.CombinedOutput(); err != nil {
+	_, err := cmd.CombinedOutput()
+	if err != nil {
 		return fmt.Errorf("failed to switch context %w", err)
 	}
 
 	cmd = exec.Command("kubectl", "patch", "svc", "skr-webhook-metrics", "-p",
 		"{\"spec\": {\"type\": \"LoadBalancer\"}}", "-n", "kyma-system")
-	if _, err := cmd.CombinedOutput(); err != nil {
+	_, err = cmd.CombinedOutput()
+	if err != nil {
 		return fmt.Errorf("failed to patch metrics service %w", err)
 	}
 

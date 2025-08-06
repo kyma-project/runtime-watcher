@@ -83,7 +83,8 @@ func AddSkipReconciliationLabelToKyma(ctx context.Context, clnt client.Client, k
 	}
 
 	kyma.Labels[shared.SkipReconcileLabel] = "true"
-	if err := clnt.Update(ctx, kyma); err != nil {
+	err = clnt.Update(ctx, kyma)
+	if err != nil {
 		return fmt.Errorf("failed to update kyma, %w", err)
 	}
 
@@ -100,7 +101,8 @@ func RemoveKymaAnnotations(ctx context.Context, clnt client.Client,
 	}
 
 	kyma.Annotations = nil
-	if err := clnt.Update(ctx, kyma); err != nil {
+	err = clnt.Update(ctx, kyma)
+	if err != nil {
 		return fmt.Errorf("failed to update kyma, %w", err)
 	}
 	return nil
