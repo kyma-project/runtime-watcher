@@ -53,11 +53,3 @@ fmt: ## Run go fmt against code.
 lint: ## Run golangci-lint against code.
 	GOBIN=$(LOCALBIN) GOFIPS140=v1.0.0 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run -v -c .golangci.yaml
-
-.PHONY: docker-build
-docker-build: ## Build docker image for sample-listener.
-	docker build -t $(IMG) .
-
-.PHONY: docker-push
-docker-push: ## Push docker image for sample-listener.
-	docker push $(IMG)
