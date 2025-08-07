@@ -26,6 +26,7 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	pathVariables := strings.Split(req.URL.Path, "/")
 
 	var contractVersion string
+
 	_, err := fmt.Sscanf(pathVariables[1], "v%s", &contractVersion)
 
 	if err != nil && !errors.Is(err, io.EOF) {
@@ -36,6 +37,8 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 		return nil, &UnmarshalError{"contract version cannot be empty", http.StatusBadRequest}
 	}
 
+	defer req.Body.Close()
+
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, &UnmarshalError{"could not read request body", http.StatusInternalServerError}
@@ -43,10 +46,13 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	defer req.Body.Close()
 
 	watcherEvent := &types.WatchEvent{}
+
 	err = json.Unmarshal(body, watcherEvent)
 	if err != nil {
-		return nil, &UnmarshalError{fmt.Sprintf("could not unmarshal watcher event: Body{%s}",
-			string(body)), http.StatusInternalServerError}
+		return nil, &UnmarshalError{
+			fmt.Sprintf("could not unmarshal watcher event: Body{%s}",
+				string(body)), http.StatusInternalServerError,
+		}
 	}
 
 	return watcherEvent, nil
@@ -58,6 +64,7 @@ func GenericEvent(watcherEvent *types.WatchEvent) *unstructured.Unstructured {
 	genericEvtObject.SetUnstructuredContent(content)
 	genericEvtObject.SetName(watcherEvent.Owner.Name)
 	genericEvtObject.SetNamespace(watcherEvent.Owner.Namespace)
+
 	return genericEvtObject
 }
 
@@ -66,5 +73,6 @@ func UnstructuredContent(watcherEvt *types.WatchEvent) map[string]interface{} {
 	content["owner"] = watcherEvt.Owner
 	content["watched"] = watcherEvt.Watched
 	content["watched-gvk"] = watcherEvt.WatchedGvk
+
 	return content
 }

@@ -2,143 +2,121 @@ package event
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
-	"strconv"
-	"time"
-
-	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
-	paramContractVersion    = "1"
-	requestSizeLimitInBytes = 16384 // 16KB
+	paramContractVersion = "1"
 )
 
-// Verify is a function which is being called to verify an incoming request to the listener.
-// If the verification fails an error should be returned and the request will be dropped,
-// otherwise it should return nil.
-// If no verification function is needed, a function which just returns nil can be used instead.
-type Verify func(r *http.Request, watcherEvtObject *types.WatchEvent) error
-
 type SKREventListener struct {
+	httpListener   *HTTPEventListener
+	eventChannel   chan ControllerRuntimeEvent
+	ReceivedEvents <-chan ControllerRuntimeEvent
+	logger         logr.Logger
 	Addr           string
-	Logger         logr.Logger
 	ComponentName  string
-	ReceivedEvents chan event.GenericEvent
-	VerifyFunc     Verify
+	VerifyFunc     VerifyFunc
 }
 
-func NewSKREventListener(addr, componentName string, verify Verify,
-) *SKREventListener {
+// ControllerRuntimeEvent represents the controller-runtime GenericEvent structure.
+type ControllerRuntimeEvent struct {
+	Object *unstructured.Unstructured
+}
+
+func NewSKREventListener(addr, componentName string, verifyFunc VerifyFunc) *SKREventListener {
+	eventChannel := make(chan ControllerRuntimeEvent, defaultBufferSize)
+
+	config := Config{
+		Addr:          addr,
+		ComponentName: componentName,
+		VerifyFunc:    verifyFunc,
+		Logger:        logr.Discard(),
+	}
+
+	httpListener := NewHTTPEventListener(config)
+
 	return &SKREventListener{
+		httpListener:   httpListener,
+		eventChannel:   eventChannel,
+		ReceivedEvents: eventChannel,
 		Addr:           addr,
 		ComponentName:  componentName,
-		ReceivedEvents: make(chan event.GenericEvent),
-		VerifyFunc:     verify,
+		VerifyFunc:     verifyFunc,
 	}
 }
 
-func (l *SKREventListener) Start(ctx context.Context) error {
-	l.Logger = ctrlLog.FromContext(ctx, "Module", "Listener")
-	router := http.NewServeMux()
-
-	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.ComponentName)
-	router.HandleFunc(listenerPattern, l.RequestSizeLimitingMiddleware(l.HandleSKREvent()))
-
-	// start web server
-	const defaultTimeout = time.Second * 60
-	server := &http.Server{
-		Addr: l.Addr, Handler: http.MaxBytesHandler(router, requestSizeLimitInBytes),
-		ReadHeaderTimeout: defaultTimeout, ReadTimeout: defaultTimeout,
-		WriteTimeout: defaultTimeout,
+func (s *SKREventListener) Start(ctx context.Context) error {
+	if logger := logr.FromContextOrDiscard(ctx); logger.GetSink() != nil {
+		s.logger = logger.WithValues("Module", "Listener")
+	} else {
+		s.logger = logr.Discard().WithValues("Module", "Listener")
 	}
+
+	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, s.ComponentName)
+
+	s.logger.Info("Listener starting", "addr", s.Addr, "path", listenerPattern)
+
+	s.httpListener.config.Logger = s.logger.WithName("http-event-listener")
+	s.httpListener.logger = s.httpListener.config.Logger
+
+	// Start the HTTP listener
+	errChan := make(chan error, 1)
+
 	go func() {
-		l.Logger.WithValues(
-			"Addr", l.Addr,
-			"ApiPath", listenerPattern,
-		).Info("Listener is starting up...")
-		err := server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			l.Logger.Error(err, "Webserver startup failed")
+		err := s.httpListener.Start(ctx)
+		if err != nil {
+			s.logger.Error(err, "HTTP listener failed")
+
+			errChan <- err
 		}
 	}()
-	<-ctx.Done()
-	l.Logger.Info("SKR events listener is shutting down: context got closed")
-	err := server.Shutdown(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to shutdown server: %w", err)
-	}
-	return nil
-}
 
-func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		if request.ContentLength > requestSizeLimitInBytes {
-			metrics.RecordHTTPRequestExceedingSizeLimit()
-			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
-			l.Logger.Error(errors.New("requestSizeExceeded"), errorMessage)
-			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)
-			return
-		}
+	go s.convertEvents(ctx)
 
-		executeRequestAndUpdateMetrics(next, writer, request)
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		s.logger.Info("SKR events listener is shutting down")
+		return s.httpListener.Stop(context.Background())
 	}
 }
 
-func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
-	return func(writer http.ResponseWriter, req *http.Request) {
-		// http method support: POST only is allowed
-		if req.Method != http.MethodPost {
-			errorMessage := req.Method + " method is not allowed on this path"
-			l.Logger.Error(nil, errorMessage)
-			http.Error(writer, errorMessage, http.StatusMethodNotAllowed)
+func (s *SKREventListener) convertEvents(ctx context.Context) {
+	defer func() {
+		close(s.eventChannel)
+	}()
+
+	for {
+		select {
+		case event, ok := <-s.httpListener.Events():
+			if !ok {
+				return
+			}
+
+			genericEvtObject := GenericEvent(&event)
+
+			s.logger.Info("Event processed", "owner", event.Owner.String())
+
+			select {
+			case s.eventChannel <- ControllerRuntimeEvent{Object: genericEvtObject}:
+				metrics.RecordEventProcessed(event.Owner.String())
+			case <-ctx.Done():
+				s.logger.Info("context cancelled during event forwarding")
+				return
+			default:
+				s.logger.Error(nil, "event channel full, dropping event",
+					"owner", event.Owner.String(),
+					"channelCapacity", cap(s.eventChannel))
+				metrics.RecordEventDropped("channel_full")
+			}
+		case <-ctx.Done():
 			return
 		}
-
-		l.Logger.V(1).Info("received event from SKR")
-
-		// unmarshal received event
-		watcherEvent, unmarshalErr := UnmarshalSKREvent(req)
-		if unmarshalErr != nil {
-			l.Logger.Error(nil, unmarshalErr.Message)
-			http.Error(writer, unmarshalErr.Message, unmarshalErr.HTTPErrorCode)
-			return
-		}
-
-		// verify request
-		if err := l.VerifyFunc(req, watcherEvent); err != nil {
-			metrics.RecordHTTPFailedVerificationRequests(req.RequestURI)
-			l.Logger.Info("request could not be verified - Event will not be dispatched",
-				"error", err)
-			return
-		}
-
-		genericEvtObject := GenericEvent(watcherEvent)
-		// add event to the channel
-		l.ReceivedEvents <- event.GenericEvent{Object: genericEvtObject}
-		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
-		writer.WriteHeader(http.StatusOK)
 	}
-}
-
-func executeRequestAndUpdateMetrics(next http.HandlerFunc, writer http.ResponseWriter, request *http.Request) {
-	start := time.Now()
-	next.ServeHTTP(writer, request)
-
-	duration := time.Since(start)
-	metrics.UpdateHTTPRequestMetrics(duration)
-	metrics.RecordHTTPInflightRequests(1)
-
-	if request.Response != nil && request.Response.Status != strconv.Itoa(http.StatusOK) {
-		metrics.RecordHTTPRequestErrors()
-	}
-
-	defer metrics.RecordHTTPInflightRequests(-1)
 }
