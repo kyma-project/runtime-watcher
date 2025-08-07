@@ -52,6 +52,12 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 					WithContext(ctx).
 					Should(BeNumerically(">", 0))
 			})
+
+			By("And FIPS-140 metric indicates \"mode==enabled\"", func() {
+				Eventually(GetFips140Metric).
+					WithContext(ctx).
+					Should(BeNumerically("==", 1))
+			})
 		})
 
 		It("When kyma does not have owned by annotation", func() {
