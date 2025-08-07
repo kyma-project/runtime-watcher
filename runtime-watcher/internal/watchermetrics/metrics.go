@@ -1,9 +1,10 @@
 package watchermetrics
 
 import (
+	"crypto/fips140"
 	"os"
 	"time"
-	"crypto/fips140"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -79,7 +80,7 @@ func (w *WatcherMetrics) UpdateRequestDuration(duration time.Duration) {
 func (w *WatcherMetrics) UpdateFipsMode() {
 	fipsMode := 0
 	if fips140.Enabled() {
-		if parseGodebugFipsMode(os.Getenv("GODEBUG")) == "only"{
+		if parseGodebugFipsMode(os.Getenv("GODEBUG")) == "only" {
 			fipsMode = 2 // FIPS 140-3 only mode
 		} else {
 			fipsMode = 1 // FIPS 140-3 enabled

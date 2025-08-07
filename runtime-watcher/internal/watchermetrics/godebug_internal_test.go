@@ -6,7 +6,8 @@ import (
 )
 
 func TestParseGodebugFips140only(t *testing.T) {
-	t.Logf("FIPS: %v", fips140.Enabled())
+	t.Parallel()
+	t.Logf("FIPS: %v", fips140.Enabled()) // TODO: Remove
 
 	tests := []struct {
 		godebug string
@@ -25,6 +26,7 @@ func TestParseGodebugFips140only(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.godebug, func(t *testing.T) {
+			t.Parallel()
 			if got := parseGodebugFipsMode(tt.godebug); got != tt.want {
 				t.Errorf("parseGodebugFips140only(%q) = %v, want %v", tt.godebug, got, tt.want)
 			}
