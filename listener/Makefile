@@ -32,7 +32,7 @@ vet: ## Run go vet against code.
 
 .PHONY: build-verbose
 build-verbose:
-	go build -v ./...
+	GOFIPS140=v1.0.0 go build -v ./...
 
 ##@ Testing
 
