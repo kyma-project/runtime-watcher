@@ -32,7 +32,8 @@ func (rp *RequestParser) ParseAdmissionReview(request *http.Request) (*admission
 	}
 
 	admissionReview := &admissionv1.AdmissionReview{}
-	if _, _, err = rp.deserializer.Decode(bodyBytes, nil, admissionReview); err != nil {
+	_, _, err = rp.deserializer.Decode(bodyBytes, nil, admissionReview)
+	if err != nil {
 		return nil, errors.Join(errDeserializeRequestBody, err)
 	}
 	if admissionReview.Request == nil {

@@ -157,7 +157,8 @@ func deleteDeployment(ctx context.Context, k8sClient client.Client, name Resourc
 
 func deploymentReady(ctx context.Context, clnt client.Client, name ResourceName) error {
 	deployment := &apiappsv1.Deployment{}
-	if err := clnt.Get(ctx, name, deployment); err != nil {
+	err := clnt.Get(ctx, name, deployment)
+	if err != nil {
 		return err
 	}
 	if deployment.Status.ReadyReplicas != 1 {
@@ -192,9 +193,10 @@ func deleteSecret(ctx context.Context, clnt client.Client, name ResourceName) er
 
 func changeRemoteKymaChannel(ctx context.Context, clnt client.Client, channel string) error {
 	kyma := &v1beta2.Kyma{}
-	if err := clnt.Get(ctx,
+	err := clnt.Get(ctx,
 		client.ObjectKey{Name: defaultRemoteKymaName, Namespace: remoteNamespace},
-		kyma); err != nil {
+		kyma)
+	if err != nil {
 		return err
 	}
 
@@ -216,7 +218,8 @@ func updateRemoteKymaStatus(clnt client.Client) error {
 		LastUpdateTime: apimetav1.NewTime(time.Now()),
 	}
 	kyma.ManagedFields = nil
-	if err := clnt.Status().Update(ctx, kyma); err != nil {
+	err = clnt.Status().Update(ctx, kyma)
+	if err != nil {
 		return fmt.Errorf("kyma status subresource could not be updated: %w", err)
 	}
 
@@ -232,7 +235,8 @@ func updateWatcherSpecField(ctx context.Context, k8sClient client.Client) error 
 		return fmt.Errorf("failed to get Kyma %w", err)
 	}
 	watcherCR.Spec.Field = v1beta2.StatusField
-	if err = k8sClient.Update(ctx, watcherCR); err != nil {
+	err = k8sClient.Update(ctx, watcherCR)
+	if err != nil {
 		return fmt.Errorf("failed to update watcher spec.field: %w", err)
 	}
 	return nil
