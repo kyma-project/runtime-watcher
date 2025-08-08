@@ -56,7 +56,7 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 			By("And FIPS-140 metric indicates \"mode==enabled\"", func() {
 				Eventually(GetFips140Metric).
 					WithContext(ctx).
-					Should(BeNumerically("==", 1))
+					Should(BeNumerically("==", 2))
 			})
 		})
 
