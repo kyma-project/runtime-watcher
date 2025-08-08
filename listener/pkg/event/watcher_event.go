@@ -72,7 +72,7 @@ func UnstructuredContent(watcherEvt *types.WatchEvent) map[string]interface{} {
 	content := make(map[string]interface{}, contentMapCapacity)
 	content["owner"] = watcherEvt.Owner
 	content["watched"] = watcherEvt.Watched
-	content["watched-gvk"] = watcherEvt.WatchedGvk
+	content["watchedGvk"] = watcherEvt.WatchedGvk
 
 	return content
 }

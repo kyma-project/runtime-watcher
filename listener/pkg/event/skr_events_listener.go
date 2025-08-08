@@ -15,8 +15,8 @@ const (
 
 type SKREventListener struct {
 	httpListener   *HTTPEventListener
-	eventChannel   chan ControllerRuntimeEvent
-	ReceivedEvents <-chan ControllerRuntimeEvent
+	eventChannel   chan RuntimeEvent
+	ReceivedEvents <-chan RuntimeEvent
 	logger         logr.Logger
 	Addr           string
 	ComponentName  string
@@ -24,12 +24,12 @@ type SKREventListener struct {
 }
 
 // ControllerRuntimeEvent represents the controller-runtime GenericEvent structure.
-type ControllerRuntimeEvent struct {
+type RuntimeEvent struct {
 	Object *unstructured.Unstructured
 }
 
 func NewSKREventListener(addr, componentName string, verifyFunc VerifyFunc) *SKREventListener {
-	eventChannel := make(chan ControllerRuntimeEvent, defaultBufferSize)
+	eventChannel := make(chan RuntimeEvent, defaultBufferSize)
 
 	config := Config{
 		Addr:          addr,
@@ -104,7 +104,7 @@ func (s *SKREventListener) convertEvents(ctx context.Context) {
 			s.logger.Info("Event processed", "owner", event.Owner.String())
 
 			select {
-			case s.eventChannel <- ControllerRuntimeEvent{Object: genericEvtObject}:
+			case s.eventChannel <- RuntimeEvent{Object: genericEvtObject}:
 				metrics.RecordEventProcessed(event.Owner.String())
 			case <-ctx.Done():
 				s.logger.Info("context cancelled during event forwarding")
