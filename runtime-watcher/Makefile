@@ -46,22 +46,25 @@ tidy: ## Run go mod tidy against code.
 	go mod tidy
 
 test: fmt vet envtest ## Run unit and envtest.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test `go list ./... | grep -v /tests/` -coverprofile cover.out -coverpkg=./...
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" GOFIPS140=v1.0.0 go test `go list ./... | grep -v /tests/` -coverprofile cover.out -coverpkg=./...
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-$(ENVTEST_VERSION)
+	GOBIN=$(LOCALBIN) GOFIPS140=v1.0.0 go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-$(ENVTEST_VERSION)
 
 lint: ## Run golangci-lint against code.
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
+	GOBIN=$(LOCALBIN) GOFIPS140=v1.0.0 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 	$(LOCALBIN)/golangci-lint run -v -c .golangci.yaml
 
 run: fmt vet ## Run runtime-watcher from your host.
 	go run ./main.go
 
 build: fmt vet ## Build runtime-watcher binary.
-	go build -ldflags="-X 'main.buildVersion=${BUILD_VERSION}'" -o bin/webhook main.go
+	GOFIPS140=v1.0.0 go build -ldflags="-X 'main.buildVersion=${BUILD_VERSION}'" -o bin/webhook main.go
+
+build-verbose:
+	GOFIPS140=v1.0.0 go build -v -ldflags="-X 'main.buildVersion=${BUILD_VERSION}'" -o bin/webhook main.go
 
 docker-build: ## Build docker image for the webhook.
 	docker build -t ${IMG} .
