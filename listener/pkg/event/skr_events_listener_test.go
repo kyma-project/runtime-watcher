@@ -64,7 +64,7 @@ func TestSKREventListener_Lifecycle(t *testing.T) {
 
 	assert.NotNil(t, skrListener.ReceivedEvents, "expected ReceivedEvents channel to be available")
 
-	// Test that the listener can be stopped gracefully
+	// Test that the listener can be stopped
 	cancel()
 	time.Sleep(100 * time.Millisecond)
 }
@@ -86,10 +86,10 @@ func TestSKREventListener_UnstructuredContentMapping(t *testing.T) {
 	// THEN
 	assert.Contains(t, unstructuredContent, "owner")
 	assert.Contains(t, unstructuredContent, "watched")
-	assert.Contains(t, unstructuredContent, "watched-gvk")
+	assert.Contains(t, unstructuredContent, "watchedGvk")
 	assert.Equal(t, testWatcherEvt.Owner, unstructuredContent["owner"])
 	assert.Equal(t, testWatcherEvt.Watched, unstructuredContent["watched"])
-	assert.Equal(t, testWatcherEvt.WatchedGvk, unstructuredContent["watched-gvk"])
+	assert.Equal(t, testWatcherEvt.WatchedGvk, unstructuredContent["watchedGvk"])
 
 	// Verify the generic event object
 	assert.NotNil(t, genericEvent)
@@ -101,4 +101,62 @@ func TestSKREventListener_UnstructuredContentMapping(t *testing.T) {
 		assert.Contains(t, genericEvent.Object, key)
 		assert.Equal(t, value, genericEvent.Object[key])
 	}
+}
+
+func TestSKREventListener_EndToEndTypeCompatibility(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN - Simulate the exact data flow from runtime-watcher to KLM
+	testWatcherEvt := &types.WatchEvent{
+		Owner:      types.ObjectKey{Name: "test-kyma", Namespace: "kyma-system"},
+		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: "test-namespace"},
+		WatchedGvk: v1.GroupVersionKind{Kind: "Deployment", Group: "apps", Version: "v1"},
+	}
+
+	// WHEN - Runtime watcher converts to unstructured (what gets sent to KLM)
+	unstructuredEvent := listenerEvent.GenericEvent(testWatcherEvt)
+
+	// THEN - Verify KLM can extract the data correctly (simulating controller logic)
+	assert.NotNil(t, unstructuredEvent)
+	assert.Equal(t, testWatcherEvt.Owner.Name, unstructuredEvent.GetName())
+	assert.Equal(t, testWatcherEvt.Owner.Namespace, unstructuredEvent.GetNamespace())
+
+	// Verify the unstructured content contains all expected fields for KLM extraction
+	expectedFields := []string{"owner", "watched", "watchedGvk"}
+	for _, field := range expectedFields {
+		assert.Contains(t, unstructuredEvent.Object, field,
+			"KLM expects field %s to be present for extraction", field)
+	}
+
+	// Verify owner can be extracted (what KLM controllers do)
+	ownerData, found := unstructuredEvent.Object["owner"]
+	assert.True(t, found, "owner field must be present for KLM extraction")
+
+	// The owner field is a types.ObjectKey struct, not a map
+	owner, ok := ownerData.(types.ObjectKey)
+	assert.True(t, ok, "owner must be types.ObjectKey for KLM extraction")
+
+	assert.Equal(t, testWatcherEvt.Owner.Name, owner.Name)
+	assert.Equal(t, testWatcherEvt.Owner.Namespace, owner.Namespace)
+
+	// Also verify that the watched field is correctly structured
+	watchedData, found := unstructuredEvent.Object["watched"]
+	assert.True(t, found, "watched field must be present")
+
+	watched, ok := watchedData.(types.ObjectKey)
+	assert.True(t, ok, "watched must be types.ObjectKey")
+
+	assert.Equal(t, testWatcherEvt.Watched.Name, watched.Name)
+	assert.Equal(t, testWatcherEvt.Watched.Namespace, watched.Namespace)
+
+	// Verify watchedGvk field
+	watchedGvkData, found := unstructuredEvent.Object["watchedGvk"]
+	assert.True(t, found, "watchedGvk field must be present")
+
+	watchedGvk, ok := watchedGvkData.(v1.GroupVersionKind)
+	assert.True(t, ok, "watchedGvk must be GroupVersionKind")
+
+	assert.Equal(t, testWatcherEvt.WatchedGvk.Kind, watchedGvk.Kind)
+	assert.Equal(t, testWatcherEvt.WatchedGvk.Group, watchedGvk.Group)
+	assert.Equal(t, testWatcherEvt.WatchedGvk.Version, watchedGvk.Version)
 }

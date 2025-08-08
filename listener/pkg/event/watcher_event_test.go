@@ -208,7 +208,7 @@ func TestGenericEvent_EmptyValues(t *testing.T) {
 	assert.Len(t, expectedContent, 3, "should have exactly 3 fields")
 	assert.Contains(t, expectedContent, "owner")
 	assert.Contains(t, expectedContent, "watched")
-	assert.Contains(t, expectedContent, "watched-gvk")
+	assert.Contains(t, expectedContent, "watchedGvk")
 }
 
 func TestUnstructuredContent(t *testing.T) {
@@ -247,8 +247,8 @@ func TestUnstructuredContent(t *testing.T) {
 	assert.Equal(t, testWatcherEvt.Watched, content["watched"])
 
 	// Verify watched-gvk mapping
-	assert.Contains(t, content, "watched-gvk")
-	assert.Equal(t, testWatcherEvt.WatchedGvk, content["watched-gvk"])
+	assert.Contains(t, content, "watchedGvk")
+	assert.Equal(t, testWatcherEvt.WatchedGvk, content["watchedGvk"])
 }
 
 func TestUnstructuredContent_ConsistentKeys(t *testing.T) {
@@ -266,7 +266,7 @@ func TestUnstructuredContent_ConsistentKeys(t *testing.T) {
 	content := listenerEvent.UnstructuredContent(testWatcherEvt)
 
 	// THEN
-	expectedKeys := []string{"owner", "watched", "watched-gvk"}
+	expectedKeys := []string{"owner", "watched", "watchedGvk"}
 
 	actualKeys := make([]string, 0, len(content))
 	for key := range content {
@@ -310,7 +310,7 @@ func TestUnstructuredContent_TypePreservation(t *testing.T) {
 	assert.True(t, watchedOK, "watched should be of type ObjectKey")
 	assert.Equal(t, testWatcherEvt.Watched, watched)
 
-	watchedGvk, gvkOK := content["watched-gvk"].(v1.GroupVersionKind)
-	assert.True(t, gvkOK, "watched-gvk should be of type GroupVersionKind")
+	watchedGvk, gvkOK := content["watchedGvk"].(v1.GroupVersionKind)
+	assert.True(t, gvkOK, "watchedGvk should be of type GroupVersionKind")
 	assert.Equal(t, testWatcherEvt.WatchedGvk, watchedGvk)
 }
