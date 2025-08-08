@@ -14,6 +14,9 @@ const (
 	listenerInflightRequests           = "watcher_listener_inflight_requests"
 	listenerExceedingSizeLimitRequests = "watcher_listener_exceeding_size_limit_requests_total"
 	listenerFailedVerificationRequests = "watcher_listener_failed_verification_requests_total"
+	listenerEventsProcessed            = "watcher_listener_events_processed_total"
+	listenerEventsDropped              = "watcher_listener_events_dropped_total"
+	listenerEventConversion            = "watcher_listener_event_conversion_duration"
 	requestURILabel                    = "request_uri_label"
 	listenerService                    = "listener"
 	serverNameLabel                    = "server_name"
@@ -44,6 +47,19 @@ var (
 		Name: listenerFailedVerificationRequests,
 		Help: "Indicates the number of requests that failed verification",
 	}, []string{serverNameLabel, requestURILabel})
+	eventsProcessedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: listenerEventsProcessed,
+		Help: "Total number of events successfully processed and forwarded",
+	}, []string{serverNameLabel, "owner"})
+	eventsDroppedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: listenerEventsDropped,
+		Help: "Total number of events dropped due to various reasons",
+	}, []string{serverNameLabel, "reason"})
+	eventConversionDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    listenerEventConversion,
+		Help:    "Time taken to convert and forward events",
+		Buckets: prometheus.DefBuckets,
+	}, []string{serverNameLabel})
 )
 
 func Init(metricsRegistry prometheus.Registerer) {
@@ -53,6 +69,9 @@ func Init(metricsRegistry prometheus.Registerer) {
 	metricsRegistry.MustRegister(HTTPInflightRequestsGauge)
 	metricsRegistry.MustRegister(httpRequestsExceedingSizeLimitCounter)
 	metricsRegistry.MustRegister(httpFailedVerificationRequests)
+	metricsRegistry.MustRegister(eventsProcessedCounter)
+	metricsRegistry.MustRegister(eventsDroppedCounter)
+	metricsRegistry.MustRegister(eventConversionDurationHistogram)
 }
 
 func UpdateHTTPRequestMetrics(duration time.Duration) {
@@ -78,6 +97,18 @@ func RecordHTTPFailedVerificationRequests(requestURI string) {
 
 func recordHTTPRequestDuration(duration time.Duration) {
 	httpRequestDurationGauge.WithLabelValues(listenerService).Set(duration.Seconds())
+}
+
+func RecordEventProcessed(owner string) {
+	eventsProcessedCounter.WithLabelValues(listenerService, owner).Inc()
+}
+
+func RecordEventDropped(reason string) {
+	eventsDroppedCounter.WithLabelValues(listenerService, reason).Inc()
+}
+
+func RecordEventConversionDuration(duration time.Duration) {
+	eventConversionDurationHistogram.WithLabelValues(listenerService).Observe(duration.Seconds())
 }
 
 func recordHTTPRequests() {
