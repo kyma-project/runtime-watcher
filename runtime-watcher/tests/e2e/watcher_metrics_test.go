@@ -53,10 +53,10 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 					Should(BeNumerically(">", 0))
 			})
 
-			By("And FIPS-140 metric indicates \"mode==enabled\"", func() {
+			By("And FIPS-140 metric indicates \"mode == enabled\"", func() {
 				Eventually(GetFips140Metric).
 					WithContext(ctx).
-					Should(BeNumerically("==", 2))
+					Should(BeNumerically("==", 1))
 			})
 		})
 
