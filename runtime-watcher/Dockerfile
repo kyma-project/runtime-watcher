@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.24.5-alpine as builder
+FROM --platform=$BUILDPLATFORM golang:1.24.6-alpine as builder
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ ARG TAG_default_tag=from_dockerfile
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-X 'main.buildVersion=${TAG_default_tag}'" -a -o webhook main.go
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOFIPS140=v1.0.0 go build -ldflags="-X 'main.buildVersion=${TAG_default_tag}'" -a -o webhook main.go
 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
