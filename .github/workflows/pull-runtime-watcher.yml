@@ -26,6 +26,6 @@ jobs:
           args: --verbose
           working-directory: ./runtime-watcher
       - name: Build
-        run: go build -v -o bin/webhook main.go
+        run: make build-verbose
       - name: Test
         run: make test
