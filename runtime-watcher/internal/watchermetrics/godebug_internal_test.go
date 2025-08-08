@@ -7,7 +7,6 @@ import (
 
 func TestParseGodebugFips140only(t *testing.T) {
 	t.Parallel()
-	t.Logf("FIPS: %v", fips140.Enabled()) // TODO: Remove
 
 	tests := []struct {
 		godebug string
