@@ -30,6 +30,8 @@ SHELL = /usr/bin/env bash -o pipefail
 GINKGO ?= $(LOCALBIN)/ginkgo
 GINKGO_VERSION ?= v2.12.0
 
+GO_TEST := GOFIPS140=v1.0.0 go test
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized
@@ -49,7 +51,7 @@ help: ## Display this help.
 ginkgo: $(GINKGO) ## Download local ginkgo binary if necessary.
 $(GINKGO): $(LOCALBIN)
 	@test -s $(GINKGO) && $(GINKGO) version | grep -q $(GINKGO_VERSION) || \
-	GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
+	GOBIN=$(LOCALBIN) GOFIPS140=v1.0.0 go install github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 
 e2e-coverage: ginkgo ## Generate the effective Acceptance Criteria for all the test suites.
 	@# for file in        - Iterates over all the E2E test suite files.
@@ -70,7 +72,7 @@ e2e-coverage: ginkgo ## Generate the effective Acceptance Criteria for all the t
 test: watcher-enqueue watcher-metrics
 
 watcher-enqueue:
-	go test -timeout 20m -ginkgo.v -ginkgo.focus "Enqueue Event from Watcher"
+	$(GO_TEST) -timeout 20m -ginkgo.v -ginkgo.focus "Enqueue Event from Watcher"
 
 watcher-metrics:
-	go test -timeout 20m -ginkgo.v -ginkgo.focus "Watcher Metrics"
+	$(GO_TEST) -timeout 20m -ginkgo.v -ginkgo.focus "Watcher Metrics"
