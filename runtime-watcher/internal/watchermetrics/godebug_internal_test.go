@@ -1,7 +1,6 @@
 package watchermetrics
 
 import (
-	"crypto/fips140"
 	"testing"
 )
 
