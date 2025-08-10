@@ -90,7 +90,7 @@ func main() {
 		ReadHeaderTimeout: internal.HTTPTimeout,
 	}
 	go func() {
-		err := metricsServer.ListenAndServe()
+		err = metricsServer.ListenAndServe()
 		if err != nil {
 			logger.Error(err, "failed to serve metrics endpoint")
 		}
