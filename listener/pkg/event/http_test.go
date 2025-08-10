@@ -16,9 +16,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
@@ -58,7 +55,7 @@ func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.Wa
 }
 
 type GenericTestEvt struct {
-	evt event.GenericEvent
+	evt types.GenericEvent
 	mu  sync.Mutex
 }
 
@@ -76,8 +73,8 @@ func TestHandler(t *testing.T) {
 
 	// GIVEN
 	testWatcherEvt := &types.WatchEvent{
-		Owner:      client.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
-		Watched:    client.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
+		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
+		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 	}
 	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt)
@@ -101,8 +98,8 @@ func TestHandler(t *testing.T) {
 		"error reading event from channel: expected non nil event, got %v", testEvt.evt)
 	testWatcherEvtContents := listenerEvent.UnstructuredContent(testWatcherEvt)
 	for key, value := range testWatcherEvtContents {
-		assert.Contains(t, testEvt.evt.Object.(*unstructured.Unstructured).Object, key)
-		assert.Equal(t, value, testEvt.evt.Object.(*unstructured.Unstructured).Object[key])
+		assert.Contains(t, testEvt.evt.Object.Object, key)
+		assert.Equal(t, value, testEvt.evt.Object.Object[key])
 	}
 }
 

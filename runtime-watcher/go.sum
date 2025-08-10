@@ -64,8 +64,6 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/kyma-project/lifecycle-manager/api v0.0.0-20250725134740-2be609ec0693 h1:cTJNMStKU7NhplowzZOrkLivRJjbMd+3p7GmmzX7/oU=
 github.com/kyma-project/lifecycle-manager/api v0.0.0-20250725134740-2be609ec0693/go.mod h1:Vmb5XezfomlADmP3aqwZxXzYU3BOPMd3jitmaNU4N6w=
-github.com/kyma-project/runtime-watcher/listener v0.0.0-20250317130058-42ef0a646046 h1:03g/tseSGYf0Ob1ZP4qLHxHyqxBEFT0NjVP5frduRGE=
-github.com/kyma-project/runtime-watcher/listener v0.0.0-20250317130058-42ef0a646046/go.mod h1:JTkqD1px7OKETXWbXvBqGcZoaKw96S3J+6t/TlKFfNM=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=

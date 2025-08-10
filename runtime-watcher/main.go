@@ -23,13 +23,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-logr/zapr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
@@ -42,13 +41,11 @@ var buildVersion = "not_provided"
 
 func main() {
 	var printVersion bool
+	var development bool
 	flag.BoolVar(&printVersion, "version", false, "Prints the watcher version and exits")
-	logger := ctrl.Log.WithName("skr-webhook").V(0)
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
+	flag.BoolVar(&development, "development", true, "Enable development mode")
 	flag.Parse()
+
 	if printVersion {
 		msg := fmt.Sprintf("Runtime Watcher version: %s\n", buildVersion)
 		_, err := os.Stdout.WriteString(msg)
@@ -58,15 +55,28 @@ func main() {
 		os.Exit(0)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-	logger.Info("Starting Runtime Watcher", "Version:", buildVersion)
+	// Set up zap logger
+	zapConfig := zap.NewProductionConfig()
+	if development {
+		zapConfig = zap.NewDevelopmentConfig()
+	}
+	zapLogger, err := zapConfig.Build()
+	if err != nil {
+		fmt.Printf("Failed to create logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer zapLogger.Sync()
 
-	config, err := serverconfig.ParseFromEnv(logger)
+	// Convert to logr.Logger using zapr
+	logger := zapr.NewLogger(zapLogger.With(zap.String("component", "skr-webhook")))
+	logger.Info("Starting Runtime Watcher", "Version", buildVersion)
+
+	serverConfig, err := serverconfig.ParseFromEnv(logger)
 	if err != nil {
 		logger.Error(err, "necessary bootstrap settings missing")
 		return
 	}
-	logger.Info("Server config successfully parsed: " + config.PrettyPrint())
+	logger.Info("Server config successfully parsed: " + serverConfig.PrettyPrint())
 
 	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 	requestParser := requestparser.NewRequestParser(decoder)
@@ -76,29 +86,29 @@ func main() {
 
 	http.Handle("/metrics", promhttp.Handler())
 	metricsServer := &http.Server{
-		Addr:              fmt.Sprintf(":%d", config.MetricsPort),
+		Addr:              fmt.Sprintf(":%d", serverConfig.MetricsPort),
 		ReadHeaderTimeout: internal.HTTPTimeout,
 	}
 	go func() {
-		err = metricsServer.ListenAndServe()
+		err := metricsServer.ListenAndServe()
 		if err != nil {
 			logger.Error(err, "failed to serve metrics endpoint")
 		}
 	}()
 	logger.Info("Metrics server started")
 
-	handler := internal.NewHandler(logger, config, *requestParser, *metrics)
+	handler := internal.NewHandler(logger, serverConfig, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
 	server := http.Server{
-		Addr:        fmt.Sprintf(":%d", config.Port),
+		Addr:        fmt.Sprintf(":%d", serverConfig.Port),
 		ReadTimeout: internal.HTTPTimeout,
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS13,
 			MaxVersion: tls.VersionTLS13,
 		},
 	}
-	logger.Info("Starting server for validation endpoint", "Port:", config.Port)
-	err = server.ListenAndServeTLS(config.TLSCertPath, config.TLSKeyPath)
+	logger.Info("Starting server for validation endpoint", "Port", serverConfig.Port)
+	err = server.ListenAndServeTLS(serverConfig.TLSCertPath, serverConfig.TLSKeyPath)
 	if err != nil {
 		logger.Error(err, "error starting skr-webhook server")
 		return
