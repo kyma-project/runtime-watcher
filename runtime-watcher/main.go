@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -37,7 +38,10 @@ import (
 )
 
 //nolint:gochecknoglobals
-var buildVersion = "not_provided"
+var (
+	buildVersion = "not_provided"
+	logger       logr.Logger
+)
 
 func main() {
 	var printVersion bool
@@ -55,20 +59,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Set up zap logger
-	zapConfig := zap.NewProductionConfig()
-	if development {
-		zapConfig = zap.NewDevelopmentConfig()
-	}
-	zapLogger, err := zapConfig.Build()
-	if err != nil {
-		fmt.Printf("Failed to create logger: %v\n", err)
-		os.Exit(1)
-	}
-	defer zapLogger.Sync()
-
-	// Convert to logr.Logger using zapr
-	logger := zapr.NewLogger(zapLogger.With(zap.String("component", "skr-webhook")))
+	// Initialize the global logger
+	setupLogger(development)
 	logger.Info("Starting Runtime Watcher", "Version", buildVersion)
 
 	serverConfig, err := serverconfig.ParseFromEnv(logger)
@@ -113,4 +105,27 @@ func main() {
 		logger.Error(err, "error starting skr-webhook server")
 		return
 	}
+}
+
+func setupLogger(development bool) {
+	zapConfig := zap.NewProductionConfig()
+	if development {
+		zapConfig = zap.NewDevelopmentConfig()
+	}
+
+	zapLogger, err := zapConfig.Build()
+	if err != nil {
+		msg := fmt.Sprintf("Failed to create logger: %v\n", err)
+		_, _ = os.Stderr.WriteString(msg)
+		os.Exit(1)
+	}
+
+	defer func() {
+		syncErr := zapLogger.Sync()
+		if syncErr != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Failed to sync logger: %v\n", syncErr)
+		}
+	}()
+
+	logger = zapr.NewLogger(zapLogger.With(zap.String("component", "skr-webhook")))
 }
