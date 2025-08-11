@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
@@ -26,8 +25,8 @@ type unmarshalTestCase struct {
 func TestUnmarshalSKREvent(t *testing.T) {
 	t.Parallel()
 	testWatcherEvt := &types.WatchEvent{
-		Owner:      client.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
-		Watched:    client.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
+		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
+		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 	}
 

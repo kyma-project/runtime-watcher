@@ -75,7 +75,7 @@ var _ = BeforeSuite(func() {
 	// set KCP env vars
 	err = os.Setenv("KCP_ADDR", kcpMockServer.Listener.Addr().String())
 	Expect(err).ShouldNot(HaveOccurred())
-	err = os.Setenv("KCP_CONTRACT", "v1")
+	err = os.Setenv("KCP_CONTRACT", "v2")
 	Expect(err).ShouldNot(HaveOccurred())
 
 	_ = os.Setenv("CA_CERT", certProvider.RootCertFile.Name())
