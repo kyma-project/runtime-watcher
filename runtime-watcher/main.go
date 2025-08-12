@@ -72,6 +72,7 @@ func main() {
 	requestParser := requestparser.NewRequestParser(decoder)
 	metrics := watchermetrics.NewMetrics()
 	metrics.RegisterAll()
+	metrics.UpdateFipsMode() // This won't change during runtime, so we can call it once at startup
 	logger.Info("All metrics registered")
 
 	http.Handle("/metrics", promhttp.Handler())
