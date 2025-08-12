@@ -8,6 +8,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	FipsModeOff  = 0
+	FipsModeOn   = 1
+	FipsModeOnly = 2
+)
+
 type WatcherMetrics struct {
 	requestDurationGauge               prometheus.Gauge
 	fipsModeGauge                      prometheus.Gauge
@@ -78,12 +84,12 @@ func (w *WatcherMetrics) UpdateRequestDuration(duration time.Duration) {
 }
 
 func (w *WatcherMetrics) UpdateFipsMode() {
-	fipsMode := 0
+	fipsMode := FipsModeOff
 	if fips140.Enabled() {
 		if parseGodebugFipsMode(os.Getenv("GODEBUG")) == "only" {
-			fipsMode = 2 // FIPS 140-3 only mode
+			fipsMode = FipsModeOnly
 		} else {
-			fipsMode = 1 // FIPS 140-3 enabled
+			fipsMode = FipsModeOn
 		}
 	}
 	w.fipsModeGauge.Set(float64(fipsMode))
