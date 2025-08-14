@@ -8,14 +8,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-logr/logr"
-
 	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/go-logr/logr"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
 )
 
 const (
-	paramContractVersion    = "2"
+	paramContractVersion    = "1"
 	requestSizeLimitInBytes = 16384 // 16KB
 )
 
@@ -29,30 +31,22 @@ type SKREventListener struct {
 	Addr           string
 	Logger         logr.Logger
 	ComponentName  string
-	ReceivedEvents <-chan types.GenericEvent
+	ReceivedEvents chan event.GenericEvent
 	VerifyFunc     Verify
-
-	// Internal channel for sending events (private)
-	receivedEventsChan chan types.GenericEvent
 }
 
 func NewSKREventListener(addr, componentName string, verify Verify,
 ) *SKREventListener {
-	receivedEventsChan := make(chan types.GenericEvent)
 	return &SKREventListener{
-		Addr:               addr,
-		ComponentName:      componentName,
-		ReceivedEvents:     receivedEventsChan, // Read-only view
-		VerifyFunc:         verify,
-		receivedEventsChan: receivedEventsChan, // Internal send channel
+		Addr:           addr,
+		ComponentName:  componentName,
+		ReceivedEvents: make(chan event.GenericEvent),
+		VerifyFunc:     verify,
 	}
 }
 
 func (l *SKREventListener) Start(ctx context.Context) error {
-	if l.Logger.GetSink() == nil {
-		// If no logger is set, create a simple discard logger
-		l.Logger = logr.Discard()
-	}
+	l.Logger = ctrlLog.FromContext(ctx, "Module", "Listener")
 	router := http.NewServeMux()
 
 	listenerPattern := fmt.Sprintf("/v%s/%s/event", paramContractVersion, l.ComponentName)
@@ -129,7 +123,7 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 
 		genericEvtObject := GenericEvent(watcherEvent)
 		// add event to the channel
-		l.receivedEventsChan <- types.GenericEvent{Object: genericEvtObject}
+		l.ReceivedEvents <- event.GenericEvent{Object: genericEvtObject}
 		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
 		writer.WriteHeader(http.StatusOK)
 	}
