@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
@@ -250,8 +251,8 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	}
 
 	watcherEvent := &listenerTypes.WatchEvent{
-		Owner:      listenerTypes.ObjectKey{Namespace: owner.Namespace, Name: owner.Name},
-		Watched:    listenerTypes.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
+		Owner:      owner,
+		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
 
