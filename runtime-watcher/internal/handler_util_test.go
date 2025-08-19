@@ -74,7 +74,7 @@ func (cr *CustomRouter) ServeHTTP(_ http.ResponseWriter, request *http.Request) 
 
 func BootStrapKcpMockHandlers(moduleName string) *CustomRouter {
 	kcpTestHandler := newCustomRouter()
-	handleFnPattern := fmt.Sprintf("/v1/%s/event", moduleName)
+	handleFnPattern := fmt.Sprintf("/v2/%s/event", moduleName)
 	kcpTestHandler.HandleFunc(handleFnPattern, func(response http.ResponseWriter, r *http.Request) {
 		reqBytes, err := io.ReadAll(r.Body)
 		if err != nil {
