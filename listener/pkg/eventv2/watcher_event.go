@@ -10,7 +10,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	typesv2 "github.com/kyma-project/runtime-watcher/listener/pkg/typesv2"
 )
 
 const (
@@ -22,7 +22,7 @@ type UnmarshalError struct {
 	HTTPErrorCode int
 }
 
-func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
+func UnmarshalSKREvent(req *http.Request) (*typesv2.WatchEvent, *UnmarshalError) {
 	pathVariables := strings.Split(req.URL.Path, "/")
 
 	var contractVersion string
@@ -42,7 +42,7 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	}
 	defer req.Body.Close()
 
-	watcherEvent := &types.WatchEvent{}
+	watcherEvent := &typesv2.WatchEvent{}
 	err = json.Unmarshal(body, watcherEvent)
 	if err != nil {
 		return nil, &UnmarshalError{fmt.Sprintf("could not unmarshal watcher event: Body{%s}",
@@ -52,7 +52,7 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	return watcherEvent, nil
 }
 
-func GenericEvent(watcherEvent *types.WatchEvent) *unstructured.Unstructured {
+func GenericEvent(watcherEvent *typesv2.WatchEvent) *unstructured.Unstructured {
 	genericEvtObject := &unstructured.Unstructured{}
 	content := UnstructuredContent(watcherEvent)
 	genericEvtObject.SetUnstructuredContent(content)
@@ -61,7 +61,7 @@ func GenericEvent(watcherEvent *types.WatchEvent) *unstructured.Unstructured {
 	return genericEvtObject
 }
 
-func UnstructuredContent(watcherEvt *types.WatchEvent) map[string]interface{} {
+func UnstructuredContent(watcherEvt *typesv2.WatchEvent) map[string]interface{} {
 	content := make(map[string]interface{}, contentMapCapacity)
 	content["owner"] = watcherEvt.Owner
 	content["watched"] = watcherEvt.Watched

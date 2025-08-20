@@ -11,7 +11,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	typesv2 "github.com/kyma-project/runtime-watcher/listener/pkg/typesv2"
 )
 
 const (
@@ -23,22 +23,22 @@ const (
 // If the verification fails an error should be returned and the request will be dropped,
 // otherwise it should return nil.
 // If no verification function is needed, a function which just returns nil can be used instead.
-type Verify func(r *http.Request, watcherEvtObject *types.WatchEvent) error
+type Verify func(r *http.Request, watcherEvtObject *typesv2.WatchEvent) error
 
 type SKREventListener struct {
 	Addr           string
 	Logger         logr.Logger
 	ComponentName  string
-	ReceivedEvents <-chan types.GenericEvent
+	ReceivedEvents <-chan typesv2.GenericEvent
 	VerifyFunc     Verify
 
 	// Internal channel for sending events (private)
-	receivedEventsChan chan types.GenericEvent
+	receivedEventsChan chan typesv2.GenericEvent
 }
 
 func NewSKREventListener(addr, componentName string, verify Verify,
 ) *SKREventListener {
-	receivedEventsChan := make(chan types.GenericEvent)
+	receivedEventsChan := make(chan typesv2.GenericEvent)
 	return &SKREventListener{
 		Addr:               addr,
 		ComponentName:      componentName,
@@ -129,7 +129,7 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 
 		genericEvtObject := GenericEvent(watcherEvent)
 		// add event to the channel
-		l.receivedEventsChan <- types.GenericEvent{Object: genericEvtObject}
+		l.receivedEventsChan <- typesv2.GenericEvent{Object: genericEvtObject}
 		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
 		writer.WriteHeader(http.StatusOK)
 	}

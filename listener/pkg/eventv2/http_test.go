@@ -17,8 +17,8 @@ import (
 	"go.uber.org/zap/zapcore"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
-	"github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/eventv2"
+	typesv2 "github.com/kyma-project/runtime-watcher/listener/pkg/typesv2"
 )
 
 func newTestListener(addr, component string, log logr.Logger,
@@ -35,7 +35,7 @@ func setupLogger() logr.Logger {
 	return zapr.NewLogger(zapLog)
 }
 
-func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.WatchEvent) *http.Request {
+func newListenerRequest(t *testing.T, method, url string, watcherEvent *typesv2.WatchEvent) *http.Request {
 	t.Helper()
 
 	var body io.Reader
@@ -55,7 +55,7 @@ func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.Wa
 }
 
 type GenericTestEvt struct {
-	evt types.GenericEvent
+	evt typesv2.GenericEvent
 	mu  sync.Mutex
 }
 
@@ -64,7 +64,7 @@ func TestHandler(t *testing.T) {
 	// SETUP
 	log := setupLogger()
 	skrEventsListener := newTestListener(":8082", "kyma", log,
-		func(_ *http.Request, _ *types.WatchEvent) error {
+		func(_ *http.Request, _ *typesv2.WatchEvent) error {
 			return nil
 		})
 
@@ -72,9 +72,9 @@ func TestHandler(t *testing.T) {
 	responseRecorder := httptest.NewRecorder()
 
 	// GIVEN
-	testWatcherEvt := &types.WatchEvent{
-		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
-		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
+	testWatcherEvt := &typesv2.WatchEvent{
+		Owner:      typesv2.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
+		Watched:    typesv2.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 	}
 	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt)
@@ -108,7 +108,7 @@ func TestMiddleware(t *testing.T) {
 	// SETUP
 	log := setupLogger()
 	skrEventsListener := newTestListener(":8082", "kyma", log,
-		func(_ *http.Request, _ *types.WatchEvent) error {
+		func(_ *http.Request, _ *typesv2.WatchEvent) error {
 			return nil
 		})
 
