@@ -9,7 +9,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/eventv2"
-	typesv2 "github.com/kyma-project/runtime-watcher/listener/pkg/typesv2"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 )
 
 const hostname = "http://localhost:8082"
@@ -17,16 +17,16 @@ const hostname = "http://localhost:8082"
 type unmarshalTestCase struct {
 	name               string
 	urlPath            string
-	expectedEvent      *typesv2.WatchEvent
+	expectedEvent      *types.WatchEvent
 	expectedErrMsg     string
 	expectedHTTPStatus int
 }
 
 func TestUnmarshalSKREvent(t *testing.T) {
 	t.Parallel()
-	testWatcherEvt := &typesv2.WatchEvent{
-		Owner:      typesv2.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
-		Watched:    typesv2.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
+	testWatcherEvt := &types.WatchEvent{
+		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
+		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 	}
 

@@ -11,7 +11,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/kyma-project/runtime-watcher/listener/pkg/metrics"
-	typesv2 "github.com/kyma-project/runtime-watcher/listener/pkg/typesv2"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 )
 
 const (
@@ -23,29 +23,30 @@ const (
 // If the verification fails an error should be returned and the request will be dropped,
 // otherwise it should return nil.
 // If no verification function is needed, a function which just returns nil can be used instead.
-type Verify func(r *http.Request, watcherEvtObject *typesv2.WatchEvent) error
+type Verify func(r *http.Request, watcherEvtObject *types.WatchEvent) error
 
 type SKREventListener struct {
 	Addr           string
 	Logger         logr.Logger
 	ComponentName  string
-	ReceivedEvents <-chan typesv2.GenericEvent
 	VerifyFunc     Verify
 
-	// Internal channel for sending events (private)
-	receivedEventsChan chan typesv2.GenericEvent
+	events chan types.GenericEvent
 }
 
 func NewSKREventListener(addr, componentName string, verify Verify,
 ) *SKREventListener {
-	receivedEventsChan := make(chan typesv2.GenericEvent)
+	unbufferedEventsChan := make(chan types.GenericEvent)
 	return &SKREventListener{
 		Addr:               addr,
 		ComponentName:      componentName,
-		ReceivedEvents:     receivedEventsChan, // Read-only view
 		VerifyFunc:         verify,
-		receivedEventsChan: receivedEventsChan, // Internal send channel
+		events: unbufferedEventsChan,
 	}
+}
+
+func (l *SKREventListener) ReceivingChannel() <-chan types.GenericEvent {
+	return l.events
 }
 
 func (l *SKREventListener) Start(ctx context.Context) error {
@@ -129,7 +130,7 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 
 		genericEvtObject := GenericEvent(watcherEvent)
 		// add event to the channel
-		l.receivedEventsChan <- typesv2.GenericEvent{Object: genericEvtObject}
+		l.events <- types.GenericEvent{Object: genericEvtObject}
 		l.Logger.Info("dispatched event object into channel", "resource-name", genericEvtObject.GetName())
 		writer.WriteHeader(http.StatusOK)
 	}
