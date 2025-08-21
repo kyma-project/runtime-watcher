@@ -82,7 +82,7 @@ func TestHandler(t *testing.T) {
 	go func() {
 		testEvt.mu.Lock()
 		defer testEvt.mu.Unlock()
-		testEvt.evt = <-skrEventsListener.ReceivedEvents
+		testEvt.evt = <-skrEventsListener.ReceivedEvents()
 	}()
 
 	// WHEN

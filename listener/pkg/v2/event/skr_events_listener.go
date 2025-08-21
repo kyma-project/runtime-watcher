@@ -26,10 +26,10 @@ const (
 type Verify func(r *http.Request, watcherEvtObject *types.WatchEvent) error
 
 type SKREventListener struct {
-	Addr           string
-	Logger         logr.Logger
-	ComponentName  string
-	VerifyFunc     Verify
+	Addr          string
+	Logger        logr.Logger
+	ComponentName string
+	VerifyFunc    Verify
 
 	events chan types.GenericEvent
 }
@@ -38,14 +38,14 @@ func NewSKREventListener(addr, componentName string, verify Verify,
 ) *SKREventListener {
 	unbufferedEventsChan := make(chan types.GenericEvent)
 	return &SKREventListener{
-		Addr:               addr,
-		ComponentName:      componentName,
-		VerifyFunc:         verify,
-		events: unbufferedEventsChan,
+		Addr:          addr,
+		ComponentName: componentName,
+		VerifyFunc:    verify,
+		events:        unbufferedEventsChan,
 	}
 }
 
-func (l *SKREventListener) ReceivingChannel() <-chan types.GenericEvent {
+func (l *SKREventListener) ReceivedEvents() <-chan types.GenericEvent {
 	return l.events
 }
 

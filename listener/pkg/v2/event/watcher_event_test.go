@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/eventv2"
+	listenerEvent "github.com/kyma-project/runtime-watcher/listener/pkg/v2/event"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 )
 
