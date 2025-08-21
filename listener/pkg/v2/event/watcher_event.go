@@ -40,7 +40,6 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	if err != nil {
 		return nil, &UnmarshalError{"could not read request body", http.StatusInternalServerError}
 	}
-	defer req.Body.Close()
 
 	watcherEvent := &types.WatchEvent{}
 	err = json.Unmarshal(body, watcherEvent)
