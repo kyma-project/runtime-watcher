@@ -1,0 +1,1588 @@
+{
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  },
+  "owner": {
+    "name": "kyma",
+    "namespace": "kcp-system"
+  },
+  "watched": {
+    "name": "watched-resource",
+    "namespace": "kcp-system"
+  },
+  "watchedGvk": {
+    "kind": "kyma",
+    "group": "operator.kyma-project.io",
+    "version": "v1alpha1"
+  }
+}
