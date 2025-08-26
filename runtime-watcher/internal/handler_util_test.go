@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/google/uuid"
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 )
 
