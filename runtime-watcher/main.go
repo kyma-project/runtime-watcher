@@ -18,12 +18,13 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
+	"syscall"
 
-	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -40,7 +41,6 @@ import (
 //nolint:gochecknoglobals
 var (
 	buildVersion = "not_provided"
-	logger       logr.Logger
 )
 
 func main() {
@@ -60,7 +60,20 @@ func main() {
 	}
 
 	// Initialize the global logger
-	setupLogger(development)
+	zapLogger := setupLogger(development)
+	defer func() {
+		syncErr := zapLogger.Sync()
+		// Ignore EINVAL errors (Sync() is not supported for some file descriptors, it doesn't mean that logs are lost)
+		var maybePathError *os.PathError
+		if errors.As(syncErr, &maybePathError) && errors.Is(maybePathError.Err, syscall.EINVAL) {
+			return
+		}
+		if syncErr != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Failed to sync logger: %v\n", syncErr)
+		}
+	}()
+	logger := zapr.NewLogger(zapLogger.With(zap.String("component", "skr-webhook")))
+
 	logger.Info("Starting Runtime Watcher", "Version", buildVersion)
 
 	serverConfig, err := serverconfig.ParseFromEnv(logger)
@@ -107,7 +120,7 @@ func main() {
 	}
 }
 
-func setupLogger(development bool) {
+func setupLogger(development bool) *zap.Logger {
 	zapConfig := zap.NewProductionConfig()
 	if development {
 		zapConfig = zap.NewDevelopmentConfig()
@@ -120,12 +133,5 @@ func setupLogger(development bool) {
 		os.Exit(1)
 	}
 
-	defer func() {
-		syncErr := zapLogger.Sync()
-		if syncErr != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Failed to sync logger: %v\n", syncErr)
-		}
-	}()
-
-	logger = zapr.NewLogger(zapLogger.With(zap.String("component", "skr-webhook")))
+	return zapLogger
 }
