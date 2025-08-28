@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/google/uuid"
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 )
 
@@ -74,7 +74,7 @@ func (cr *CustomRouter) ServeHTTP(_ http.ResponseWriter, request *http.Request) 
 
 func BootStrapKcpMockHandlers(moduleName string) *CustomRouter {
 	kcpTestHandler := newCustomRouter()
-	handleFnPattern := fmt.Sprintf("/v1/%s/event", moduleName)
+	handleFnPattern := fmt.Sprintf("/v2/%s/event", moduleName)
 	kcpTestHandler.HandleFunc(handleFnPattern, func(response http.ResponseWriter, r *http.Request) {
 		reqBytes, err := io.ReadAll(r.Body)
 		if err != nil {

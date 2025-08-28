@@ -17,11 +17,9 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 
 	"github.com/kyma-project/runtime-watcher/skr/internal/cacertificatehandler"
 	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
@@ -252,7 +250,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 
 	watcherEvent := &listenerTypes.WatchEvent{
 		Owner:      owner,
-		Watched:    client.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
+		Watched:    listenerTypes.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
 
@@ -312,19 +310,19 @@ func (h *Handler) logAndReturnKCPErr(err error, reason watchermetrics.KcpErrReas
 	return err
 }
 
-func extractOwner(watched WatchedObject) (types.NamespacedName, error) {
+func extractOwner(watched WatchedObject) (listenerTypes.ObjectKey, error) {
 	if watched.Annotations == nil || watched.Annotations[ownedBy] == "" {
-		return types.NamespacedName{}, fmt.Errorf("no '%s' annotation found for watched resource %s",
+		return listenerTypes.ObjectKey{}, fmt.Errorf("no '%s' annotation found for watched resource %s",
 			ownedBy, watched.NamespacedName())
 	}
 	ownerKey := watched.Annotations[ownedBy]
 	ownerParts := strings.Split(ownerKey, "/")
 	if len(ownerParts) != namespaceNameEntityCount {
-		return types.NamespacedName{}, fmt.Errorf("annotation %s not set correctly on resource %s: %s",
+		return listenerTypes.ObjectKey{}, fmt.Errorf("annotation %s not set correctly on resource %s: %s",
 			ownedBy, watched.NamespacedName(), ownerKey)
 	}
 
-	return types.NamespacedName{Namespace: ownerParts[0], Name: ownerParts[1]}, nil
+	return listenerTypes.ObjectKey{Namespace: ownerParts[0], Name: ownerParts[1]}, nil
 }
 
 func (h *Handler) getHTTPSClient() (*http.Client, error) {
