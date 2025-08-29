@@ -22,9 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/types"
+	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 	"github.com/kyma-project/runtime-watcher/skr/internal"
 )
 
@@ -140,8 +139,8 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Expect(json.Unmarshal(kcpPayload, watcherEvt)).To(Succeed())
 			Expect(watcherEvt).To(Equal(
 				&listenerTypes.WatchEvent{
-					Watched: ctrlClient.ObjectKey{Name: testCase.params.watchedName, Namespace: metav1.NamespaceDefault},
-					Owner:   ctrlClient.ObjectKey{Name: ownerName, Namespace: metav1.NamespaceDefault},
+					Watched: listenerTypes.ObjectKey{Name: testCase.params.watchedName, Namespace: metav1.NamespaceDefault},
+					Owner:   listenerTypes.ObjectKey{Name: ownerName, Namespace: metav1.NamespaceDefault},
 					WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(WatchedResourceAPIVersion,
 						WatchedResourceKind)),
 				},

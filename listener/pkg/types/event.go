@@ -9,4 +9,5 @@ type WatchEvent struct {
 	Owner      client.ObjectKey        `json:"owner"`
 	Watched    client.ObjectKey        `json:"watched"`
 	WatchedGvk metav1.GroupVersionKind `json:"watchedGvk"`
+	SkrMeta    SkrMeta                 `json:"-"`
 }
