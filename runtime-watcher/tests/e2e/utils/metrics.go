@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/watchermetrics"
 )
 
 func ExposeSKRMetricsServiceEndpoint() error {

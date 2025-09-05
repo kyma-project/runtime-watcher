@@ -8,7 +8,7 @@ COPY go.sum go.sum
 RUN go mod download
 
 COPY main.go main.go
-COPY internal/ internal/
+COPY pkg/ pkg/
 
 # TAG_default_tag comes from image builder: https://github.com/kyma-project/test-infra/tree/main/cmd/image-builder
 ARG TAG_default_tag=from_dockerfile

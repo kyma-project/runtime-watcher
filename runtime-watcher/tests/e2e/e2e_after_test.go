@@ -6,11 +6,12 @@ import (
 
 	"github.com/kyma-project/lifecycle-manager/api/shared"
 	"github.com/kyma-project/lifecycle-manager/api/v1beta2"
-	"github.com/kyma-project/runtime-watcher/skr/tests/e2e/utils"
 	apimetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/kyma-project/runtime-watcher/tests/e2e/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -75,7 +76,11 @@ func syncKyma(ctx context.Context, clnt client.Client, kyma *v1beta2.Kyma) error
 	return nil
 }
 
-func deleteKyma(ctx context.Context, clnt client.Client, kyma *v1beta2.Kyma, delProp apimetav1.DeletionPropagation) error {
+func deleteKyma(ctx context.Context,
+	clnt client.Client,
+	kyma *v1beta2.Kyma,
+	delProp apimetav1.DeletionPropagation,
+) error {
 	err := clnt.Delete(ctx, kyma, &client.DeleteOptions{PropagationPolicy: &delProp})
 	if client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("updating kyma failed %w", err)

@@ -32,10 +32,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal"
-	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
-	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
-	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/admissionreview"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/requestparser"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/serverconfig"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/watchermetrics"
 )
 
 //nolint:gochecknoglobals
@@ -93,7 +93,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	metricsServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", serverConfig.MetricsPort),
-		ReadHeaderTimeout: internal.HTTPTimeout,
+		ReadHeaderTimeout: admissionreview.HTTPTimeout,
 	}
 	go func() {
 		err = metricsServer.ListenAndServe()
@@ -103,11 +103,11 @@ func main() {
 	}()
 	logger.Info("Metrics server started")
 
-	handler := internal.NewHandler(logger, serverConfig, *requestParser, *metrics)
+	handler := admissionreview.NewHandler(logger, serverConfig, *requestParser, *metrics)
 	http.HandleFunc("/validate/", handler.Handle)
 	server := http.Server{
 		Addr:        fmt.Sprintf(":%d", serverConfig.Port),
-		ReadTimeout: internal.HTTPTimeout,
+		ReadTimeout: admissionreview.HTTPTimeout,
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS13,
 			MaxVersion: tls.VersionTLS13,
