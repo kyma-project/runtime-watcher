@@ -1,13 +1,22 @@
 package watchermetrics
 
 import (
+	"crypto/fips140"
+	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	FipsModeOff  = 0
+	FipsModeOn   = 1
+	FipsModeOnly = 2
+)
+
 type WatcherMetrics struct {
 	requestDurationGauge               prometheus.Gauge
+	fipsModeGauge                      prometheus.Gauge
 	admissionRequestsErrorTotalCounter prometheus.Counter
 	admissionRequestsTotalCounter      prometheus.Counter
 	kcpRequestsTotalCounter            prometheus.Counter
@@ -16,6 +25,7 @@ type WatcherMetrics struct {
 
 const (
 	RequestDuration                          = "watcher_request_duration"
+	WatcherFipsMode                          = "watcher_fips_mode"
 	FailedKCPRequestsTotal                   = "watcher_failed_kcp_total"
 	KcpRequestsTotal                         = "watcher_kcp_requests_total"
 	AdmissionRequestsErrorTotal              = "watcher_admission_request_error_total"
@@ -52,12 +62,17 @@ func NewMetrics() *WatcherMetrics {
 			Name: FailedKCPRequestsTotal,
 			Help: "Indicates total failed requests to KCP count",
 		}, []string{kcpErrReasonLabel}),
+		fipsModeGauge: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: WatcherFipsMode,
+			Help: "current FIPS mode (0=off/1=on/2=only)",
+		}),
 	}
 	return metrics
 }
 
 func (w *WatcherMetrics) RegisterAll() {
 	prometheus.MustRegister(w.requestDurationGauge)
+	prometheus.MustRegister(w.fipsModeGauge)
 	prometheus.MustRegister(w.admissionRequestsErrorTotalCounter)
 	prometheus.MustRegister(w.admissionRequestsTotalCounter)
 	prometheus.MustRegister(w.kcpRequestsTotalCounter)
@@ -66,6 +81,18 @@ func (w *WatcherMetrics) RegisterAll() {
 
 func (w *WatcherMetrics) UpdateRequestDuration(duration time.Duration) {
 	w.requestDurationGauge.Set(duration.Seconds())
+}
+
+func (w *WatcherMetrics) UpdateFipsMode() {
+	fipsMode := FipsModeOff
+	if fips140.Enabled() {
+		if parseGodebugFipsMode(os.Getenv("GODEBUG")) == "only" {
+			fipsMode = FipsModeOnly
+		} else {
+			fipsMode = FipsModeOn
+		}
+	}
+	w.fipsModeGauge.Set(float64(fipsMode))
 }
 
 func (w *WatcherMetrics) UpdateFailedKCPTotal(reason KcpErrReason) {

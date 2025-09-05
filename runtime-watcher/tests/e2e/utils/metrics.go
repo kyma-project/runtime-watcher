@@ -77,6 +77,16 @@ func GetAdmissionRequestsMetric(ctx context.Context) (int, error) {
 	return parseCount(regex, metricsBody)
 }
 
+func GetFips140Metric(ctx context.Context) (int, error) {
+	metricsBody, err := getMetricsBody(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	regex := regexp.MustCompile(`watcher_fips_mode (\d+)`)
+	return parseCount(regex, metricsBody)
+}
+
 func getMetricsBody(ctx context.Context) (string, error) {
 	clnt := &http.Client{}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:2112/metrics", nil)
