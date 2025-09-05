@@ -4,8 +4,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
-	. "github.com/kyma-project/runtime-watcher/skr/tests/e2e/utils"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/watchermetrics"
+	. "github.com/kyma-project/runtime-watcher/tests/e2e/utils"
 )
 
 var _ = Describe("Watcher Metrics", Ordered, func() {

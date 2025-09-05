@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/tlstest"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/tlstest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
