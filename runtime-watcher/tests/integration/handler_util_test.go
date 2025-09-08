@@ -15,7 +15,8 @@ import (
 
 	"github.com/google/uuid"
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
-	"github.com/kyma-project/runtime-watcher/skr/internal"
+
+	"github.com/kyma-project/runtime-watcher/skr/pkg/admissionreview"
 )
 
 type ChangeObj string
@@ -148,8 +149,8 @@ func createAdmissionRequest(operation admissionv1.Operation, watchedName string,
 func generateAdmissionRequestRawObject(objectName string, labels, annotations map[string]string,
 	isOldObject bool, changeObj ChangeObj,
 ) ([]byte, error) {
-	obj := &internal.WatchedObject{
-		Metadata: internal.Metadata{
+	obj := &admissionreview.WatchedObject{
+		Metadata: admissionreview.Metadata{
 			Name:        objectName,
 			Namespace:   metav1.NamespaceDefault,
 			Labels:      labels,
@@ -170,9 +171,9 @@ func generateAdmissionRequestRawObject(objectName string, labels, annotations ma
 	return rawObject, nil
 }
 
-func configureObjectWatched(obj *internal.WatchedObject,
+func configureObjectWatched(obj *admissionreview.WatchedObject,
 	isOldObject bool, changeObj ChangeObj,
-) *internal.WatchedObject {
+) *admissionreview.WatchedObject {
 	if isOldObject {
 		switch changeObj {
 		case NoSpecField:
