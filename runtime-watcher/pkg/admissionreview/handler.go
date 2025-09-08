@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/go-logr/logr"
+
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 
 	"github.com/kyma-project/runtime-watcher/skr/pkg/cacertificatehandler"
