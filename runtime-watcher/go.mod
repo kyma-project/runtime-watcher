@@ -5,8 +5,8 @@ go 1.24.6
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
-	github.com/kyma-project/runtime-watcher/listener v0.0.0-20250825111833-2cf3f8cc5232
-	github.com/prometheus/client_golang v1.23.1
+	github.com/kyma-project/runtime-watcher/listener v0.0.0-20250908061848-5ecf98a16e6b
+	github.com/prometheus/client_golang v1.23.2
 	github.com/sethgrid/pester v1.2.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
@@ -16,10 +16,8 @@ require (
 
 require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
@@ -35,7 +33,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.66.0 // indirect
+	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect; indirectg
 	golang.org/x/net v0.43.0 // indirect
