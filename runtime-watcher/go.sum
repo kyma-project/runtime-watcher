@@ -31,6 +31,8 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/kyma-project/runtime-watcher/listener v0.0.0-20250908061848-5ecf98a16e6b h1:kaRZUIk/NEcSuAvPUtOp/v7tvM1ECmDTaKOtAEKqQXc=
 github.com/kyma-project/runtime-watcher/listener v0.0.0-20250908061848-5ecf98a16e6b/go.mod h1:FiLVh77vm/4CHQ+Xnvr/lvNa343eItJfIUWwWOoXI3U=
+github.com/kyma-project/runtime-watcher/listener v0.0.0-20250908135737-12ddb4e47da9 h1:PSnS3NFgs1/kSapL2bQMTg39pTfjJWOYD6Bfx1KgiWA=
+github.com/kyma-project/runtime-watcher/listener v0.0.0-20250908135737-12ddb4e47da9/go.mod h1:aR3sboOyEdMIXShVTPrB1fhc7awivJzhuech3ORVPTk=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
