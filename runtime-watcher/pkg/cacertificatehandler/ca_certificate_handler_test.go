@@ -14,8 +14,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/cacertificatehandler"
-	"github.com/kyma-project/runtime-watcher/skr/internal/tlstest"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/cacertificatehandler"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/tlstest"
 )
 
 func TestGetCertificatePool1(t *testing.T) {

@@ -1,4 +1,4 @@
-package internal
+package admissionreview
 
 import (
 	"bytes"
@@ -19,12 +19,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/go-logr/logr"
+
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/cacertificatehandler"
-	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
-	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
-	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/cacertificatehandler"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/requestparser"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/serverconfig"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/watchermetrics"
 )
 
 const (

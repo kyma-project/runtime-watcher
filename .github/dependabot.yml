@@ -12,6 +12,7 @@ updates:
     directories:
       - "/listener"
       - "/runtime-watcher"
+      - "/runtime-watcher/tests"
     labels:
       - "go"
       - "area/dependency"
@@ -32,7 +33,6 @@ updates:
           - "github.com/onsi/gomega"
   - package-ecosystem: "docker"
     directories:
-        - "/listener"
         - "/runtime-watcher"
     labels:
       - "area/dependency"

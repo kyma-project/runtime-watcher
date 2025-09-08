@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/watchermetrics"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/watchermetrics"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/requestparser"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/requestparser"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	"github.com/kyma-project/runtime-watcher/skr/internal/serverconfig"
+	"github.com/kyma-project/runtime-watcher/skr/pkg/serverconfig"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -24,7 +24,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	listenerTypes "github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
-	"github.com/kyma-project/runtime-watcher/skr/internal"
+
+	"github.com/kyma-project/runtime-watcher/skr/pkg/admissionreview"
 )
 
 type testCase struct {
@@ -108,7 +109,7 @@ var _ = Describe("given watched resource", Ordered, func() {
 		decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 		requestParser := requestparser.NewRequestParser(decoder)
 		metrics := watchermetrics.NewMetrics()
-		handler := internal.NewHandler(logger, config, *requestParser, *metrics)
+		handler := admissionreview.NewHandler(logger, config, *requestParser, *metrics)
 		skrRecorder := httptest.NewRecorder()
 		handler.Handle(skrRecorder, request)
 
@@ -139,8 +140,11 @@ var _ = Describe("given watched resource", Ordered, func() {
 			Expect(json.Unmarshal(kcpPayload, watcherEvt)).To(Succeed())
 			Expect(watcherEvt).To(Equal(
 				&listenerTypes.WatchEvent{
-					Watched: listenerTypes.ObjectKey{Name: testCase.params.watchedName, Namespace: metav1.NamespaceDefault},
-					Owner:   listenerTypes.ObjectKey{Name: ownerName, Namespace: metav1.NamespaceDefault},
+					Watched: listenerTypes.ObjectKey{
+						Name:      testCase.params.watchedName,
+						Namespace: metav1.NamespaceDefault,
+					},
+					Owner: listenerTypes.ObjectKey{Name: ownerName, Namespace: metav1.NamespaceDefault},
 					WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(WatchedResourceAPIVersion,
 						WatchedResourceKind)),
 				},
