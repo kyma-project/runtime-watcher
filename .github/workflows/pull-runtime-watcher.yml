@@ -12,7 +12,7 @@ jobs:
         working-directory: ./runtime-watcher
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: 'runtime-watcher/go.mod'
           cache-dependency-path: 'runtime-watcher/go.sum'
