@@ -2,9 +2,6 @@ module github.com/kyma-project/runtime-watcher/skr
 
 go 1.24.6
 
-replace (
-		github.com/kyma-project/runtime-watcher/listener => ../listener
-)
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
