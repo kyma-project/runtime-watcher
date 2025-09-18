@@ -49,7 +49,10 @@ $(LOCALBIN):
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
+.PHONY: install-golangci-lint
+install-golangci-lint:
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANG_CI_LINT_VERSION)
+
 .PHONY: lint
-lint: ## Run golangci-lint against code.
-	GOBIN=$(LOCALBIN) GOFIPS140=v1.0.0 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
+lint: install-golangci-lint ## Run golangci-lint against code.
 	$(LOCALBIN)/golangci-lint run -v -c .golangci.yaml

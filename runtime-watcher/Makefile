@@ -53,8 +53,12 @@ envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) GOFIPS140=v1.0.0 go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-$(ENVTEST_VERSION)
 
-lint: ## Run golangci-lint against code.
-	GOBIN=$(LOCALBIN) GOFIPS140=v1.0.0 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
+.PHONY: install-golangci-lint
+install-golangci-lint:
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANG_CI_LINT_VERSION)
+
+.PHONY: lint
+lint: install-golangci-lint ## Run golangci-lint against code.
 	$(LOCALBIN)/golangci-lint run -v -c .golangci.yaml
 
 run: fmt vet ## Run runtime-watcher from your host.
