@@ -24,5 +24,7 @@ jobs:
           working-directory: ./listener
       - name: Build
         run: make build-verbose
+        working-directory: ./listener
       - name: Test
         run: make test
+        working-directory: ./listener

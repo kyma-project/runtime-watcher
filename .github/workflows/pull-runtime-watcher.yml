@@ -24,5 +24,7 @@ jobs:
           working-directory: ./runtime-watcher
       - name: Build
         run: make build-verbose
+        working-directory: ./runtime-watcher
       - name: Test
         run: make test
+        working-directory: ./runtime-watcher
