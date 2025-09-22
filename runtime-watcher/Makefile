@@ -59,7 +59,7 @@ install-golangci-lint:
 
 .PHONY: lint
 lint: install-golangci-lint ## Run golangci-lint against code.
-	$(LOCALBIN)/golangci-lint run -v -c .golangci.yaml
+	$(LOCALBIN)/golangci-lint run -v -c ../.golangci.yaml
 
 run: fmt vet ## Run runtime-watcher from your host.
 	go run ./main.go
