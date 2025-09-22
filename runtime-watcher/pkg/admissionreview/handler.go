@@ -40,6 +40,13 @@ const (
 	namespaceNameEntityCount = 2
 )
 
+var (
+	errParseURLPath       = errors.New("could not parse url path")
+	errEmptyModule        = errors.New("module name must not be empty")
+	errNoOwner            = errors.New("no owner annotation found")
+	errInvalidSubResource = errors.New("invalid subresource")
+)
+
 type responseInterface interface {
 	IsEmpty() bool
 }
@@ -71,6 +78,8 @@ const (
 	contentSecurityPolicy      = "Content-Security-Policy"
 	contentSecurityPolicyValue = "default-src 'self'"
 )
+
+var errEmptyConfig = errors.New("KCPAddress or KCPContract empty")
 
 func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 	h.logger.Info("Handle request - START")
@@ -117,11 +126,11 @@ func getModuleName(urlPath string) (string, error) {
 	var moduleName string
 	_, err := fmt.Sscanf(urlPath, urlPathPattern, &moduleName)
 	if err != nil && !errors.Is(err, io.EOF) {
-		return "", errors.New("could not parse url path")
+		return "", errParseURLPath
 	}
 
 	if err != nil && errors.Is(err, io.EOF) || moduleName == "" {
-		return "", errors.New("module name must not be empty")
+		return "", errEmptyModule
 	}
 
 	return moduleName, nil
@@ -234,7 +243,7 @@ func (h *Handler) checkForChange(resource *Resource, oldObj, obj WatchedObject) 
 	case statusSubResource:
 		registerChange = !reflect.DeepEqual(oldObj.Status, obj.Status)
 	default:
-		return false, fmt.Errorf("invalid subresource for watched resource %s/%s",
+		return false, fmt.Errorf("%w: watched resource %s/%s", errInvalidSubResource,
 			obj.Namespace, obj.Name)
 	}
 
@@ -256,7 +265,7 @@ func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) err
 	}
 
 	if h.config.KCPAddress == "" || h.config.KCPContract == "" {
-		return h.logAndReturnKCPErr(errors.New("KCPAddress or KCPContract empty"), watchermetrics.ReasonKcpAddress)
+		return h.logAndReturnKCPErr(errEmptyConfig, watchermetrics.ReasonKcpAddress)
 	}
 
 	url := fmt.Sprintf("https://%s/%s/%s/%s", h.config.KCPAddress, h.config.KCPContract, moduleName, eventEndpoint)
@@ -313,13 +322,13 @@ func (h *Handler) logAndReturnKCPErr(err error, reason watchermetrics.KcpErrReas
 
 func extractOwner(watched WatchedObject) (listenerTypes.ObjectKey, error) {
 	if watched.Annotations == nil || watched.Annotations[ownedBy] == "" {
-		return listenerTypes.ObjectKey{}, fmt.Errorf("no '%s' annotation found for watched resource %s",
+		return listenerTypes.ObjectKey{}, fmt.Errorf("%w: no '%s' annotation found for watched resource %s", errNoOwner,
 			ownedBy, watched.NamespacedName())
 	}
 	ownerKey := watched.Annotations[ownedBy]
 	ownerParts := strings.Split(ownerKey, "/")
 	if len(ownerParts) != namespaceNameEntityCount {
-		return listenerTypes.ObjectKey{}, fmt.Errorf("annotation %s not set correctly on resource %s: %s",
+		return listenerTypes.ObjectKey{}, fmt.Errorf("%w: annotation %s not set correctly on resource %s: %s", errNoOwner,
 			ownedBy, watched.NamespacedName(), ownerKey)
 	}
 

@@ -2,20 +2,16 @@ version: "2"
 linters:
   default: all
   disable:
-    - contextcheck
-    - depguard
-    - err113
-    - exhaustruct
-    - godox
-    - ireturn
-    - musttag
-    - nlreturn
-    - noctx
-    - rowserrcheck
-    - sqlclosecheck
-    - wastedassign
-    - wsl
-    - wsl_v5 # can be discussed with the team if enforced grouping of statements is desired, but generally considered too strict
+    - contextcheck # too many false positives
+    - depguard # checks if package imports are whitelisted
+    - exhaustruct # too subjective and harms code readability
+    - nlreturn # too strict and mostly code is not more readable
+    - paralleltest # should be enabled consciously for long running tests
+    - lll # revive.line-length-limit serve same purpose
+    - sqlclosecheck # not needed for this project
+    - wsl # too strict and mostly code is not more readable
+    - wsl_v5 # too strict
+    - noinlineerr # we want to keep inlining
   settings:
     cyclop:
       max-complexity: 20

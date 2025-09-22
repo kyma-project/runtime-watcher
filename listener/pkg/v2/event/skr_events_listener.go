@@ -19,6 +19,8 @@ const (
 	requestSizeLimitInBytes = 16384 // 16KB
 )
 
+var errRequestSizeExceeded = errors.New("requestSizeExceeded")
+
 // Verify is a function which is being called to verify an incoming request to the listener.
 // If the verification fails an error should be returned and the request will be dropped,
 // otherwise it should return nil.
@@ -72,7 +74,7 @@ func (l *SKREventListener) Start(ctx context.Context) error {
 			"ApiPath", listenerPattern,
 		).Info("Listener is starting up...")
 		err := server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			l.Logger.Error(err, "Webserver startup failed")
 		}
 	}()
@@ -90,7 +92,7 @@ func (l *SKREventListener) RequestSizeLimitingMiddleware(next http.HandlerFunc) 
 		if request.ContentLength > requestSizeLimitInBytes {
 			metrics.RecordHTTPRequestExceedingSizeLimit()
 			errorMessage := fmt.Sprintf("Body size greater than %d bytes is not allowed", requestSizeLimitInBytes)
-			l.Logger.Error(errors.New("requestSizeExceeded"), errorMessage)
+			l.Logger.Error(errRequestSizeExceeded, errorMessage)
 			http.Error(writer, errorMessage, http.StatusRequestEntityTooLarge)
 			return
 		}

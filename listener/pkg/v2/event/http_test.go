@@ -47,7 +47,7 @@ func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.Wa
 		body = bytes.NewBuffer(jsonBody)
 	}
 
-	r, err := http.NewRequest(method, url, body)
+	r, err := http.NewRequestWithContext(t.Context(), method, url, body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,8 +137,8 @@ func TestMiddleware(t *testing.T) {
 		t.Error(err)
 	}
 
-	goodHTTPRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(smallJSONFile))
-	badHTTPRequest, _ := http.NewRequest(http.MethodPost, "http://test.url", bytes.NewBuffer(largeJSONFile))
+	goodHTTPRequest, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://test.url", bytes.NewBuffer(smallJSONFile))
+	badHTTPRequest, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://test.url", bytes.NewBuffer(largeJSONFile))
 
 	// WHEN
 	handlerUnderTest.ServeHTTP(goodResponseRecorder, goodHTTPRequest)
