@@ -7,9 +7,6 @@ on: [pull_request, workflow_dispatch]
 jobs:
   lint-build-test-runtime-watcher:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./runtime-watcher
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
