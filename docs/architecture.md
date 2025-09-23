@@ -40,4 +40,5 @@ Because you must have an mTLS connection from the Kyma cluster to the KCP Gatewa
 
 In each Kyma reconciliation loop, Lifecycle Manager creates or updates a [Certificate CR](https://cert-manager.io/docs/concepts/certificate/) for the Kyma CR. The Certificate CR is signed by a deployed [Issuer](https://cert-manager.io/docs/concepts/issuer/#supported-issuers), which requests the Cert-Manager to create a signed certificate. This certificate is stored in a Secret in KCP and copied over to the corresponding Kyma cluster when Runtime Watcher is deployed. The Secret includes the CA certificate, a TLS certificate, and a TLS key.
 
-> Note: The Lifecycle manager updates the label `operator.kyma-project.io/pod-restart-trigger` with the value of the current resource version of the Certificate Secret CR in the Runtime Watcher deployment. This label triggers a rolling update of the Runtime Watcher deployment when the Certificate Secret is updated.
+> ### Note:
+> Lifecycle Manager updates the `operator.kyma-project.io/pod-restart-trigger` label with the value of the current resource version of the Certificate Secret CR in the Runtime Watcher deployment. This label triggers a rolling update of the Runtime Watcher deployment when the Certificate Secret is updated.
