@@ -23,6 +23,11 @@ const (
 	envKCPContract     = "KCP_CONTRACT" // 31536000 seconds = 1 year
 )
 
+var (
+	errInvalidPortRange   = errors.New("invalid port range")
+	errParsingEnvVariable = errors.New("error parsing env variable")
+)
+
 type ServerConfig struct {
 	Port        int
 	MetricsPort int
@@ -89,14 +94,14 @@ func ParseFromEnv(logger logr.Logger) (ServerConfig, error) {
 
 func validatePortRange(port int) error {
 	if port <= minPort || port >= maxPort {
-		return errors.New("invalid port range")
+		return errInvalidPortRange
 	}
 
 	return nil
 }
 
 func flagError(flagName string) error {
-	return fmt.Errorf("failed parsing %s env variable", flagName)
+	return fmt.Errorf("failed parsing %s env variable: %w", flagName, errParsingEnvVariable)
 }
 
 func (s *ServerConfig) PrettyPrint() string {
