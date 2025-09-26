@@ -137,8 +137,10 @@ func TestMiddleware(t *testing.T) {
 		t.Error(err)
 	}
 
-	goodHTTPRequest, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://test.url", bytes.NewBuffer(smallJSONFile))
-	badHTTPRequest, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://test.url", bytes.NewBuffer(largeJSONFile))
+	goodHTTPRequest, _ := http.NewRequestWithContext(t.Context(),
+		http.MethodPost, "http://test.url", bytes.NewBuffer(smallJSONFile))
+	badHTTPRequest, _ := http.NewRequestWithContext(t.Context(),
+		http.MethodPost, "http://test.url", bytes.NewBuffer(largeJSONFile))
 
 	// WHEN
 	handlerUnderTest.ServeHTTP(goodResponseRecorder, goodHTTPRequest)

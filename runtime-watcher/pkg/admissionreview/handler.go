@@ -322,14 +322,14 @@ func (h *Handler) logAndReturnKCPErr(err error, reason watchermetrics.KcpErrReas
 
 func extractOwner(watched WatchedObject) (listenerTypes.ObjectKey, error) {
 	if watched.Annotations == nil || watched.Annotations[ownedBy] == "" {
-		return listenerTypes.ObjectKey{}, fmt.Errorf("%w: no '%s' annotation found for watched resource %s", errNoOwner,
-			ownedBy, watched.NamespacedName())
+		return listenerTypes.ObjectKey{}, fmt.Errorf("%w: no '%s' annotation found for watched resource %s",
+			errNoOwner, ownedBy, watched.NamespacedName())
 	}
 	ownerKey := watched.Annotations[ownedBy]
 	ownerParts := strings.Split(ownerKey, "/")
 	if len(ownerParts) != namespaceNameEntityCount {
-		return listenerTypes.ObjectKey{}, fmt.Errorf("%w: annotation %s not set correctly on resource %s: %s", errNoOwner,
-			ownedBy, watched.NamespacedName(), ownerKey)
+		return listenerTypes.ObjectKey{}, fmt.Errorf("%w: annotation %s not set correctly on resource %s: %s",
+			errNoOwner, ownedBy, watched.NamespacedName(), ownerKey)
 	}
 
 	return listenerTypes.ObjectKey{Namespace: ownerParts[0], Name: ownerParts[1]}, nil

@@ -30,7 +30,6 @@ linters:
           arguments:
             - 120
           severity: warning
-          disabled: true
   exclusions:
     generated: lax
     presets:
