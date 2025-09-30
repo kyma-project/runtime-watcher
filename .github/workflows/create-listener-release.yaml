@@ -18,7 +18,10 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: "listener/go.mod"
+          cache-dependency-path: "listener/go.sum"
       - name: Validate & normalize version
         id: normalize
         run: |
@@ -46,10 +49,8 @@ jobs:
       - name: "Run tests / build for listener"
         working-directory: ./listener
         run: |
-          # ensure deps are fetched and build/test succeed before releasing
-          go version
-          go mod tidy
           make test
+          make build-verbose
 
       - name: Create and push git tag
         env:
