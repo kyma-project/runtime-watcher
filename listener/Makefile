@@ -38,7 +38,7 @@ build-verbose:
 
 .PHONY: test
 test: fmt vet ## Run tests.
-	GOTOOLCHAIN=go1.25.0+auto GOFIPS140=v1.0.0 go test ./... -v --race -coverprofile cover.out
+	GOFIPS140=v1.0.0 go test ./... -v --race -coverprofile cover.out
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
