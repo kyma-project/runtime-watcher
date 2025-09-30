@@ -14,7 +14,7 @@ jobs:
   release-listener:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (full)
+      - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -22,7 +22,6 @@ jobs:
       - name: Validate & normalize version
         id: normalize
         run: |
-          set -euo pipefail
           raw="${{ github.event.inputs.version }}"
           # strip leading "v" if present
           ver="${raw#v}"
@@ -37,7 +36,6 @@ jobs:
 
       - name: Ensure tag does not already exist
         run: |
-          set -euo pipefail
           if git ls-remote --tags origin "refs/tags/${{ env.TAG }}" | grep -q "${{ env.TAG }}"; then
             echo "Tag ${{ env.TAG }} already exists in origin"
             exit 1
@@ -48,21 +46,17 @@ jobs:
       - name: "Run tests / build for listener"
         working-directory: ./listener
         run: |
-          set -euo pipefail
           # ensure deps are fetched and build/test succeed before releasing
           go version
           go mod tidy
-          go test ./...
-        env:
-          GOFLAGS: ""
+          make test
 
       - name: Create and push git tag
         env:
           TAG: ${{ env.TAG }}
         run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "jellyfish[bot]"
+          git config user.email "jellyfish[bot]@users.noreply.github.com"
           git tag -a "${TAG}" -m "Release ${TAG}"
           git push origin "${TAG}"
 
