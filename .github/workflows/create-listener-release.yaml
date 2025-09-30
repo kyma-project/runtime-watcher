@@ -1,0 +1,64 @@
+name: "Create Listener Release"
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version to release (e.g. 1.2.3 or v1.2.3)"
+        required: true
+
+jobs:
+  release-listener:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate & normalize version
+        id: normalize
+        run: |
+          raw="${{ github.event.inputs.version }}"
+          # strip leading "v" if present
+          ver="${raw#v}"
+          if [[ ! "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version: $raw. Must be semver X.Y.Z"
+            exit 1
+          fi
+          tag="listener/v${ver}"
+          echo "VERSION=${ver}" >> "$GITHUB_ENV"
+          echo "TAG=${tag}" >> "$GITHUB_ENV"
+          echo "Normalized to tag: ${tag}"
+
+      - name: Ensure tag does not already exist
+        run: |
+          if git ls-remote --tags origin "refs/tags/${{ env.TAG }}" | grep -q "${{ env.TAG }}"; then
+            echo "Tag ${{ env.TAG }} already exists in origin"
+            exit 1
+          fi
+        env:
+          TAG: ${{ env.TAG }}
+
+      - name: "Run tests / build for listener"
+        working-directory: ./listener
+        run: |
+          # ensure deps are fetched and build/test succeed before releasing
+          go version
+          go mod tidy
+          make test
+
+      - name: Create and push git tag
+        env:
+          TAG: ${{ env.TAG }}
+        run: |
+          git config user.name "jellyfish[bot]"
+          git config user.email "jellyfish[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+
+      - name: Output release info
+        run: echo "Released module tag=${{ env.TAG }} version=${{ env.VERSION }}"
