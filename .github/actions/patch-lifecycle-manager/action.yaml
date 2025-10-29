@@ -14,7 +14,10 @@ runs:
           value: --skr-watcher-image-registry=europe-docker.pkg.dev/kyma-project/dev
         - op: add
           path: /spec/template/spec/containers/0/args/-
-          value: --skr-watcher-image-tag=PR-${{ github.event.pull_request.number }}" >> patch_watcher_img.yaml
+          value: --skr-watcher-image-tag=PR-${{ github.event.pull_request.number }}
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value:--oci-registry-host=http://k3d-kcp-registry.localhost:5000" >> patch_watcher_img.yaml
         kustomize edit add patch --path patch_watcher_img.yaml --kind Deployment
         popd
         kustomize build config/watcher_local_test
