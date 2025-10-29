@@ -11,11 +11,32 @@ on:
       k8s_version:
         description: With Kubernetes version
         required: false
+      runtime-watcher-tag:
+        description: With runtime-watcher image tag
+        required: false
+        default: latest
   pull_request:
     types: [ opened, edited, synchronize, reopened, ready_for_review ]
 
 jobs:
+  get-custom-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.get_custom_tags.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Get tags
+        id: get_custom_tags
+        run: |
+          tags="${{ github.event.inputs.runtime-watcher-tag }}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            tags="${{ github.event.pull_request.head.sha }}"
+          fi
+          echo "Using custom tags: '$tags'"
+          echo "tags=$tags" >> $GITHUB_OUTPUT
   wait-for-image-build:
+    needs: get-custom-tags
     name: Wait for image build
     runs-on: ubuntu-latest
     steps:
@@ -28,10 +49,12 @@ jobs:
         env:
           ITERATIONS: 40
           SLEEP_SECONDS: 30
-        run: ./.github/scripts/release/wait_for_image.sh ${{ env.IMAGE_REPO }}:${{ github.event.pull_request.head.sha }} ${{ env.ITERATIONS }} ${{ env.SLEEP_SECONDS}}
+        run: ./.github/scripts/release/wait_for_image.sh ${{ env.IMAGE_REPO }}:${{ needs.get-custom-tags.outputs.tags }} ${{ env.ITERATIONS }} ${{ env.SLEEP_SECONDS}}
   e2e-integration:
     name: E2E
-    needs: wait-for-image-build
+    needs:
+      - wait-for-image-build
+      - get-custom-tags
     strategy:
       matrix:
         e2e-test:
@@ -75,6 +98,8 @@ jobs:
 
       - name: Patch lifecycle-manager
         uses: ./.github/actions/patch-lifecycle-manager
+        with:
+          runtime-watcher-tag: ${{ needs.get-custom-tags.outputs.tags }}
 
       - name: Deploy lifecycle-manager
         uses: kyma-project/lifecycle-manager/.github/actions/deploy-lifecycle-manager@main

@@ -1,5 +1,9 @@
 name: Patch lifecycle-manager
 description: Patches lifecycle-manager to use the PR specific watcher image.
+inputs:
+  runtime-watcher-tag:
+    description: Tag of runtime-watcher to use
+    required: true
 runs:
   using: composite
   steps:
@@ -14,7 +18,7 @@ runs:
           value: --skr-watcher-image-registry=europe-docker.pkg.dev/kyma-project/dev
         - op: add
           path: /spec/template/spec/containers/0/args/-
-          value: --skr-watcher-image-tag=PR-${{ github.event.pull_request.number }}" >> patch_watcher_img.yaml
+          value: --skr-watcher-image-tag=PR-${{ inputs.runtime-watcher-tag }}" >> patch_watcher_img.yaml
         kustomize edit add patch --path patch_watcher_img.yaml --kind Deployment
         popd
         kustomize build config/watcher_local_test
