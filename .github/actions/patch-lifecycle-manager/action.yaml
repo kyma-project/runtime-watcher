@@ -18,7 +18,7 @@ runs:
         echo \
         "- op: add
           path: /spec/template/spec/containers/0/args/-
-          value: --skr-watcher-image-registry=${{.inputs.runtime-watcher-image-registry }}
+          value: --skr-watcher-image-registry=${{ inputs.runtime-watcher-image-registry }}
         - op: add
           path: /spec/template/spec/containers/0/args/-
           value: --skr-watcher-image-tag=${{ inputs.runtime-watcher-tag }}
