@@ -4,6 +4,9 @@ inputs:
   runtime-watcher-tag:
     description: Tag of runtime-watcher to use
     required: true
+  runtime-watcher-image-registry:
+    description: Registry of runtime-watcher to use
+    required: true
 runs:
   using: composite
   steps:
@@ -15,7 +18,7 @@ runs:
         echo \
         "- op: add
           path: /spec/template/spec/containers/0/args/-
-          value: --skr-watcher-image-registry=europe-docker.pkg.dev/kyma-project/dev
+          value: --skr-watcher-image-registry=${{.inputs.runtime-watcher-image-registry }}
         - op: add
           path: /spec/template/spec/containers/0/args/-
           value: --skr-watcher-image-tag=${{ inputs.runtime-watcher-tag }}
