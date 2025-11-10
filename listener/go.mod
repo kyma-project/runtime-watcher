@@ -2,6 +2,11 @@ module github.com/kyma-project/runtime-watcher/listener
 
 go 1.25.3
 
+retract (
+	v1.0.18
+	v1.0.1
+)
+
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
