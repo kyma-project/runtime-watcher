@@ -4,7 +4,6 @@ go 1.25.3
 
 retract (
 	v1.0.18
-	v1.0.1
 )
 
 require (
