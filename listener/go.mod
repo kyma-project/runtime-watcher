@@ -3,7 +3,7 @@ module github.com/kyma-project/runtime-watcher/listener
 go 1.25.3
 
 retract (
-	v1.0.18
+	v1.0.18 // reason: not a valid release
 )
 
 require (
