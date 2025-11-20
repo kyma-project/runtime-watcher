@@ -1,6 +1,6 @@
 module github.com/kyma-project/runtime-watcher/listener
 
-go 1.25.3
+go 1.25.4
 
 retract v1.1.18 // reason: not a valid release
 
@@ -9,7 +9,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	k8s.io/apimachinery v0.34.2
 )
 
