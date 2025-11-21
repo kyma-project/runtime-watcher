@@ -10,11 +10,12 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 )
 
 const (
-	contentMapCapacity = 3
+	contentMapCapacity = 4
 )
 
 type UnmarshalError struct {
@@ -44,8 +45,23 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 	watcherEvent := &types.WatchEvent{}
 	err = json.Unmarshal(body, watcherEvent)
 	if err != nil {
-		return nil, &UnmarshalError{fmt.Sprintf("could not unmarshal watcher event: Body{%s}",
-			string(body)), http.StatusInternalServerError}
+		return nil, &UnmarshalError{
+			fmt.Sprintf("could not unmarshal watcher event: Body{%s}",
+				string(body)), http.StatusInternalServerError,
+		}
+	}
+
+	clientCertificate, err := certificate.GetCertificateFromHeader(req)
+	if err != nil {
+		return nil, &UnmarshalError{
+			fmt.Sprintf("could not get client certificate from request: %v", err),
+			http.StatusUnauthorized,
+		}
+	}
+
+	watcherEvent.SkrMeta = types.SkrMeta{
+		RuntimeId: clientCertificate.Subject.CommonName,
+		SkrDomain: "", // this cannot be reliably extracted from the certificate.DNSNames slice
 	}
 
 	return watcherEvent, nil
@@ -65,5 +81,6 @@ func UnstructuredContent(watcherEvt *types.WatchEvent) map[string]interface{} {
 	content["owner"] = watcherEvt.Owner
 	content["watched"] = watcherEvt.Watched
 	content["watched-gvk"] = watcherEvt.WatchedGvk
+	content["runtime-id"] = watcherEvt.SkrMeta.RuntimeId
 	return content
 }
