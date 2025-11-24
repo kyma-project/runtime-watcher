@@ -49,15 +49,15 @@ func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.Wa
 		body = bytes.NewBuffer(jsonBody)
 	}
 
-	r, err := http.NewRequestWithContext(t.Context(), method, url, body)
+	httpRequest, err := http.NewRequestWithContext(t.Context(), method, url, body)
 
 	pemCert := utils.GenerateSelfSignedPEMCert(t)
-	r.Header.Set(certificate.XFCCHeader, certificate.CertificateKey+pemCert)
+	httpRequest.Header.Set(certificate.XFCCHeader, certificate.CertificateKey+pemCert)
 
 	if err != nil {
 		t.Fatal(err)
 	}
-	return r
+	return httpRequest
 }
 
 type GenericTestEvt struct {
