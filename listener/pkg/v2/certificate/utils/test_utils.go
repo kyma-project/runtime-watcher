@@ -15,13 +15,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func GenerateSelfSignedPEMCert(t *testing.T) string {
+func GenerateSelfSignedPEMCert(t *testing.T, commonName string) string {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	tmpl := &x509.Certificate{
 		Subject: pkix.Name{
-			CommonName: "test-cert",
+			CommonName: commonName,
 		},
 		SerialNumber:          big.NewInt(1),
 		NotBefore:             time.Now().Add(-time.Hour),

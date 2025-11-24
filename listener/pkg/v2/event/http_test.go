@@ -37,7 +37,11 @@ func setupLogger() logr.Logger {
 	return zapr.NewLogger(zapLog)
 }
 
-func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.WatchEvent) *http.Request {
+func newListenerRequest(t *testing.T,
+	method, url string,
+	watcherEvent *types.WatchEvent,
+	certificateCommonName string,
+) *http.Request {
 	t.Helper()
 
 	var body io.Reader
@@ -51,7 +55,7 @@ func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.Wa
 
 	httpRequest, err := http.NewRequestWithContext(t.Context(), method, url, body)
 
-	pemCert := utils.GenerateSelfSignedPEMCert(t)
+	pemCert := utils.GenerateSelfSignedPEMCert(t, certificateCommonName)
 	httpRequest.Header.Set(certificate.XFCCHeader, certificate.CertificateKey+pemCert)
 
 	if err != nil {
@@ -84,7 +88,8 @@ func TestHandler(t *testing.T) {
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
 	}
-	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt)
+	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt,
+		"test-cert")
 	testEvt := GenericTestEvt{}
 	go func() {
 		testEvt.mu.Lock()

@@ -55,7 +55,7 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			t.Logf("Testing %q for %q", testCase.name, testCase.urlPath)
 			// GIVEN
 			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
-			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt)
+			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, "test-cert")
 			// WHEN
 			currentWatcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
@@ -69,4 +69,23 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			require.Equal(t, testCase.expectedEvent, currentWatcherEvent)
 		})
 	}
+}
+
+func TestUnmarshalSKREvent_WhenNoCommonNameInClientCertificate_ReturnsError(t *testing.T) {
+	t.Parallel()
+	// GIVEN
+	testWatcherEvt := &types.WatchEvent{
+		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
+		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
+		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		SkrMeta:    types.SkrMeta{RuntimeId: ""},
+	}
+	url := fmt.Sprintf("%s/v1/kyma/event", hostname)
+	req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, "")
+	// WHEN
+	_, err := listenerEvent.UnmarshalSKREvent(req)
+	// THEN
+	require.NotNil(t, err)
+	require.Equal(t, "client certificate common name is empty", err.Message)
+	require.Equal(t, http.StatusBadRequest, err.HTTPErrorCode)
 }
