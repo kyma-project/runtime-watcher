@@ -51,20 +51,35 @@ func UnmarshalSKREvent(req *http.Request) (*types.WatchEvent, *UnmarshalError) {
 		}
 	}
 
+	skrMetaFromRequest, unmarshalError := getSkrMetaFromRequest(req)
+	if unmarshalError != nil {
+		return nil, unmarshalError
+	}
+	watcherEvent.SkrMeta = skrMetaFromRequest
+
+	return watcherEvent, nil
+}
+
+func getSkrMetaFromRequest(req *http.Request) (types.SkrMeta, *UnmarshalError) {
 	clientCertificate, err := certificate.GetCertificateFromHeader(req)
 	if err != nil {
-		return nil, &UnmarshalError{
+		return types.SkrMeta{}, &UnmarshalError{
 			fmt.Sprintf("could not get client certificate from request: %v", err),
 			http.StatusUnauthorized,
 		}
 	}
 
-	watcherEvent.SkrMeta = types.SkrMeta{
-		RuntimeId: clientCertificate.Subject.CommonName,
-		SkrDomain: "", // this cannot be reliably extracted from the certificate.DNSNames slice
+	if clientCertificate.Subject.CommonName == "" {
+		return types.SkrMeta{}, &UnmarshalError{
+			"client certificate common name is empty",
+			http.StatusBadRequest,
+		}
 	}
 
-	return watcherEvent, nil
+	return types.SkrMeta{
+		RuntimeId: clientCertificate.Subject.CommonName,
+		SkrDomain: "", // this cannot be reliably extracted from the certificate.DNSNames slice
+	}, nil
 }
 
 func GenericEvent(watcherEvent *types.WatchEvent) *unstructured.Unstructured {

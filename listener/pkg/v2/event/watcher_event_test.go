@@ -28,6 +28,7 @@ func TestUnmarshalSKREvent(t *testing.T) {
 		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
 		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
 	}
 
 	testCases := []unmarshalTestCase{

@@ -82,6 +82,7 @@ func TestHandler(t *testing.T) {
 		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
 		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
 	}
 	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt)
 	testEvt := GenericTestEvt{}

@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
 	"net/url"
@@ -19,6 +20,9 @@ func GenerateSelfSignedPEMCert(t *testing.T) string {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	tmpl := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "test-cert",
+		},
 		SerialNumber:          big.NewInt(1),
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(time.Hour),
