@@ -12,6 +12,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate/utils"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -48,6 +50,10 @@ func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.Wa
 	}
 
 	r, err := http.NewRequestWithContext(t.Context(), method, url, body)
+
+	pemCert := utils.GenerateSelfSignedPEMCert(t)
+	r.Header.Set(certificate.XFCCHeader, certificate.CertificateKey+pemCert)
+
 	if err != nil {
 		t.Fatal(err)
 	}

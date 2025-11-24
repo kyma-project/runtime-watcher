@@ -2,43 +2,19 @@ package certificate_test
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
-	"math/big"
 	"net/http"
 	"net/url"
 	"testing"
-	"time"
 
 	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate/utils"
 	"github.com/stretchr/testify/require"
 )
 
-func generateSelfSignedPEMCert(t *testing.T) string {
-	t.Helper()
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	tmpl := &x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(time.Hour),
-		DNSNames:              []string{"example.com"},
-		BasicConstraintsValid: true,
-	}
-	certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
-	require.NoError(t, err)
-	block := &pem.Block{Type: "CERTIFICATE", Bytes: certBytes}
-	return string(pem.EncodeToMemory(block))
-}
-
 func TestGetCertificateFromHeader_Success(t *testing.T) {
-	pemCert := generateSelfSignedPEMCert(t)
-	escaped := url.QueryEscape(pemCert)
+	pemCert := utils.GenerateSelfSignedPEMCert(t)
 	r, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost", nil)
-	r.Header.Set(certificate.XFCCHeader, certificate.CertificateKey+escaped)
+	r.Header.Set(certificate.XFCCHeader, certificate.CertificateKey+pemCert)
 	cert, err := certificate.GetCertificateFromHeader(r)
 	require.NoError(t, err)
 	require.NotNil(t, cert)
@@ -114,10 +90,9 @@ func TestGetCertificateFromHeader_CertificateParseError(t *testing.T) {
 }
 
 func TestGetCertificateFromHeader_MultipleValuesFirstHasCert(t *testing.T) {
-	pemCert := generateSelfSignedPEMCert(t)
-	escaped := url.QueryEscape(pemCert)
+	pemCert := utils.GenerateSelfSignedPEMCert(t)
 	r, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost", nil)
-	r.Header[certificate.XFCCHeader] = []string{certificate.CertificateKey + escaped + ";Other=foo", "Cert=ignored"}
+	r.Header[certificate.XFCCHeader] = []string{certificate.CertificateKey + pemCert + ";Other=foo", "Cert=ignored"}
 	cert, err := certificate.GetCertificateFromHeader(r)
 	require.NoError(t, err)
 	require.NotNil(t, cert)
