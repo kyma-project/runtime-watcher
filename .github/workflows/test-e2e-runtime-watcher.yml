@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Wait for the Docker image
@@ -89,10 +89,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout runtime-watcher
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Checkout lifecycle-manager
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: kyma-project/lifecycle-manager
           path: lifecycle-manager
