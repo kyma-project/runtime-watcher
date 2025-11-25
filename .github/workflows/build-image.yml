@@ -25,7 +25,7 @@ jobs:
       tags: ${{ steps.get_custom_tags.outputs.tags }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Get tags
         id: get_custom_tags
         run: |
