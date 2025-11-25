@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate/utils"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -55,7 +56,8 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			t.Logf("Testing %q for %q", testCase.name, testCase.urlPath)
 			// GIVEN
 			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
-			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, "test-cert")
+			pemCert := utils.NewPemCertificateBuilder(t).Build()
+			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, pemCert)
 			// WHEN
 			currentWatcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
@@ -80,8 +82,9 @@ func TestUnmarshalSKREvent_WhenNoCommonNameInClientCertificate_ReturnsError(t *t
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 		SkrMeta:    types.SkrMeta{RuntimeId: ""},
 	}
-	url := fmt.Sprintf("%s/v1/kyma/event", hostname)
-	req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, "")
+	url := hostname + "/v1/kyma/event"
+	pemCert := utils.NewPemCertificateBuilder(t).WithCommonName("").Build()
+	req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, pemCert)
 	// WHEN
 	_, err := listenerEvent.UnmarshalSKREvent(req)
 	// THEN
