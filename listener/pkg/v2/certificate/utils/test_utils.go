@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net/url"
 	"time"
@@ -38,7 +39,7 @@ func (builder *CertificateBuilder) WithCommonName(commonName string) *Certificat
 func (builder *CertificateBuilder) Build() (string, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to generate ecdsa key: %w", err)
 	}
 	tmpl := &x509.Certificate{
 		Subject: pkix.Name{
@@ -52,7 +53,7 @@ func (builder *CertificateBuilder) Build() (string, error) {
 	}
 	certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to create certificate: %s", err)
 	}
 	block := &pem.Block{Type: "CERTIFICATE", Bytes: certBytes}
 	return url.QueryEscape(string(pem.EncodeToMemory(block))), nil
