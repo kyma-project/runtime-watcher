@@ -53,7 +53,7 @@ func (builder *CertificateBuilder) Build() (string, error) {
 	}
 	certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
 	if err != nil {
-		return "", fmt.Errorf("unable to create certificate: %s", err)
+		return "", fmt.Errorf("unable to create certificate: %w", err)
 	}
 	block := &pem.Block{Type: "CERTIFICATE", Bytes: certBytes}
 	return url.QueryEscape(string(pem.EncodeToMemory(block))), nil
