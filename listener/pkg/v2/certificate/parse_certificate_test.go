@@ -12,7 +12,8 @@ import (
 )
 
 func TestGetCertificateFromHeader_Success(t *testing.T) {
-	pemCert := utils.NewPemCertificateBuilder(t).Build()
+	pemCert, err := utils.NewPemCertificateBuilder().Build()
+	require.NoError(t, err)
 	r, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost", nil)
 	r.Header.Set(certificate.XFCCHeader, certificate.CertificateKey+pemCert)
 	cert, err := certificate.GetCertificateFromHeader(r)
@@ -90,7 +91,8 @@ func TestGetCertificateFromHeader_CertificateParseError(t *testing.T) {
 }
 
 func TestGetCertificateFromHeader_MultipleValuesFirstHasCert(t *testing.T) {
-	pemCert := utils.NewPemCertificateBuilder(t).Build()
+	pemCert, err := utils.NewPemCertificateBuilder().Build()
+	require.NoError(t, err)
 	r, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://localhost", nil)
 	r.Header[certificate.XFCCHeader] = []string{certificate.CertificateKey + pemCert + ";Other=foo", "Cert=ignored"}
 	cert, err := certificate.GetCertificateFromHeader(r)

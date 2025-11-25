@@ -56,14 +56,15 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			t.Logf("Testing %q for %q", testCase.name, testCase.urlPath)
 			// GIVEN
 			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
-			pemCert := utils.NewPemCertificateBuilder(t).Build()
+			pemCert, err := utils.NewPemCertificateBuilder().Build()
+			require.NoError(t, err)
 			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, pemCert)
 			// WHEN
-			currentWatcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
+			currentWatcherEvent, unmarshalErr := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
 			if err != nil {
-				require.Equal(t, testCase.expectedErrMsg, err.Message)
-				require.Equal(t, testCase.expectedHTTPStatus, err.HTTPErrorCode)
+				require.Equal(t, testCase.expectedErrMsg, unmarshalErr.Message)
+				require.Equal(t, testCase.expectedHTTPStatus, unmarshalErr.HTTPErrorCode)
 				return
 			}
 			require.Equal(t, testCase.expectedErrMsg, "")
@@ -83,12 +84,13 @@ func TestUnmarshalSKREvent_WhenNoCommonNameInClientCertificate_ReturnsError(t *t
 		SkrMeta:    types.SkrMeta{RuntimeId: ""},
 	}
 	url := hostname + "/v1/kyma/event"
-	pemCert := utils.NewPemCertificateBuilder(t).WithCommonName("").Build()
+	pemCert, err := utils.NewPemCertificateBuilder().WithCommonName("").Build()
+	require.NoError(t, err)
 	req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, pemCert)
 	// WHEN
-	_, err := listenerEvent.UnmarshalSKREvent(req)
+	_, unmarshalErr := listenerEvent.UnmarshalSKREvent(req)
 	// THEN
-	require.NotNil(t, err)
-	require.Equal(t, "client certificate common name is empty", err.Message)
-	require.Equal(t, http.StatusBadRequest, err.HTTPErrorCode)
+	require.NotNil(t, unmarshalErr)
+	require.Equal(t, "client certificate common name is empty", unmarshalErr.Message)
+	require.Equal(t, http.StatusBadRequest, unmarshalErr.HTTPErrorCode)
 }

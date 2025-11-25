@@ -15,6 +15,7 @@ import (
 	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate"
 	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,7 +87,8 @@ func TestHandler(t *testing.T) {
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
 	}
-	pemCert := utils.NewPemCertificateBuilder(t).Build()
+	pemCert, err := utils.NewPemCertificateBuilder().Build()
+	require.NoError(t, err)
 	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt,
 		pemCert)
 	testEvt := GenericTestEvt{}
