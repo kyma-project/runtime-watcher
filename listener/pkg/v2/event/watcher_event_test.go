@@ -62,7 +62,7 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			// WHEN
 			currentWatcherEvent, unmarshalErr := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
-			if err != nil {
+			if unmarshalErr != nil {
 				require.Equal(t, testCase.expectedErrMsg, unmarshalErr.Message)
 				require.Equal(t, testCase.expectedHTTPStatus, unmarshalErr.HTTPErrorCode)
 				return
