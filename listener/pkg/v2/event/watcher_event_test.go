@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate/utils"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -28,6 +29,7 @@ func TestUnmarshalSKREvent(t *testing.T) {
 		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
 		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
 	}
 
 	testCases := []unmarshalTestCase{
@@ -54,13 +56,15 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			t.Logf("Testing %q for %q", testCase.name, testCase.urlPath)
 			// GIVEN
 			url := fmt.Sprintf("%s%s", hostname, testCase.urlPath)
-			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt)
+			pemCert, err := utils.NewPemCertificateBuilder().Build()
+			require.NoError(t, err)
+			req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, pemCert)
 			// WHEN
-			currentWatcherEvent, err := listenerEvent.UnmarshalSKREvent(req)
+			currentWatcherEvent, unmarshalErr := listenerEvent.UnmarshalSKREvent(req)
 			// THEN
-			if err != nil {
-				require.Equal(t, testCase.expectedErrMsg, err.Message)
-				require.Equal(t, testCase.expectedHTTPStatus, err.HTTPErrorCode)
+			if unmarshalErr != nil {
+				require.Equal(t, testCase.expectedErrMsg, unmarshalErr.Message)
+				require.Equal(t, testCase.expectedHTTPStatus, unmarshalErr.HTTPErrorCode)
 				return
 			}
 			require.Equal(t, testCase.expectedErrMsg, "")
@@ -68,4 +72,25 @@ func TestUnmarshalSKREvent(t *testing.T) {
 			require.Equal(t, testCase.expectedEvent, currentWatcherEvent)
 		})
 	}
+}
+
+func TestUnmarshalSKREvent_WhenNoCommonNameInClientCertificate_ReturnsError(t *testing.T) {
+	t.Parallel()
+	// GIVEN
+	testWatcherEvt := &types.WatchEvent{
+		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
+		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
+		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		SkrMeta:    types.SkrMeta{RuntimeId: ""},
+	}
+	url := hostname + "/v1/kyma/event"
+	pemCert, err := utils.NewPemCertificateBuilder().WithCommonName("").Build()
+	require.NoError(t, err)
+	req := newListenerRequest(t, http.MethodPost, url, testWatcherEvt, pemCert)
+	// WHEN
+	_, unmarshalErr := listenerEvent.UnmarshalSKREvent(req)
+	// THEN
+	require.NotNil(t, unmarshalErr)
+	require.Equal(t, "client certificate common name is empty", unmarshalErr.Message)
+	require.Equal(t, http.StatusBadRequest, unmarshalErr.HTTPErrorCode)
 }

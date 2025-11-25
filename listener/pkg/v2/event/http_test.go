@@ -12,7 +12,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate"
+	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/certificate/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +38,11 @@ func setupLogger() logr.Logger {
 	return zapr.NewLogger(zapLog)
 }
 
-func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.WatchEvent) *http.Request {
+func newListenerRequest(t *testing.T,
+	method, url string,
+	watcherEvent *types.WatchEvent,
+	encodedCertificate string,
+) *http.Request {
 	t.Helper()
 
 	var body io.Reader
@@ -47,11 +54,13 @@ func newListenerRequest(t *testing.T, method, url string, watcherEvent *types.Wa
 		body = bytes.NewBuffer(jsonBody)
 	}
 
-	r, err := http.NewRequestWithContext(t.Context(), method, url, body)
+	httpRequest, err := http.NewRequestWithContext(t.Context(), method, url, body)
+	httpRequest.Header.Set(certificate.XFCCHeader, certificate.CertificateKey+encodedCertificate)
+
 	if err != nil {
 		t.Fatal(err)
 	}
-	return r
+	return httpRequest
 }
 
 type GenericTestEvt struct {
@@ -76,8 +85,12 @@ func TestHandler(t *testing.T) {
 		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
 		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
 	}
-	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt)
+	pemCert, err := utils.NewPemCertificateBuilder().Build()
+	require.NoError(t, err)
+	httpRequest := newListenerRequest(t, http.MethodPost, "http://localhost:8082/v1/kyma/event", testWatcherEvt,
+		pemCert)
 	testEvt := GenericTestEvt{}
 	go func() {
 		testEvt.mu.Lock()
