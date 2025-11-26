@@ -38,6 +38,7 @@ func NewKyma(name, namespace, channel string) *v1beta2.Kyma {
 			},
 			Labels: map[string]string{
 				shared.InstanceIDLabel: instanceIDLabelValue,
+				shared.RuntimeIDLabel:  name,
 			},
 		},
 		Spec: v1beta2.KymaSpec{
