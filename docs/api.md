@@ -40,14 +40,15 @@ It uses either the `spec` or `status` value to define if Runtime Watcher sends a
 
 ### **spec.manager**
 
-Specifies the component responsible for handling webhook requests from the Runtime Watcher. This field determines the routing path for webhook validation requests to KCP (`/validate/<manager-value>`).
+Specifies the component responsible for handling webhook requests from Runtime Watcher. This field determines the routing path for webhook validation requests to KCP (`/validate/<manager-value>`).
 
 ```yaml
 spec:
   manager: "lifecycle-manager"
 ```
 
-**Backward Compatibility:** If `spec.manager` is not set, the system falls back to the `operator.kyma-project.io/managed-by` label for backward compatibility. However, this label-based approach is deprecated and will be removed in a future version. It is recommended to migrate to using the `spec.manager` field.
+> ### Note:
+> **Backward Compatibility:** If you don't set **spec.manager**, the system falls back to the `operator.kyma-project.io/managed-by` label for backward compatibility. However, this label-based approach is deprecated and will be removed in a future version. It is recommended to migrate to using the **spec.manager** field.
 
 ## KCP configuration
 
@@ -78,4 +79,5 @@ spec:
 
 - **`operator.kyma-project.io/managed-by`:** **[DEPRECATED]** This label previously specified the module that manages and listens to the Watcher CR's corresponding webhook. The value was used to generate the path in KCP for webhook requests (`/validate/<label-value>`). 
   
-  **This approach is deprecated.** Use the `spec.manager` field instead. The label-based fallback will be removed in a future API version. See the `spec.manager` field documentation above for migration guidance.
+> ### Caution
+> The `operator.kyma-project.io/managed-by` label is deprecated. Use the **spec.manager** field instead. The label-based fallback will be removed in a future API version. For more information, see the [**spec.manager**](#specmanager) section.
