@@ -14,8 +14,8 @@ require (
 	github.com/kyma-project/lifecycle-manager/api v1.0.0
 	github.com/kyma-project/runtime-watcher/listener v1.3.0
 	github.com/kyma-project/runtime-watcher/skr v0.0.0-00010101000000-000000000000
-	github.com/onsi/ginkgo/v2 v2.27.2
-	github.com/onsi/gomega v1.38.2
+	github.com/onsi/ginkgo/v2 v2.27.3
+	github.com/onsi/gomega v1.38.3
 	go.uber.org/zap v1.27.1
 	k8s.io/api v0.34.2
 	k8s.io/apiextensions-apiserver v0.34.2
