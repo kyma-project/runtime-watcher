@@ -144,7 +144,6 @@ var _ = Describe("given watched resource", Ordered, func() {
 						Name:      testCase.params.watchedName,
 						Namespace: metav1.NamespaceDefault,
 					},
-					Owner: listenerTypes.ObjectKey{Name: ownerName, Namespace: metav1.NamespaceDefault},
 					WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(WatchedResourceAPIVersion,
 						WatchedResourceKind)),
 				},

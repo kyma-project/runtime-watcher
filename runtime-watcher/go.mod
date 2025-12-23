@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
-	github.com/kyma-project/runtime-watcher/listener v1.3.0
+	github.com/kyma-project/runtime-watcher/listener v1.4.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sethgrid/pester v1.2.0
 	github.com/stretchr/testify v1.11.1
