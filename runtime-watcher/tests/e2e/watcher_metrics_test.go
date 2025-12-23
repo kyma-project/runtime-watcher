@@ -59,31 +59,5 @@ var _ = Describe("Watcher Metrics", Ordered, func() {
 					Should(BeNumerically("==", watchermetrics.FipsModeOnly))
 			})
 		})
-
-		It("When kyma does not have owned by annotation", func() {
-			Eventually(AddSkipReconciliationLabelToKyma).
-				WithContext(ctx).
-				WithArguments(controlPlaneClient, kyma.Name, kyma.Namespace).
-				Should(Succeed())
-
-			Eventually(RemoveKymaAnnotations).
-				WithContext(ctx).
-				WithArguments(runtimeClient, defaultRemoteKymaName, remoteNamespace).
-				Should(Succeed())
-
-			By("And spec of SKR Kyma CR is changed", func() {
-				Eventually(changeRemoteKymaChannel).
-					WithContext(ctx).
-					WithArguments(runtimeClient, "regular").
-					Should(Succeed())
-			})
-		})
-
-		It("Then Watcher Failed Kcp Metric is 1", func() {
-			Eventually(GetWatcherFailedKcpTotalMetric).
-				WithContext(ctx).
-				WithArguments(watchermetrics.ReasonOwner).
-				Should(BeNumerically(">=", 1))
-		})
 	})
 })

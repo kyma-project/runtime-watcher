@@ -32,7 +32,6 @@ const (
 	AdmissionRequestsTotal                   = "watcher_admission_request_total"
 	kcpErrReasonLabel                        = "error_reason"
 	ReasonSubresource           KcpErrReason = "invalid-subresource"
-	ReasonOwner                 KcpErrReason = "unknown-owner"
 	ReasonKcpAddress            KcpErrReason = "missing-address-or-contract"
 	ReasonRequest               KcpErrReason = "request-setup"
 	ReasonResponse              KcpErrReason = "failed-request"

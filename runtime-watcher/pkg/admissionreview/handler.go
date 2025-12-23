@@ -29,21 +29,18 @@ import (
 )
 
 const (
-	HTTPTimeout              = time.Minute * 3
-	eventEndpoint            = "event"
-	admissionError           = "admission error"
-	kcpReqFailedMsg          = "kcp request failed"
-	kcpReqSucceededMsg       = "kcp request succeeded"
-	urlPathPattern           = "/validate/%s"
-	ownedBy                  = "operator.kyma-project.io/owned-by"
-	statusSubResource        = "status"
-	namespaceNameEntityCount = 2
+	HTTPTimeout        = time.Minute * 3
+	eventEndpoint      = "event"
+	admissionError     = "admission error"
+	kcpReqFailedMsg    = "kcp request failed"
+	kcpReqSucceededMsg = "kcp request succeeded"
+	urlPathPattern     = "/validate/%s"
+	statusSubResource  = "status"
 )
 
 var (
 	errParseURLPath       = errors.New("could not parse url path")
 	errEmptyModule        = errors.New("module name must not be empty")
-	errNoOwner            = errors.New("no owner annotation found")
 	errInvalidSubResource = errors.New("invalid subresource")
 )
 
@@ -253,13 +250,7 @@ func (h *Handler) checkForChange(resource *Resource, oldObj, obj WatchedObject) 
 func (h *Handler) sendRequestToKcp(moduleName string, watched WatchedObject) error {
 	h.metrics.UpdateKCPTotal()
 
-	owner, err := extractOwner(watched)
-	if err != nil {
-		return h.logAndReturnKCPErr(err, watchermetrics.ReasonOwner)
-	}
-
 	watcherEvent := &listenerTypes.WatchEvent{
-		Owner:      owner,
 		Watched:    listenerTypes.ObjectKey{Namespace: watched.Namespace, Name: watched.Name},
 		WatchedGvk: metav1.GroupVersionKind(schema.FromAPIVersionAndKind(watched.APIVersion, watched.Kind)),
 	}
@@ -318,21 +309,6 @@ func (h *Handler) logAndReturnKCPErr(err error, reason watchermetrics.KcpErrReas
 	h.logger.Error(err, err.Error())
 	h.metrics.UpdateFailedKCPTotal(reason)
 	return err
-}
-
-func extractOwner(watched WatchedObject) (listenerTypes.ObjectKey, error) {
-	if watched.Annotations == nil || watched.Annotations[ownedBy] == "" {
-		return listenerTypes.ObjectKey{}, fmt.Errorf("%w: no '%s' annotation found for watched resource %s",
-			errNoOwner, ownedBy, watched.NamespacedName())
-	}
-	ownerKey := watched.Annotations[ownedBy]
-	ownerParts := strings.Split(ownerKey, "/")
-	if len(ownerParts) != namespaceNameEntityCount {
-		return listenerTypes.ObjectKey{}, fmt.Errorf("%w: annotation %s not set correctly on resource %s: %s",
-			errNoOwner, ownedBy, watched.NamespacedName(), ownerKey)
-	}
-
-	return listenerTypes.ObjectKey{Namespace: ownerParts[0], Name: ownerParts[1]}, nil
 }
 
 func (h *Handler) getHTTPSClient() (*http.Client, error) {
