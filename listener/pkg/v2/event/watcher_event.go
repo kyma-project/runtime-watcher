@@ -86,14 +86,11 @@ func GenericEvent(watcherEvent *types.WatchEvent) *unstructured.Unstructured {
 	genericEvtObject := &unstructured.Unstructured{}
 	content := UnstructuredContent(watcherEvent)
 	genericEvtObject.SetUnstructuredContent(content)
-	genericEvtObject.SetName(watcherEvent.Owner.Name)
-	genericEvtObject.SetNamespace(watcherEvent.Owner.Namespace)
 	return genericEvtObject
 }
 
 func UnstructuredContent(watcherEvt *types.WatchEvent) map[string]interface{} {
 	content := make(map[string]interface{}, contentMapCapacity)
-	content["owner"] = watcherEvt.Owner
 	content["watched"] = watcherEvt.Watched
 	content["watched-gvk"] = watcherEvt.WatchedGvk
 	content["runtime-id"] = watcherEvt.SkrMeta.RuntimeId

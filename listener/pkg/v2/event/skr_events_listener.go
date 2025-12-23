@@ -21,28 +21,20 @@ const (
 
 var errRequestSizeExceeded = errors.New("requestSizeExceeded")
 
-// Verify is a function which is being called to verify an incoming request to the listener.
-// If the verification fails an error should be returned and the request will be dropped,
-// otherwise it should return nil.
-// If no verification function is needed, a function which just returns nil can be used instead.
-type Verify func(r *http.Request, watcherEvtObject *types.WatchEvent) error
-
 type SKREventListener struct {
 	Addr          string
 	Logger        logr.Logger
 	ComponentName string
-	VerifyFunc    Verify
 
 	events chan types.GenericEvent
 }
 
-func NewSKREventListener(addr, componentName string, verify Verify,
+func NewSKREventListener(addr, componentName string,
 ) *SKREventListener {
 	unbufferedEventsChan := make(chan types.GenericEvent)
 	return &SKREventListener{
 		Addr:          addr,
 		ComponentName: componentName,
-		VerifyFunc:    verify,
 		events:        unbufferedEventsChan,
 	}
 }
@@ -118,15 +110,6 @@ func (l *SKREventListener) HandleSKREvent() http.HandlerFunc {
 		if unmarshalErr != nil {
 			l.Logger.Error(nil, unmarshalErr.Message)
 			http.Error(writer, unmarshalErr.Message, unmarshalErr.HTTPErrorCode)
-			return
-		}
-
-		// verify request
-		err := l.VerifyFunc(req, watcherEvent)
-		if err != nil {
-			metrics.RecordHTTPFailedVerificationRequests(req.RequestURI)
-			l.Logger.Info("request could not be verified - Event will not be dispatched",
-				"error", err)
 			return
 		}
 

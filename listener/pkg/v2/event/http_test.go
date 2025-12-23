@@ -25,9 +25,8 @@ import (
 )
 
 func newTestListener(addr, component string, log logr.Logger,
-	verify listenerEvent.Verify,
 ) *listenerEvent.SKREventListener {
-	listener := listenerEvent.NewSKREventListener(addr, component, verify)
+	listener := listenerEvent.NewSKREventListener(addr, component)
 	listener.Logger = log
 	return listener
 }
@@ -72,17 +71,13 @@ func TestHandler(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	log := setupLogger()
-	skrEventsListener := newTestListener(":8082", "kyma", log,
-		func(_ *http.Request, _ *types.WatchEvent) error {
-			return nil
-		})
+	skrEventsListener := newTestListener(":8082", "kyma", log)
 
 	handlerUnderTest := skrEventsListener.HandleSKREvent()
 	responseRecorder := httptest.NewRecorder()
 
 	// GIVEN
 	testWatcherEvt := &types.WatchEvent{
-		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
 		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
@@ -120,10 +115,7 @@ func TestMiddleware(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	log := setupLogger()
-	skrEventsListener := newTestListener(":8082", "kyma", log,
-		func(_ *http.Request, _ *types.WatchEvent) error {
-			return nil
-		})
+	skrEventsListener := newTestListener(":8082", "kyma", log)
 
 	const successfulResponseString = "SUCCESS"
 	const requestSizeLimitInBytes = 16384 // 16KB

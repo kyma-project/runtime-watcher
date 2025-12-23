@@ -26,7 +26,6 @@ type unmarshalTestCase struct {
 func TestUnmarshalSKREvent(t *testing.T) {
 	t.Parallel()
 	testWatcherEvt := &types.WatchEvent{
-		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
 		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
@@ -78,7 +77,6 @@ func TestUnmarshalSKREvent_WhenNoCommonNameInClientCertificate_ReturnsError(t *t
 	t.Parallel()
 	// GIVEN
 	testWatcherEvt := &types.WatchEvent{
-		Owner:      types.ObjectKey{Name: "kyma", Namespace: v1.NamespaceDefault},
 		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
 		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
 		SkrMeta:    types.SkrMeta{RuntimeId: ""},
