@@ -30,8 +30,8 @@ func (m Metadata) NamespacedName() string {
 type WatchedObject struct {
 	Metadata `json:"metadata"`
 
-	Spec       map[string]interface{} `json:"spec"`
-	APIVersion string                 `json:"apiVersion"`
-	Kind       string                 `json:"kind"`
-	Status     map[string]interface{} `json:"status"`
+	Spec       map[string]any `json:"spec"`
+	APIVersion string         `json:"apiVersion"`
+	Kind       string         `json:"kind"`
+	Status     map[string]any `json:"status"`
 }

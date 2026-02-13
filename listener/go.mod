@@ -1,6 +1,6 @@
 module github.com/kyma-project/runtime-watcher/listener
 
-go 1.25.7
+go 1.26.0
 
 retract v1.1.18 // reason: not a valid release
 
