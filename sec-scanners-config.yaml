@@ -5,6 +5,7 @@ checkmarx-one:
   exclude:
     - "**/*_test.go"
 bdba:
+  - europe-docker.pkg.dev/kyma-project/prod/runtime-watcher:0.0.1
   - europe-docker.pkg.dev/kyma-project/prod/runtime-watcher:2.1.4
   - europe-docker.pkg.dev/kyma-project/prod/runtime-watcher:latest
 mend:
