@@ -110,6 +110,10 @@ jobs:
     name: Create draft release
     runs-on: ubuntu-latest
     needs: [validate-release, await-bump-images-pr-merge]
+    if: |
+      always() &&
+      needs.validate-release.result == 'success' &&
+      (needs.await-bump-images-pr-merge.result == 'success' || needs.await-bump-images-pr-merge.result == 'skipped')
     permissions:
       contents: write
     steps:
@@ -138,6 +142,8 @@ jobs:
       release_id: ${{ steps.draft-release.outputs.release_id }}
   builds:
     needs: draft-release
+    # the always() is needed so that the job is not skipped if previous jobs were skipped due to skip_sec_scanners_bump
+    if: always() && needs.draft-release.result == 'success'
     uses: ./.github/workflows/build-image.yml
     with:
       tag: "${{ github.event.inputs.name }}"
@@ -146,7 +152,10 @@ jobs:
       id-token: write
   publish_release:
     name: Publish release
-    needs: [validate-release, draft-release, builds]
+    needs: [draft-release, builds]
+    # the always() is needed so that the job is not skipped if previous jobs were skipped due to skip_sec_scanners_bump
+    # draft-release is needed as we use needs.draft-release.outputs.release_id below
+    if: always() && needs.builds.result == 'success' && needs.draft-release.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
