@@ -8,7 +8,7 @@ set -o pipefail
 
 CURRENT_RELEASE_TAG=$1
 DOCKER_IMAGE_URL=$2
-LAST_RELEASE_TAG=${2:-} # default to empty string if not provided so that "nounset" doesn't cause an error
+LAST_RELEASE_TAG=${3:-} # default to empty string if not provided so that "nounset" doesn't cause an error
 
 if [ "${LAST_RELEASE_TAG}"  == "" ]
 then
