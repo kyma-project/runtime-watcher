@@ -37,7 +37,7 @@ spec:
 
 ## Consuming Events
 
-The service receiving the events can be any arbitrary service that is listening on the specified port. Behind the service there needs to be consumer expecting POST requests on `/v2/<spec.manager>/event` with the following content:
+The service receiving the events can be any arbitrary service that is listening on the specified port. Behind the service, there must be a consumer expecting POST requests on `/v2/<spec.manager>/event` with the following content:
 
 ```json
 {
@@ -46,7 +46,7 @@ The service receiving the events can be any arbitrary service that is listening 
 }
 ```
 
-To determine what Kyma Runtime the received event is from, the Runtime Id can be extracted from the Common Name of the certificate attached to the request. The certificate attached to the request is available as HTTP header and the `listener` package provides the [`GetCertificateFromHeader()`](https://github.com/kyma-project/runtime-watcher/blob/de2f534ce7c0c73da817505c9aad0db12f966b27/listener/pkg/v2/certificate/parse_certificate.go#L26-L65) helper function to extract it. It can be used as follows:
+To identify the Kyma runtime from which the received event originates, the Runtime Id can be extracted from the Common Name of the certificate attached to the request. The certificate attached to the request is available as an HTTP header, and the `listener` package provides the [`GetCertificateFromHeader()`](https://github.com/kyma-project/runtime-watcher/blob/de2f534ce7c0c73da817505c9aad0db12f966b27/listener/pkg/v2/certificate/parse_certificate.go#L26-L65) helper function to extract it. It can be used as follows:
 
 ```Go
 func getRuntimeIdFromRequest(req *http.Request) (string, *UnmarshalError) {
@@ -69,7 +69,7 @@ func getRuntimeIdFromRequest(req *http.Request) (string, *UnmarshalError) {
 }
 ```
 
-For further convenience, the `listener` package also provides a [`SKREventListener`](../listener/pkg/v2/event/skr_events_listener.go#L32-L43) that handles the requests and exposes a channel via [`ReceivedEvents()`](../listener/pkg/v2/event/skr_events_listener.go#L46-L54) providing an unstructured object for every received event. For a usage example, refer to Lifecycle Manager:
+For further convenience, the `listener` package also provides a [`SKREventListener`](../listener/pkg/v2/event/skr_events_listener.go#L32-L43) that handles the requests and exposes a channel via [`ReceivedEvents()`](../listener/pkg/v2/event/skr_events_listener.go#L46-L54) providing an unstructured object for every received event. For an example in Lifecycle Manager, see:
 
 - https://github.com/kyma-project/lifecycle-manager/blob/d76d77a2c636b26084a0233b876c41189c556d77/internal/controller/kyma/setup.go#L30-L37
 - https://github.com/kyma-project/lifecycle-manager/blob/d76d77a2c636b26084a0233b876c41189c556d77/internal/controller/kyma/setup.go#L50-L51

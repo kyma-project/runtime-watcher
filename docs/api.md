@@ -1,6 +1,6 @@
 # Watcher CR
 
-The [Watcher CR](https://github.com/kyma-project/lifecycle-manager/blob/main/api/v1beta2/watcher_types.go) configures the Kyma Control Plane (KCP) setup and Runtime Watcher on Kyma runtimes. Read the following document to see the the parameters the CR consists of.
+The [Watcher CR](https://github.com/kyma-project/lifecycle-manager/blob/main/api/v1beta2/watcher_types.go) configures the Kyma Control Plane (KCP) setup and Runtime Watcher on Kyma runtimes. Read the following document to see the parameters that the CR consists of.
 
 ```yaml
 apiVersion: operator.kyma-project.io/v1beta2
@@ -42,16 +42,16 @@ Optionally, the **spec.labelsToWatch** field allows to filter the resources by a
 
 The **spec.field** field specifies what parts of the watched object trigger events. Allowed values are `spec` and `status`.
 
-If `status` is specified, watch events are only emitted if the `.status` subresource of the watched object changes. The ValidatingWebhookConfiguration is configured to only watch the status subresource accordingly. For example, "pods/status" instead of "pods".
+If `status` is specified, watch events are only emitted if the `.status` subresource of the watched object changes. The ValidatingWebhookConfiguration is configured to watch only the status subresource. For example, "pods/status" instead of "pods".
 
 If `spec` is specified, watch events are only emitted if the `.spec` field of the watched object changes. If the object doesn't contain a `.spec` field, it falls back to emit a watch event on **any** change to the object, including changes to metadata or status.
 
 ### Manager
 
-The **spec.manager** field defines the URL path the Runtime Watcher sends the events to. The entire path follows `/v2/<spec.manager>/event`. Accordingly, a VirtualService is created matching the prefix `/v2/<spec.manager>/event` and routing received requests to the Service defined in **spec.serviceInfo**.
+The **spec.manager** field defines the URL path to which the Runtime Watcher sends events. The entire path follows the format `/v2/<spec.manager>/event`. Accordingly, a VirtualService is created that matches the prefix `/v2/<spec.manager>/event` and routes received requests to the Service defined in **spec.serviceInfo**.
 
 > [!NOTE]
-> In the Kyma Runtime, this setting configures the ValidatingWebhookConfiguration to call `/validate/<spec.manager>` of the Runtime Watcher deployment.
+> In Kyma runtime, this setting configures the ValidatingWebhookConfiguration to call `/validate/<spec.manager>` of the Runtime Watcher deployment.
 
 ### Service Info
 
