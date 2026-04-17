@@ -8,7 +8,7 @@ The Watcher mechanism is deployed to the SKR as `ValidatingWebhookConfiguration`
 
 To set up a watch on a resource, you must define and apply a Watcher CR for it. The Watcher CR defines which resources Runtime Watcher notifies changes for and where to forward the events in KCP.
 
-Here is the definition of the Watcher CR. The detailed filed descriptions are provided below in the [Resources to Watch](#resources-to-watch) and [Events to Consume](#events-to-consume) sections.
+Here is the definition of the Watcher CR. The detailed field descriptions are provided below in the [Resources to Watch](#resources-to-watch) and [Events to Consume](#events-to-consume) sections.
 
 ```yaml
 apiVersion: operator.kyma-project.io/v1beta2
@@ -16,188 +16,93 @@ kind: Watcher
 metadata:
   name: <name>
   namespace: kcp-system
-  labels:
-    "operator.kyma-project.io/managed-by": "<operator-name>"
 spec:
   resourceToWatch:
     group: <api-group>
-    version: <version> # wildcard "*" is allowed
+    version: <version>
     resource: <kind>
   labelsToWatch:
-    "operator.kyma-project.io/watched-by": "<label>" # needs to be on the resource to watch
-  field: "" # possible values: "spec", "status"
+    "<some>": "<label>"
+  field: <"spec" or "status">
+  manager: <manager-name>
   serviceInfo:
     name: <service-name>
     port: <port>
     namespace: <namespace>
-  gateway:
+  gateway: # don't change
     selector:
       matchLabels:
-        "operator.kyma-project.io/watcher-gateway": "default" # don't change
+        "operator.kyma-project.io/watcher-gateway": "default"
 ```
 
 For more information, see the [Watcher API definition](./api.md).
 
 ### Resources to Watch
 
-The **spec.resourceToWatch** field specifies the GVK of the resources Runtime Watcher watches.
+The **spec.resourceToWatch** field specifies the GVK of the resources Runtime Watcher watches. Note that **spec.resourceToWatch.resource** must be the API resource name, not the kind of the resource. For example, it must be "configmaps" instead of "ConfigMap". It is possible to specify the wildcard `*` for **spec.resourceToWatch.version**.
 
-These resources must have the `operator.kyma-project.io/watched-by` label. The **spec.labelsToWatch** field allows you to filter the resources by a specific label value.
+### Labels to Watch
+
+Optionally, the **spec.labelsToWatch** field allows you to filter the resources by a specific label value.
 
 > [!NOTE]
 > Runtime Watcher does not provide a mechanism to add this label to the resources. You must ensure that the resources you want to watch have this label.
 
-Using the **spec.field** field, you can choose between values `spec` or `status`, to set either the `status` subresource as a notification trigger or the `spec` field.
+### Field
 
-See an example of a Watcher CR that watches changes on Secrets' spec:
+The **spec.field** field specifies what parts of the watched object trigger events. Allowed values are `spec` and `status`.
 
-```yaml
-spec:
-  resourceToWatch:
-    group: ""
-    version: v1
-    resource: secrets
-  labelsToWatch:
-    "operator.kyma-project.io/watched-by": "my-operator"
-  field: "spec"
-```
+If `status` is specified, watch events are only emitted if the `.status` subresource of the watched object changes.
 
-### Events to Consume
+If `spec` is specified, watch events are only emitted if the `.spec` field of the watched object changes. If the object doesn't contain a `.spec` field, it falls back to emit a watch event on **any** change to the object, including changes to metadata or status.
 
-The **spec.serviceInfo** field specifies the name, namespace, and port to which the events are routed.
+### Manager
+
+The **spec.manager** field defines the URL path the Runtime Watcher sends the events to. The entire path follows `/v2/<spec.manager>/event`. Accordingly, a VirtualService is created matching the prefix `/v2/<spec.manager>/event` and routing received requests to the Service defined in **spec.serviceInfo**.
+
+### Service Info
+
+The **spec.serviceInfo** specifies the name, namespace, and port to which events received from the Runtime Watcher are routed.
+
+### Gateway
 
 The **spec.gateway** field defines the label selector of the Istio Gateway in KCP. Don't change the default value.
 
-See an example of a Watcher CR that forwards events to the `my-operator-service` service in the `my-system` namespace on port `8080`:
+## Consuming Events
 
-```yaml
-spec:
-  serviceInfo:
-    name: my-operator-service
-    namespace: my-system
-    port: 8080
-```
-
-The service receiving the events can be any arbitrary service that is listening on the specified port, or it can be a k8s controller using the [Listener package](./listener.md).
-
-This is the request body of the event that is sent to the service:
+The service receiving the events can be any arbitrary service that is listening on the specified port. Behind the service there needs to be consumer expecting POST requests on `/v2/<spec.manager>/event` with the following content:
 
 ```json
 {
-  "owner": {
-    "name": "my-kyma",
-    "namespace": "kcp-system"
-  },
-  "watched": {
-    "name": "my-secret",
-    "namespace": "kyma-system"
-  },
-  "watchedGvk": {
-    "group": "",
-    "version": "v1",
-    "kind": "secrets"
-  }
+  "watched": { "Namespace": "<watched object's namespace>", "Name": "<watched object's name>" },
+  "watchedGvk": { "group": "<watched object's group>", "version": "<watched object's version>", "kind": "<watched object's kind>" }
 }
 ```
 
-The **owner** field contains the namespaced name of the resource that owns the watched resource. It is the reference to the resource in KCP that should be reconciled when the event is received. It is parsed from the `operator.kyma-project.io/owned-by` label on the watched resource in the `<namespace>/<name>` format.
+To determine what Kyma Runtime the received event is from, the Runtime Id can be extracted from the Common Name of the certificate attached to the request. The certificate attached to the request is available as HTTP header and the `listener` package provides the [`GetCertificateFromHeader()`](https://github.com/kyma-project/runtime-watcher/blob/de2f534ce7c0c73da817505c9aad0db12f966b27/listener/pkg/v2/certificate/parse_certificate.go#L26-L65) helper function to extract it. It can be used as follows:
 
-## Examples
+```Go
+func getRuntimeIdFromRequest(req *http.Request) (string, *UnmarshalError) {
+	clientCertificate, err := certificate.GetCertificateFromHeader(req)
+	if err != nil {
+		return "", &UnmarshalError{
+			fmt.Sprintf("could not get client certificate from request: %v", err),
+			http.StatusUnauthorized,
+		}
+	}
 
-### Arbitrary Service
+	if clientCertificate.Subject.CommonName == "" {
+		return "", &UnmarshalError{
+			"client certificate common name is empty",
+			http.StatusBadRequest,
+		}
+	}
 
-It is possible to consume events in any arbitrary service that listens on the specified port. It receives the Events as POST requests on the route `/v1/<operator-name>/event`. This <operator-name> is the value of the `operator.kyma-project.io/managed-by` label in the Watcher CR.
-
-See a Golang example of a server that listens on port `8080` and prints the received events:
-
-```go
-package main
-import (
-    "fmt"
-    "io"
-    "log"
-    "net/http"
-)
-func main() {
-    http.HandleFunc("/v1/my-operator/event", func(w http.ResponseWriter, r *http.Request) {
-        body, err := io.ReadAll(r.Body)
-        if err != nil {
-            http.Error(w, "can't read body", http.StatusBadRequest)
-            return
-        }
-        fmt.Println(string(body))
-    })
-    log.Fatal(http.ListenAndServe(":8080", nil))
+	return clientCertificate.Subject.CommonName, nil
 }
 ```
 
-### Listener Package
+For further convenience, the `listener` package also provides a [`SKREventListener`](../listener/pkg/v2/event/skr_events_listener.go#L32-L43) that handles the requests and exposes a channel via [`ReceivedEvents()`](../listener/pkg/v2/event/skr_events_listener.go#L46-L54) providing an unstructured object for every received event. For a usage example, refer to Lifecycle Manager:
 
-The listener package simplifies setting up an endpoint for an operator residing in KCP, which receives events sent by the Watcher to KCP. It provides a simple API to register a handler for the event type and start the server in a controller.
-
-See an example of setting up a listener in a controller and reconciling the owner resource:
-
-```go
-import (
-    "context"
-    "net/http"
-    ctrl "sigs.k8s.io/controller-runtime"
-    "sigs.k8s.io/controller-runtime/pkg/client"
-    "sigs.k8s.io/controller-runtime/pkg/source"
-    "sigs.k8s.io/controller-runtime/pkg/event"
-    "sigs.k8s.io/controller-runtime/pkg/handler"
-    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-    "k8s.io/client-go/util/workqueue"
-    watcherevent "github.com/kyma-project/runtime-watcher/listener/pkg/event"
-    "github.com/kyma-project/runtime-watcher/listener/pkg/types"
-)
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, ...) error {
-    verifyFunc = func(r *http.Request, watcherEvtObject *types.WatchEvent) error {
-        return nil // If needed, implement your verification logic here
-    }
-    runnableListener := watcherevent.NewSKREventListener(
-        ":8080", // The port on which the listener listens
-        "operator-name", // The value of the `operator.kyma-project.io/managed-by` label in the Watcher CR
-        verifyFunc,
-    )
-    if err := mgr.Add(runnableListener); err != nil {
-        // Handle error
-    }
-    ...
-    if err := ctrl.NewControllerManagedBy(mgr).For(...).
-        ... // Add your controller setup here
-        WatchesRawSource(source.Channel(runnableListener.ReceivedEvents, r.skrEventHandler())).
-        Complete(r); err != nil {
-            // Handle error
-        }
-}
-
-func (r *Reconciler) skrEventHandler() *handler.Funcs {
-    return &handler.Funcs{
-        GenericFunc: func(ctx context.Context, evnt event.GenericEvent,
-            queue workqueue.TypedRateLimitingInterface[ctrl.Request],
-        ) {
-            unstructWatcherEvt, conversionOk := evnt.Object.(*unstructured.Unstructured)
-            if !conversionOk {
-                // Handle error
-            }
-
-            unstructuredOwner, ok := unstructWatcherEvt.Object["owner"]
-            if !ok {
-                // Handle error
-            }
-
-            ownerObjectKey, conversionOk := unstructuredOwner.(client.ObjectKey)
-            if !conversionOk {
-                // Handle error
-            }
-
-            queue.Add(ctrl.Request{
-                NamespacedName: ownerObjectKey,
-            })
-        },
-    }
-}
-```
-
-The package provides a `SKREventListener` struct that implements the `Runnable` interface. The `SKREventListener` struct listens on the specified port and verifies the incoming events. The `ReceivedEvents` channel is used to receive the events. The `SKREventListener` struct is added to the manager, and the controller watches the `ReceivedEvents` channel to reconcile the owner resource through WatcherRawSource.
+- https://github.com/kyma-project/lifecycle-manager/blob/d76d77a2c636b26084a0233b876c41189c556d77/internal/controller/kyma/setup.go#L30-L37
+- https://github.com/kyma-project/lifecycle-manager/blob/d76d77a2c636b26084a0233b876c41189c556d77/internal/controller/kyma/setup.go#L50-L51

@@ -29,6 +29,10 @@ type SKREventListener struct {
 	events chan types.GenericEvent
 }
 
+// NewSKREventListener creates a new instance of SKREventListener.
+// addr specifies the TCP address for the server to listen on in the form "host:port".
+// componentName is used to construct the API path for receiving events.
+// The API path will be in the format "/v2/{componentName}/event".
 func NewSKREventListener(addr, componentName string,
 ) *SKREventListener {
 	unbufferedEventsChan := make(chan types.GenericEvent)
@@ -39,6 +43,12 @@ func NewSKREventListener(addr, componentName string,
 	}
 }
 
+// ReceivedEvents returns a read-only channel that emits GenericEvent objects received by the listener.
+// GenericEvent is a wrapper around a Object of type *unstructured.Unstructured.
+// The data contains:
+//   - watched: NamespacedName
+//   - watched-gvk: GroupVersionKind
+//   - runtime-id: string
 func (l *SKREventListener) ReceivedEvents() <-chan types.GenericEvent {
 	return l.events
 }

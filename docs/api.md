@@ -38,6 +38,10 @@ spec:
 
 It uses either the `spec` or `status` value to define if Runtime Watcher sends an event to KCP if the spec of the specified GVK or the status changes.
 
+If `status` is specified, watch events are only emitted if the `.status` subresource of the watched object changes.
+
+If `spec` is specified, watch events are only emitted if the `.spec` field of the watched object changes. If the object doesn't contain a `.spec` field, it falls back to emit a watch event on **any** change to the object, including changes to metadata or status.
+
 ### **spec.manager**
 
 Specifies the component responsible for handling webhook requests from Runtime Watcher. This field determines the routing path for webhook validation requests to KCP (`/validate/<manager-value>`).
