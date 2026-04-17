@@ -8,7 +8,7 @@ The Watcher mechanism is deployed to the SKR as `ValidatingWebhookConfiguration`
 
 To set up a watch on a resource, you must define and apply a Watcher CR for it. The Watcher CR defines which resources Runtime Watcher notifies changes for and where to forward the events in KCP.
 
-Here is the definition of the Watcher CR. The detailed field descriptions are provided below in the [Resources to Watch](#resources-to-watch) and [Events to Consume](#events-to-consume) sections.
+Here is an example of the Watcher CR. The detailed field descriptions are provided in the [Watcher API definition](./api.md).
 
 ```yaml
 apiVersion: operator.kyma-project.io/v1beta2
@@ -34,39 +34,6 @@ spec:
       matchLabels:
         "operator.kyma-project.io/watcher-gateway": "default"
 ```
-
-For more information, see the [Watcher API definition](./api.md).
-
-### Resources to Watch
-
-The **spec.resourceToWatch** field specifies the GVK of the resources Runtime Watcher watches. Note that **spec.resourceToWatch.resource** must be the API resource name, not the kind of the resource. For example, it must be "configmaps" instead of "ConfigMap". It is possible to specify the wildcard `*` for **spec.resourceToWatch.version**.
-
-### Labels to Watch
-
-Optionally, the **spec.labelsToWatch** field allows you to filter the resources by a specific label value.
-
-> [!NOTE]
-> Runtime Watcher does not provide a mechanism to add this label to the resources. You must ensure that the resources you want to watch have this label.
-
-### Field
-
-The **spec.field** field specifies what parts of the watched object trigger events. Allowed values are `spec` and `status`.
-
-If `status` is specified, watch events are only emitted if the `.status` subresource of the watched object changes.
-
-If `spec` is specified, watch events are only emitted if the `.spec` field of the watched object changes. If the object doesn't contain a `.spec` field, it falls back to emit a watch event on **any** change to the object, including changes to metadata or status.
-
-### Manager
-
-The **spec.manager** field defines the URL path the Runtime Watcher sends the events to. The entire path follows `/v2/<spec.manager>/event`. Accordingly, a VirtualService is created matching the prefix `/v2/<spec.manager>/event` and routing received requests to the Service defined in **spec.serviceInfo**.
-
-### Service Info
-
-The **spec.serviceInfo** specifies the name, namespace, and port to which events received from the Runtime Watcher are routed.
-
-### Gateway
-
-The **spec.gateway** field defines the label selector of the Istio Gateway in KCP. Don't change the default value.
 
 ## Consuming Events
 
