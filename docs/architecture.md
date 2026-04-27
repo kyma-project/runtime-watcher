@@ -14,31 +14,48 @@ The Watcher CR's main purposes:
 - configure the KCP landscape
 - configure Runtime Watcher in Kyma clusters
 
-To configure Virtual Services in KCP, Lifecycle Manager uses the `spec.gateway` and `spec.serviceinfo` fields, and the `operator.kyma-project.io/managed-by` label from each Watcher CR. Each Watcher CR owns one Virtual Service. If Runtime Watcher's configuration changes or the Watcher CR is deleted, Lifecycle Manager reconfigures the corresponding Virtual Service or deletes it as well. This mechanism is implemented in its own [reconcile loop](https://github.com/kyma-project/lifecycle-manager/blob/4cb423780633afe7805d26d624c22a6f51943492/controllers/watcher_controller.go#L74).
+To configure Virtual Services in KCP, Lifecycle Manager uses the `spec.gateway` and `spec.serviceinfo` fields, and the `operator.kyma-project.io/managed-by` label from each Watcher CR. Each Watcher CR owns one Virtual Service. If Runtime Watcher's configuration changes or the Watcher CR is deleted, Lifecycle Manager reconfigures the corresponding Virtual Service or deletes it as well. This mechanism is implemented in its own [reconcile loop](https://github.com/kyma-project/lifecycle-manager/blob/main/internal/controller/watcher/controller.go).
 
 Runtime Watcher is configured during the reconciliation of a Kyma CR. This means, during each reconciliation of a Kyma CR, all Watcher CRs are fetched, and one `ValidationWebhookConfiguration` using the `spec.LabelsToWatch`, `spec.ResourceToWatch`, and `spec.Field` from all Watcher CRs is created. The configuration includes one webhook per Watcher CR. The validation webhook configuration is applied to the Kyma cluster as a part of Runtime Watcher.
 
 ### Runtime Watcher
 
-Runtime Watcher consists of `ValidationWebhookConfiguration` configured by Watcher CRs, an attached deployment, and a Secret holding a TLS certificate. The ValidationWebhookConfiguration is a resource that watches configured resources and sends validation requests to the attached deployment. Instead of validating the received requests, the deployment converts the validation requests into [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/de040bddeba1a7875e3a0e626db4634134971022/listener/pkg/types/event.go#L8), which are sent to KCP using a secured mTLS connection. To establish a secure mTLS connection from a Kyma cluster to KCP, it uses the TLS certificate stored inside a Secret. For more information on how this Secret is created, see [certificates](#certificates).
+Runtime Watcher consists of `ValidationWebhookConfiguration` configured by Watcher CRs, an attached deployment, and a Secret holding TLS certificates. The `ValidationWebhookConfiguration` watches configured resources and forwards admission review requests to the attached deployment. Instead of validating the received requests, the deployment converts them into [WatchEvents](https://github.com/kyma-project/runtime-watcher/blob/main/listener/pkg/v2/types/event.go), which carry the name and namespace of the changed resource along with its GVK, and sends them to KCP using a secured mTLS connection. To establish the mTLS connection from a Kyma cluster to KCP, the deployment uses the TLS certificate stored inside a Secret. For more information on how this Secret is created, see [certificates](#certificates).
 
 Runtime Watcher is configured and deployed in a Kyma cluster in the Kyma reconciliation loop.
 
 ### Listener package
 
-The Listener package is designed to streamline the process of establishing an endpoint for an operator located in KCP. This operator intends to receive Watcher Events that are transmitted from Runtime Watcher to KCP. When calling the `RegisterListenerComponent` function, it returns you a runnable listener, which is added to your reconcile-manager, and a channel. See this [example of how the listener package is used in Lifecycle Manager](https://github.com/kyma-project/lifecycle-manager/blob/24d21bb642ceaf9dadffe7732bf7c3f70c085ffb/controllers/manifest_controller.go#L43-L50). The channel becomes the source for the operator. For example, the operator can fetch the incoming WatchEvents from the channel and requeue the corresponding resource in the reconcile loop. Furthermore, it is possible to provide a validation function to the `RegisterListenerComponent`, which can be used to filter out unnecessary requests before processing them further. An example of the validation function is SAN pinning.
+The Listener package is designed to streamline the process of establishing an endpoint for an operator located in KCP. This operator intends to receive WatchEvents transmitted from Runtime Watcher to KCP. Call `NewSKREventListener(addr, componentName string)` to get an `SKREventListener`, which implements the `Runnable` interface and can be added directly to a controller-runtime Manager. Incoming events are then read from the channel returned by `runnableListener.ReceivedEvents()` and adapted into controller-runtime generic events to requeue the corresponding resource. See this [example of how the listener package is used in Lifecycle Manager](https://github.com/kyma-project/lifecycle-manager/blob/main/internal/controller/kyma/setup.go).
+
+The listener authenticates each incoming request by extracting the client certificate from the `X-Forwarded-Client-Cert` (XFCC) header that the Istio gateway injects. The Common Name of that certificate is the runtime ID of the originating SKR, which the listener uses to identify and route the event.
 
 For more information on how to set up a listener, see [Kyma Listener Package](https://github.com/kyma-project/runtime-watcher/blob/main/docs/listener.md).
 
-#### Subject Alternative Name (SAN) Pinning
-
-[SAN pinning](https://github.com/kyma-project/lifecycle-manager/blob/c1e06b7b973aca17cc715b6a4660b76f4e7b9e29/pkg/security/san_pinning.go#L55) is an example implementation of a validation function given to the listener package. SAN pinning is used in Lifecycle Manager. The validation function checks if the certificate of the incoming WatchEvent request has at least one matching SAN with the domain of the corresponding Kyma CR. The domain of a Kyma CR is saved in an annotation called `skr-domain`.
-
 ### Certificates
 
-Because you must have an mTLS connection from the Kyma cluster to the KCP Gateway,  you need signed TLS certificates for both the KCP Gateway and each Kyma cluster. To be independent from third parties in the infrastructure, Kyma built the `Public Key Infrastructure`(PKI) by [bootstrapping a self-signed CA issuer](https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers). The PKI uses the function of the [Cert-Manager](https://cert-manager.io/).
+Because you must have an mTLS connection from the Kyma cluster to the KCP Gateway, you need signed TLS certificates for both the KCP Gateway and each Kyma cluster. To be independent from third parties in the infrastructure, Kyma built the `Public Key Infrastructure` (PKI) by [bootstrapping a self-signed CA issuer](https://cert-manager.io/docs/configuration/selfsigned/#bootstrapping-ca-issuers). The PKI uses [Cert-Manager](https://cert-manager.io/) in standard landscapes or [Gardener Certificate Management](https://github.com/gardener/cert-management) in restricted markets.
 
-In each Kyma reconciliation loop, Lifecycle Manager creates or updates a [Certificate CR](https://cert-manager.io/docs/concepts/certificate/) for the Kyma CR. The Certificate CR is signed by a deployed [Issuer](https://cert-manager.io/docs/concepts/issuer/#supported-issuers), which requests the Cert-Manager to create a signed certificate. This certificate is stored in a Secret in KCP and copied over to the corresponding Kyma cluster when Runtime Watcher is deployed. The Secret includes the CA certificate, a TLS certificate, and a TLS key.
+The PKI uses only two certificate levels: a self-signed CA certificate and client certificates signed by that CA. The CA certificate also acts as the server certificate for the KCP Istio Gateway.
+
+Two secrets on KCP hold the gateway certificates:
+- `klm-watcher` (in `istio-system`): stores the current CA certificate, managed automatically by Cert-Manager.
+- `klm-istio-gateway` (in `istio-system`): stores the server certificate in use by the Istio Gateway, together with a CA bundle of all currently unexpired CA certificates. Lifecycle Manager maintains this secret through its dedicated [Istio Gateway Secret controller](https://github.com/kyma-project/lifecycle-manager/blob/main/internal/controller/istiogatewaysecret/controller.go).
+
+In each Kyma reconciliation loop, Lifecycle Manager creates or updates a [Certificate CR](https://cert-manager.io/docs/concepts/certificate/) for the Kyma CR. The Certificate CR is signed by a deployed [Issuer](https://cert-manager.io/docs/concepts/issuer/#supported-issuers), which requests Cert-Manager to create a signed client certificate. This certificate, together with the CA bundle from `klm-istio-gateway`, is stored in a Secret in KCP and synced to the corresponding Kyma cluster when Runtime Watcher is deployed. The Secret includes the CA bundle, a TLS certificate, and a TLS key.
+
+#### Zero-Downtime CA Certificate Rotation
+
+When the CA certificate is rotated, Lifecycle Manager follows a six-step process to maintain uninterrupted mTLS connectivity:
+
+1. Cert-Manager automatically issues a new CA certificate into the `klm-watcher` secret.
+2. Lifecycle Manager detects the change and adds the new CA certificate to the CA bundle in `klm-istio-gateway`, recording the timestamp in the `caAddedToBundleAt` annotation. Expired CA certificates are removed from the bundle.
+3. During Kyma CR reconciliation, Lifecycle Manager compares the `caAddedToBundleAt` timestamp against the `NotBefore` date of the SKR's client certificate. If the client certificate pre-dates the new CA, Lifecycle Manager triggers re-issuance by setting the `Issuing` condition on the Certificate CR (Cert-Manager) or `renew: true` on the spec (Gardener cert-management).
+4. Cert-Manager re-issues the client certificate, now signed by the new CA.
+5. On the next reconciliation, Lifecycle Manager syncs the renewed client certificate and the updated CA bundle to the SKR.
+6. After a configurable grace period following CA rotation, Lifecycle Manager switches the server certificate in `klm-istio-gateway` to the latest CA certificate from `klm-watcher`.
+
+This ordering guarantees that the gateway always trusts all in-flight client certificates, and SKR deployments always trust the current server certificate, with no connection downtime. For the full design rationale see [ADR 007 - PKI Certificates and Zero-Downtime Rotation](https://github.com/kyma-project/lifecycle-manager/blob/main/docs/contributor/adr/007-pki-certs-and-rotation.md).
 
 > ### Note:
 > Lifecycle Manager updates the `operator.kyma-project.io/pod-restart-trigger` label with the value of the current resource version of the Certificate Secret CR in the Runtime Watcher deployment. This label triggers a rolling update of the Runtime Watcher deployment when the Certificate Secret is updated.
