@@ -61,7 +61,7 @@ jobs:
       #   manual        → <input-tag>  and  sha-<short>   (sha only if no input)
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: ghcr.io/kyma-project/runtime-watcher
           tags: |
