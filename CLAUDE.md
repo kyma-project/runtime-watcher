@@ -114,3 +114,12 @@ Detailed docs in `docs/`:
 - `listener.md` — how to integrate the listener package in a KCP operator
 - `watcher-setup-guide.md` — configuration and deployment guide
 - `api.md` — Watcher CR API reference
+
+## Model usage
+
+Follow the Kyma team's Claude Code workflow:
+
+- **Planning complex tasks** — switch to Opus: `/model claude-opus-4-7`
+- **Implementation** — use the default Sonnet: `/model claude-sonnet-4-6`
+
+Use Opus when you need to understand an unfamiliar subsystem, design a non-trivial change, or reason about cross-cutting impacts. Switch back to Sonnet once the approach is clear and you are writing code.
