@@ -125,6 +125,9 @@ Detailed docs in `docs/`:
 - `watcher-setup-guide.md` — configuration and deployment guide
 - `api.md` — Watcher CR API reference
 
+### CVE triage
+Three scanners run against this repo (`sec-scanners-config.yaml`): **Checkmarx One** (SAST), **BDBA** (container CVE scan), **Mend** (Go module SCA across all three modules). When triaging a CVE finding, see [`.claude/cve-triage/context.md`](.claude/cve-triage/context.md).
+
 ## Model usage
 
 Follow the Kyma team's Claude Code workflow:
