@@ -102,10 +102,7 @@ The listener serves HTTP on `/v2/{componentName}/event`. Certificate validation 
 
 ## Code conventions
 
-- `GOFIPS140=v1.0.0` is used in all build commands
-- **TLS 1.3 is the minimum** — the `NextProtos: []string{"http/1.1"}` configuration in the TLS setup is a CVE-2023-44487 mitigation and must not be removed
-- Metrics are Prometheus-based, registered in `watchermetrics/` and `listener/pkg/metrics/`
-- All HTTP retry logic uses `github.com/sethgrid/pester` (exponential backoff) — do not replace with a manual retry loop
+Go nolint policy, FIPS, and TLS constraint rules load automatically when editing `.go` files — see [`.claude/rules/go-conventions.md`](.claude/rules/go-conventions.md).
 
 ## Security guardrails
 
