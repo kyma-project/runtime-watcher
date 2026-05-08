@@ -2,7 +2,7 @@
 
 ## Overview
 
-The workflow of Runtime Watcher uses the Watcher CR, Runtime Watcher, and listener package.
+The workflow of Runtime Watcher uses the Watcher CR, Runtime Watcher, and the listener module.
 The following diagram presents Runtime Watcher's workflow:
 
 ![Runtime Watcher architecture](./assets/runtime_watcher_architecture_simplified.svg)
@@ -24,13 +24,13 @@ Runtime Watcher consists of `ValidationWebhookConfiguration` configured by Watch
 
 Runtime Watcher is configured and deployed in a Kyma cluster in the Kyma reconciliation loop.
 
-### Listener package
+### Listener module
 
-The Listener package is designed to streamline the process of establishing an endpoint for an operator located in KCP. This operator intends to receive WatchEvents transmitted from Runtime Watcher to KCP. Call `NewSKREventListener(addr, componentName string)` to get an `SKREventListener`, which implements the `Runnable` interface and can be added directly to a controller-runtime Manager. Incoming events are then read from the channel returned by `runnableListener.ReceivedEvents()` and adapted into controller-runtime generic events to requeue the corresponding resource. See this [example of how the listener package is used in Lifecycle Manager](https://github.com/kyma-project/lifecycle-manager/blob/main/internal/controller/kyma/setup.go).
+The Listener module (`runtime-watcher/listener`) defines the HTTP endpoint in KCP that receives WatchEvents transmitted from Runtime Watcher. Call `NewSKREventListener(addr, componentName string)` to get an `SKREventListener`, which implements the `Runnable` interface and can be added directly to a controller-runtime Manager. Incoming events are then read from the channel returned by `runnableListener.ReceivedEvents()` and adapted into controller-runtime generic events to requeue the corresponding resource. See this [example of how the listener module is used in Lifecycle Manager](https://github.com/kyma-project/lifecycle-manager/blob/main/internal/controller/kyma/setup.go).
 
 The listener authenticates each incoming request by extracting the client certificate from the `X-Forwarded-Client-Cert` (XFCC) header that the Istio gateway injects. The Common Name of that certificate is the runtime ID of the originating SKR, which the listener uses to identify and route the event.
 
-For more information on how to set up a listener, see [Kyma Listener Package](https://github.com/kyma-project/runtime-watcher/blob/main/docs/listener.md).
+For more information on how to set up a listener, see [Kyma Listener Module](https://github.com/kyma-project/runtime-watcher/blob/main/docs/listener.md).
 
 ### Certificates
 
