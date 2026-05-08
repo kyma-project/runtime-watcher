@@ -107,6 +107,16 @@ The listener serves HTTP on `/v2/{componentName}/event`. Certificate validation 
 - Metrics are Prometheus-based, registered in `watchermetrics/` and `listener/pkg/metrics/`
 - All HTTP retry logic uses `github.com/sethgrid/pester` (exponential backoff) — do not replace with a manual retry loop
 
+## Security guardrails
+
+These constraints are CVE mitigations or compliance requirements — do not remove or weaken them.
+
+- **CVE-2023-44487 (HTTP/2 Rapid Reset)**: `NextProtos: []string{"http/1.1"}` in the TLS config disables HTTP/2 on the webhook server. This is intentional. Do not add `"h2"` to this list.
+- **TLS 1.3 minimum**: The mTLS connection from SKR to KCP uses TLS 1.3. Do not add a `MinVersion` below `tls.VersionTLS13`.
+- **`GOFIPS140=v1.0.0`**: All builds use the FIPS Go module. Never remove this from the Makefile or Dockerfile.
+- **mTLS**: The SKR webhook always authenticates to KCP via mutual TLS. Do not bypass certificate validation in non-test code.
+- **Retry loop**: `github.com/sethgrid/pester` provides exponential backoff. Replacing it with a `for` loop risks thundering-herd amplification under KCP load.
+
 ## Documentation
 
 Detailed docs in `docs/`:
