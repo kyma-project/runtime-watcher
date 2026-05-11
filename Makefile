@@ -12,4 +12,4 @@ lint-listener: ## Run golangci-lint against listener code.
 
 .PHONY: bump-go-version
 bump-go-version: ## Bump Go version. Usage: make bump-go-version GO_VERSION=1.26.3
-	./scripts/bump-go-version.sh $(GO_VERSION)
+	curl -fsSL https://raw.githubusercontent.com/kyma-project/lifecycle-manager/refs/heads/main/scripts/bump-go-version.sh | bash -s $(GO_VERSION)
