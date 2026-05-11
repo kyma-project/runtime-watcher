@@ -1,83 +1,62 @@
 # Watcher CR
 
-The [Watcher CR](https://github.com/kyma-project/lifecycle-manager/blob/main/api/v1beta2/watcher_types.go#L121) configures the Kyma Control Plane (KCP) setup and Runtime Watcher on Kyma runtimes. Read the following document to see the the parameters the CR consists of.
-
-## Runtime-Watcher configuration
-
-### **spec.resourceToWatch**
-
-Defines which resources the Runtime Watcher watches. By default, the **version** value is a wildcard (`*`), so an update is not required after the API version changes.
+The [Watcher CR](https://github.com/kyma-project/lifecycle-manager/blob/main/api/v1beta2/watcher_types.go) configures the Kyma Control Plane (KCP) setup and Runtime Watcher on Kyma runtimes. Read the following document to see the parameters that the CR consists of.
 
 ```yaml
+apiVersion: operator.kyma-project.io/v1beta2
+kind: Watcher
+metadata:
+  name: <name>
+  namespace: kcp-system
 spec:
   resourceToWatch:
-    group: operator.kyma-project.io
-    version: "*"
-    resource: kymas
-```
-
-### **spec.labelsToWatch**
-
-> **NOTE:** The resources you're watching must have the `operator.kyma-project.io/watched-by` label.
-
-With the **spec.labelsToWatch** attribute, you can filter the specified Group/Version/Kind (GVK) in **spec.resourceToWatch**. For example, if the specified GVK is `secrets`, then it is useful to filter them by a specific label, otherwise, the Runtime Watcher would send an event to the KCP for every Create/Read/Update/Delete (CRUD) event of any Secret in the Kyma cluster.
-
-```yaml
-spec:
+    group: <api-group>
+    version: <version>
+    resource: <kind>
   labelsToWatch:
-    "operator.kyma-project.io/watched-by": "kyma"
-    "example.label.to.watch": "true"
-  resourceToWatch:
-    group: ""
-    version: "v1"
-    resource: secrets
-```
-
-
-### **spec.field**
-
-It uses either the `spec` or `status` value to define if Runtime Watcher sends an event to KCP if the spec of the specified GVK or the status changes.
-
-### **spec.manager**
-
-Specifies the component responsible for handling webhook requests from Runtime Watcher. This field determines the routing path for webhook validation requests to KCP (`/validate/<manager-value>`).
-
-```yaml
-spec:
-  manager: "lifecycle-manager"
-```
-
-> ### Note:
-> **Backward Compatibility:** If you don't set **spec.manager**, the system falls back to the `operator.kyma-project.io/managed-by` label for backward compatibility. However, this label-based approach is deprecated and will be removed in a future version. It is recommended to migrate to using the **spec.manager** field.
-
-## KCP configuration
-
-### **spec.serviceInfo**
-
-Specifies to which name, Namespace, and port the incoming events are routed.
-
-```yaml
-spec:
-    name: klm-event-service
-    namespace: kcp-system
-    port: 8082
-```
-
-### **spec.gateway**
-
-Defines to which label selector of a Gateway the VirtualService binds.
-
-```yaml
-spec:
-  gateway:
+    "<some>": "<label>"
+  field: <"spec" or "status">
+  manager: <manager-name>
+  serviceInfo:
+    name: <service-name>
+    port: <port>
+    namespace: <namespace>
+  gateway: # don't change
     selector:
       matchLabels:
         "operator.kyma-project.io/watcher-gateway": "default"
 ```
 
-## Labels
+### Resources to Watch
 
-- **`operator.kyma-project.io/managed-by`:** **[DEPRECATED]** This label previously specified the module that manages and listens to the Watcher CR's corresponding webhook. The value was used to generate the path in KCP for webhook requests (`/validate/<label-value>`). 
-  
-> ### Caution
-> The `operator.kyma-project.io/managed-by` label is deprecated. Use the **spec.manager** field instead. The label-based fallback will be removed in a future API version. For more information, see the [**spec.manager**](#specmanager) section.
+The **spec.resourceToWatch** field specifies the GVK of the resources Runtime Watcher watches. Note that **spec.resourceToWatch.resource** must be the API resource name, not the kind of the resource. For example, it must be "configmaps" instead of "ConfigMap". It is possible to specify the wildcard `*` for **spec.resourceToWatch.version**.
+
+### Labels to Watch
+
+Optionally, the **spec.labelsToWatch** field allows to filter the resources by a specific label value.
+
+> [!NOTE]
+> Runtime Watcher does not provide a mechanism to add this label to the resources. You must ensure that the resources you want to watch have this label.
+
+### Field
+
+The **spec.field** field specifies what parts of the watched object trigger events. Allowed values are `spec` and `status`.
+
+If `status` is specified, watch events are only emitted if the `.status` subresource of the watched object changes. The ValidatingWebhookConfiguration is configured to watch only the status subresource. For example, "pods/status" instead of "pods".
+
+If `spec` is specified, watch events are only emitted if the `.spec` field of the watched object changes. If the object doesn't contain a `.spec` field, it falls back to emit a watch event on **any** change to the object, including changes to metadata or status.
+
+### Manager
+
+The **spec.manager** field defines the URL path to which the Runtime Watcher sends events. The entire path follows the format `/v2/<spec.manager>/event`. Accordingly, a VirtualService is created that matches the prefix `/v2/<spec.manager>/event` and routes received requests to the Service defined in **spec.serviceInfo**.
+
+> [!NOTE]
+> In Kyma runtime, this setting configures the ValidatingWebhookConfiguration to call `/validate/<spec.manager>` of the Runtime Watcher deployment.
+
+### Service Info
+
+The **spec.serviceInfo** specifies the name, namespace, and port to which events received from the Runtime Watcher are routed.
+
+### Gateway
+
+The **spec.gateway** field defines the label selector of the Istio Gateway in KCP. Don't change the default value.
