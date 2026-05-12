@@ -9,3 +9,7 @@ lint-runtime-watcher: ## Run golangci-lint against runtime-watcher code.
 .PHONY: lint-listener
 lint-listener: ## Run golangci-lint against listener code.
 	$(MAKE) -C listener lint
+
+.PHONY: bump-go-version
+bump-go-version: ## Bump Go version. Usage: make bump-go-version GO_VERSION=1.26.3
+	curl -fsSL https://raw.githubusercontent.com/kyma-project/lifecycle-manager/refs/heads/main/scripts/bump-go-version.sh | bash -s $(GO_VERSION)
