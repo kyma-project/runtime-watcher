@@ -98,3 +98,7 @@ kcp/webhook-chart/
 *.csr
 # ignore .cfg files
 *.cfg
+
+# claude
+.claude/settings.local.json
+**/CLAUDE.local.md
