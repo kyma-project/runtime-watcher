@@ -1,7 +1,7 @@
 name: Build PR Image
 
 permissions:
-  contents: read # This is required for actions/checkout
+  contents: read
 
 on:
   pull_request_target:
@@ -18,8 +18,8 @@ jobs:
   build-pr-image:
     needs: restricted-gate
     permissions:
-      id-token: write # This is required for requesting the JWT token
-      contents: read # This is required for actions/checkout
+      id-token: write
+      contents: read
     uses: kyma-project/test-infra/.github/workflows/image-builder.yml@main
     with:
       name: runtime-watcher
