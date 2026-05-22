@@ -1,8 +1,7 @@
 name: Build Image
 
 permissions:
-  id-token: write # This is required for requesting the JWT token
-  contents: read # This is required for actions/checkout
+  contents: read
 
 on:
   push:
@@ -15,8 +14,6 @@ on:
         required: false
         type: string
         default: ""
-  pull_request_target:
-    types: [ opened, edited, synchronize, reopened, ready_for_review ]
 
 jobs:
   get-custom-tags:
@@ -25,7 +22,7 @@ jobs:
       tags: ${{ steps.get_custom_tags.outputs.tags }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Get tags
         id: get_custom_tags
         run: |
@@ -34,13 +31,15 @@ jobs:
             tags="latest"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             tags="${{ inputs.tag }}"
-          elif [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
-            tags="${{ github.event.pull_request.head.sha }}"
           fi
           echo "Using custom tags: '$tags'"
           echo "tags=$tags" >> $GITHUB_OUTPUT
+
   build-image:
-    needs: get-custom-tags
+    needs: [get-custom-tags]
+    permissions:
+      id-token: write
+      contents: read
     uses: kyma-project/test-infra/.github/workflows/image-builder.yml@main
     with:
       name: runtime-watcher
