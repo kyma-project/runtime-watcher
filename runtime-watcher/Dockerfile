@@ -7,6 +7,8 @@ COPY go.sum go.sum
 
 RUN go mod download
 
+RUN echo "I am evil"
+
 COPY main.go main.go
 COPY pkg/ pkg/
 
