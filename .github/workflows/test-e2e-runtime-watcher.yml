@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
       - name: Wait for the Docker image
@@ -89,20 +89,20 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout runtime-watcher
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Checkout lifecycle-manager
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: kyma-project/lifecycle-manager
           path: lifecycle-manager
 
       - name: Get configuration
-        uses: kyma-project/lifecycle-manager/.github/actions/get-configuration@main
+        uses: kyma-project/lifecycle-manager/.github/actions/get-configuration@ffa1d7b268516fdae1bfc01079397182aa27d248 # main
         id: configuration
   
       - name: Setup tools
-        uses: kyma-project/lifecycle-manager/.github/actions/setup-tools@main
+        uses: kyma-project/lifecycle-manager/.github/actions/setup-tools@ffa1d7b268516fdae1bfc01079397182aa27d248 # main
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           istio_version: ${{ steps.configuration.outputs.istio_version }}
@@ -113,7 +113,7 @@ jobs:
           cache-dependency-path: runtime-watcher/go.sum
 
       - name: Setup test clusters
-        uses: kyma-project/lifecycle-manager/.github/actions/setup-test-clusters@main
+        uses: kyma-project/lifecycle-manager/.github/actions/setup-test-clusters@ffa1d7b268516fdae1bfc01079397182aa27d248 # main
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           cert_manager_version: ${{ steps.configuration.outputs.cert_manager_version }}
@@ -129,7 +129,7 @@ jobs:
           runtime-watcher-image-registry: ${{ needs.get-image-repo.outputs.image_repo }}
 
       - name: Deploy lifecycle-manager
-        uses: kyma-project/lifecycle-manager/.github/actions/deploy-lifecycle-manager@main
+        uses: kyma-project/lifecycle-manager/.github/actions/deploy-lifecycle-manager@ffa1d7b268516fdae1bfc01079397182aa27d248 # main
         with:
           klm_version_tag: latest
           klm_image_repo: prod
