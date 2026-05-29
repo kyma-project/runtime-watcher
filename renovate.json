@@ -1,6 +1,93 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "osvVulnerabilityAlerts": true,
   "extends": [
-    "config:recommended"
-  ]
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "labels": ["area/dependency", "kind/chore"],
+  "commitMessagePrefix": "chore(renovate):",
+  "gomod": {
+    "postUpdateOptions": ["gomodTidy"],
+    "enabled": true
+  },
+  "kustomize": {
+    "enabled": false
+  },
+  "dockerfile": {
+    "enabled": true
+  },
+  "helm-values": {
+    "enabled": false
+  },
+  "github-actions": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "addLabels": ["go"]
+    },
+    {
+      "matchCategories": ["golang"],
+      "postUpdateOptions": ["gomodTidy"],
+      "enabled": true
+    },
+    {
+      "matchDatasources": ["golang-version"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["digest"],
+      "enabled": false
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    },
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "All Kubernetes packages",
+      "matchPackageNames": ["k8s.io/**", "sigs.k8s.io/**"]
+    },
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "All Istio packages",
+      "matchPackageNames": ["istio.io/**"]
+    },
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "ginkgo and gomega",
+      "matchPackageNames": [
+        "github.com/onsi/ginkgo/v2",
+        "github.com/onsi/gomega"
+      ]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["^versions\\.yaml$"],
+      "matchStrings": ["golangciLint: \"(?<currentValue>[\\d.]+)\""],
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver",
+      "depNameTemplate": "golangci/golangci-lint"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["^versions\\.yaml$"],
+      "matchStrings": ["envtest_k8s: \"(?<currentValue>[\\d.]+)\""],
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver",
+      "depNameTemplate": "kubernetes/kubernetes"
+    }
+  ],
+  "ignorePaths": ["docs/**"]
 }
