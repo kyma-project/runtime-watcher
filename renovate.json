@@ -25,6 +25,15 @@
   },
   "packageRules": [
     {
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["kyma-project/test-infra"],
+      "matchFileNames": [
+        ".github/workflows/build-image.yml",
+        ".github/workflows/build-pr-image.yml"
+      ],
+      "enabled": false
+    },
+    {
       "matchManagers": ["gomod"],
       "addLabels": ["go"]
     },
