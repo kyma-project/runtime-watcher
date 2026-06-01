@@ -126,6 +126,15 @@ type WatchEvent struct {
 
 The listener serves HTTP on `/v2/{componentName}/event`. It extracts the SKR's runtime ID from the `X-Forwarded-Client-Cert` (XFCC) header injected by Istio — this is how the KCP side identifies which SKR sent the event.
 
+**listener key packages:**
+
+| Package | Purpose |
+|---|---|
+| `pkg/v2/event` | `SKREventListener`, WatchEvent unmarshaling, GenericEvent conversion |
+| `pkg/v2/types` | Core types: `WatchEvent`, `GenericEvent`, `SkrMeta`, `ObjectKey` |
+| `pkg/v2/certificate` | Extracts x509 certs from XFCC header (injected by Istio) |
+| `pkg/metrics` | Listener-side Prometheus metrics |
+
 See [Lifecycle Manager's usage](https://github.com/kyma-project/lifecycle-manager/blob/main/internal/controller/kyma/setup.go) for a concrete integration example.
 
 ## runtime-watcher (SKR webhook) — key packages
@@ -166,6 +175,7 @@ Go nolint policy, FIPS, and TLS constraint rules load automatically when editing
 The full linter config is in `.golangci.yaml` — check it before adding any `//nolint` directive. Every `//nolint` **must** include an explanation comment. Bare suppressions fail CI.
 
 Key limits enforced by golangci-lint:
+- **All linters enabled by default** — check `.golangci.yaml` before adding `//nolint`
 - **Import ordering** (gci): standard → third-party → project (`github.com/kyma-project`)
 - **Line length**: 120 chars | **Function length**: 80 lines / 60 statements | **Cyclomatic complexity**: 20
 
