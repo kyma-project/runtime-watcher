@@ -73,6 +73,21 @@ cd runtime-watcher && KUBEBUILDER_ASSETS=$(../bin/setup-envtest use 1.32.0 -p pa
   GOFIPS140=v1.0.0 go test -run TestFoo `go list ./... | grep -v /tests/`
 ```
 
+### E2E tests (`runtime-watcher/tests/e2e/`)
+
+E2E tests require real KCP and SKR clusters. Set the following env vars before running:
+
+```sh
+export KCP_KUBECONFIG=<path-to-kcp-kubeconfig>
+export SKR_KUBECONFIG=<path-to-skr-kubeconfig>
+```
+
+| Target | What it does |
+|---|---|
+| `make test` | Run all e2e suites (watcher-enqueue + watcher-metrics) |
+| `make watcher-enqueue` | Run "Enqueue Event from Watcher" suite (timeout: 20m) |
+| `make watcher-metrics` | Run "Watcher Metrics" suite (timeout: 20m) |
+
 ## How it works
 
 1. KLM deploys the webhook as a `ValidatingWebhookConfiguration` + Deployment on each SKR (failure policy: `Ignore`).
@@ -156,13 +171,17 @@ Key limits enforced by golangci-lint:
 
 ## Commits and Pull Requests
 
+- PRs are usually created from a **fork branch** against `main`.
 - PRs are merged with **squash merge** — the PR title and description form the commit message.
 - Follow [conventional commits](https://www.conventionalcommits.org/), enforced by `.github/workflows/lint-conventional-prs.yml`.
 - PR title format: `<type>: <title>` where the title is one sentence explaining the reason for the changeset.
-- Types: `deps`, `chore`, `docs`, `feat`, `fix`, `refactor`, `test`.
+- Ask what type to use when creating a PR: `deps`, `chore`, `docs`, `feat`, `fix`, `refactor`, `test`.
+- PR description should contain a short summary of the changes and, if applicable, a reference to the issue using the `closes` or `resolves` keyword.
 - Never mention Claude or any AI agent in commits or PRs (no author attribution, no `Co-Authored-By`, no references in commit messages).
 
 ## Documentation
+
+When reviewing or editing documentation in `docs/`, the SAP/Kyma technical writing styleguide loads automatically — see [`.claude/rules/documentation-style.md`](.claude/rules/documentation-style.md).
 
 Detailed docs in `docs/`:
 - `architecture.md` — full system architecture with certificate rotation process
