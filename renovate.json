@@ -31,7 +31,7 @@
         ".github/workflows/build-image.yml",
         ".github/workflows/build-pr-image.yml"
       ],
-      "enabled": false
+      "pinDigests": false
     },
     {
       "matchManagers": ["gomod"],
