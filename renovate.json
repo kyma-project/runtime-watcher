@@ -16,7 +16,6 @@
     "enabled": false
   },
   "dockerfile": {
-    "enabled": true,
     "pinDigests": true
   },
   "helm-values": {
