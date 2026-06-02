@@ -74,7 +74,21 @@
     },
     {
       "matchManagers": ["gomod"],
-      "groupName": "Go maintenance"
+      "groupName": "All Kubernetes packages",
+      "matchPackageNames": ["k8s.io/**", "sigs.k8s.io/**"]
+    },
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "All Istio packages",
+      "matchPackageNames": ["istio.io/**"]
+    },
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "All ginkgo and gomega packages",
+      "matchPackageNames": [
+        "github.com/onsi/ginkgo/v2",
+        "github.com/onsi/gomega"
+      ]
     }
   ],
   "customManagers": [
