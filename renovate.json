@@ -7,6 +7,7 @@
   ],
   "labels": ["area/dependency", "kind/chore"],
   "commitMessagePrefix": "chore(renovate):",
+  "minimumReleaseAge": "3 days",
   "gomod": {
     "postUpdateOptions": ["gomodTidy"],
     "enabled": true
@@ -15,7 +16,8 @@
     "enabled": false
   },
   "dockerfile": {
-    "enabled": true
+    "enabled": true,
+    "pinDigests": true
   },
   "helm-values": {
     "enabled": false
@@ -32,6 +34,15 @@
         ".github/workflows/build-pr-image.yml"
       ],
       "pinDigests": false
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "groupName": "Docker maintenance"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": true
     },
     {
       "matchManagers": ["gomod"],
@@ -63,21 +74,7 @@
     },
     {
       "matchManagers": ["gomod"],
-      "groupName": "All Kubernetes packages",
-      "matchPackageNames": ["k8s.io/**", "sigs.k8s.io/**"]
-    },
-    {
-      "matchManagers": ["gomod"],
-      "groupName": "All Istio packages",
-      "matchPackageNames": ["istio.io/**"]
-    },
-    {
-      "matchManagers": ["gomod"],
-      "groupName": "ginkgo and gomega",
-      "matchPackageNames": [
-        "github.com/onsi/ginkgo/v2",
-        "github.com/onsi/gomega"
-      ]
+      "groupName": "Go maintenance"
     }
   ],
   "customManagers": [
