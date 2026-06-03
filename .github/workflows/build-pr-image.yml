@@ -20,7 +20,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    uses: kyma-project/test-infra/.github/workflows/image-builder.yml@main
+    uses: kyma-project/test-infra/.github/workflows/image-builder.yml@f6cec0651bc52e4ed137a80e2763814a27e51cd6 # main
     with:
       name: runtime-watcher
       dockerfile: Dockerfile
