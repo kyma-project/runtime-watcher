@@ -35,10 +35,6 @@
       "pinDigests": false
     },
     {
-      "matchManagers": ["dockerfile"],
-      "groupName": "Docker maintenance"
-    },
-    {
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["digest"],
       "automerge": true
@@ -88,6 +84,14 @@
         "github.com/onsi/ginkgo/v2",
         "github.com/onsi/gomega"
       ]
+    },
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "Go maintenance"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "groupName": "Docker maintenance"
     }
   ],
   "customManagers": [
