@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-runtime-watcher is a **two-component system** that reduces Lifecycle Manager's reconciliation load by forwarding only meaningful resource changes from SKR clusters back to KCP. Instead of periodic polling, LKM reacts to real events.
+runtime-watcher is a **two-component system** that reduces Lifecycle Manager's reconciliation load by forwarding only meaningful resource changes from SKR clusters back to KCP. Instead of periodic polling, KLM reacts to real events.
 
 ```
 SKR cluster                             KCP cluster
@@ -24,8 +24,8 @@ The webhook **always allows** admission requests (`Allowed: true`) — it uses t
 
 | Directory | Module | Role |
 |---|---|---|
-| `listener/` | `github.com/kyma-project/runtime-watcher/listener` | **Library** consumed by KCP operators (Lifecycle Manager) |
-| `runtime-watcher/` | `github.com/kyma-project/runtime-watcher/skr` | **Binary** deployed as a ValidatingWebhook on each SKR |
+| `listener/` | `github.com/kyma-project/runtime-watcher/listener` | Go module, a **Library** used by KCP operators (Lifecycle Manager) |
+| `runtime-watcher/` | `github.com/kyma-project/runtime-watcher/skr` | Go project for creating a **Binary** deployed as a ValidatingWebhook on each SKR cluster |
 | `runtime-watcher/tests/` | `github.com/kyma-project/runtime-watcher/tests` | Shared e2e test suite (requires real KCP + SKR clusters) |
 
 Run `go` and `make` commands from inside the module directory, not from the repo root. The root `Makefile` only orchestrates linting across all modules. Tool versions (golangci-lint, envtest, k8s) are centralized in `versions.yaml`.
@@ -90,7 +90,7 @@ export SKR_KUBECONFIG=<path-to-skr-kubeconfig>
 
 ## How it works
 
-1. KLM deploys the webhook as a `ValidatingWebhookConfiguration` + Deployment on each SKR (failure policy: `Ignore`).
+1. KLM deploys the webhook as a `ValidatingWebhookConfiguration` + Deployment on each SKR cluster (failure policy: `Ignore`).
 2. When a watched resource changes on SKR, Kubernetes calls the webhook via admission.
 3. For UPDATE operations, the webhook compares old vs new `.spec` or `.status` and only fires if there's an actual change. CREATE and DELETE are always forwarded.
 4. The webhook sends an HTTP POST to KCP (`/<KCP_CONTRACT>/<moduleName>/event`) over mTLS using per-SKR client certificates.
@@ -103,7 +103,7 @@ The [Watcher CR](https://github.com/kyma-project/lifecycle-manager/blob/main/api
 
 ## listener — key API surface
 
-The listener package is consumed by Lifecycle Manager. Its public API:
+The listener package is used by Lifecycle Manager. Its public API:
 
 ```go
 // Create and start the listener (implements controller-runtime Runnable)
@@ -124,7 +124,7 @@ type WatchEvent struct {
 }
 ```
 
-The listener serves HTTP on `/v2/{componentName}/event`. It extracts the SKR's runtime ID from the `X-Forwarded-Client-Cert` (XFCC) header injected by Istio — this is how the KCP side identifies which SKR sent the event.
+In the `Lifecycle-Manager` the listener logic is wired to an endpoint that serves HTTP requests on `/v2/{componentName}/event`. It extracts the SKR's runtime ID from the `X-Forwarded-Client-Cert` (XFCC) header injected by Istio — this is how the KCP side identifies which SKR cluster sent the event.
 
 **listener key packages:**
 
