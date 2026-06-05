@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-runtime-watcher is a **two-component system** that reduces Lifecycle Manager's reconciliation load by forwarding only meaningful resource changes from SKR clusters back to KCP. Instead of periodic polling, KLM reacts to real events.
+runtime-watcher is a **two-component system** that reduces Kyma Lifecycle Manager (KLM) reconciliation load by forwarding only meaningful resource changes from SAP BTP, Kyma Runtime (SKR) clusters back to the central control plane (KCP). Instead of periodic polling, KLM reacts to real events.
 
 ```
 SKR cluster                             KCP cluster
@@ -28,65 +28,15 @@ The webhook **always allows** admission requests (`Allowed: true`) — it uses t
 | `runtime-watcher/` | `github.com/kyma-project/runtime-watcher/skr` | Go project for creating a **Binary** deployed as a ValidatingWebhook on each SKR cluster |
 | `runtime-watcher/tests/` | `github.com/kyma-project/runtime-watcher/tests` | Shared e2e test suite (requires real KCP + SKR clusters) |
 
-Run `go` and `make` commands from inside the module directory, not from the repo root. The root `Makefile` only orchestrates linting across all modules. Tool versions (golangci-lint, envtest, k8s) are centralized in `versions.yaml`.
+Run `go` and `make` commands from inside the module directory, not from the repo root. The root `Makefile` only orchestrates linting across all modules. Each module has its own release cycle with distinct tag formats: `v1.2.3` for the SKR webhook, `listener/v1.2.3` for the listener library.
 
-Each module has its own release cycle with distinct tag formats: `v1.2.3` for the SKR webhook, `listener/v1.2.3` for the listener library.
+## Build and test
 
-## Make targets
+From `runtime-watcher/`: `make build`, `make test`, `make lint`
+From `listener/`: `make test`, `make lint`
+From repo root: `make lint-all`
 
-### Root `Makefile`
-
-| Target | What it does |
-|---|---|
-| `make lint-all` | Lint both modules |
-| `make lint-runtime-watcher` | Lint only `runtime-watcher/` |
-| `make lint-listener` | Lint only `listener/` |
-| `make bump-go-version GO_VERSION=x.y.z` | Bump Go version across all modules |
-
-### `runtime-watcher/`
-
-| Target | What it does |
-|---|---|
-| `make build` | Compile webhook binary with version ldflags (`GOFIPS140=v1.0.0`) |
-| `make test` | `fmt` + `vet` + envtest unit tests (excludes `tests/` dir) |
-| `make lint` | golangci-lint |
-| `make run` | Run webhook locally |
-| `make docker-build` / `make docker-push` | Container image lifecycle |
-
-### `listener/`
-
-| Target | What it does |
-|---|---|
-| `make test` | `fmt` + `vet` + unit tests with race detector (`GOFIPS140=v1.0.0`) |
-| `make lint` | golangci-lint |
-| `make resolve` | `go mod tidy` |
-| `make build-verbose` | Build with verbose output |
-
-### Running a single test
-
-```sh
-# listener
-cd listener && GOFIPS140=v1.0.0 go test -run TestFoo ./pkg/...
-
-# runtime-watcher
-cd runtime-watcher && KUBEBUILDER_ASSETS=$(../bin/setup-envtest use 1.32.0 -p path) \
-  GOFIPS140=v1.0.0 go test -run TestFoo `go list ./... | grep -v /tests/`
-```
-
-### E2E tests (`runtime-watcher/tests/e2e/`)
-
-E2E tests require real KCP and SKR clusters. Set the following env vars before running:
-
-```sh
-export KCP_KUBECONFIG=<path-to-kcp-kubeconfig>
-export SKR_KUBECONFIG=<path-to-skr-kubeconfig>
-```
-
-| Target | What it does |
-|---|---|
-| `make test` | Run all e2e suites (watcher-enqueue + watcher-metrics) |
-| `make watcher-enqueue` | Run "Enqueue Event from Watcher" suite (timeout: 20m) |
-| `make watcher-metrics` | Run "Watcher Metrics" suite (timeout: 20m) |
+E2E tests (`runtime-watcher/tests/e2e/`) require real KCP and SKR clusters — set `KCP_KUBECONFIG` and `SKR_KUBECONFIG`. All builds and test runs require `GOFIPS140=v1.0.0`.
 
 ## How it works
 
@@ -100,64 +50,6 @@ export SKR_KUBECONFIG=<path-to-skr-kubeconfig>
 ## Watcher CR
 
 The [Watcher CR](https://github.com/kyma-project/lifecycle-manager/blob/main/api/v1beta2/watcher_types.go) is defined in **Lifecycle Manager** (not this repo). It drives both the `ValidatingWebhookConfiguration` on SKR and the `VirtualService` routing on KCP. Key fields: `spec.resourceToWatch` (GVK), `spec.labelsToWatch` (optional label filter), `spec.field` (`spec` or `status`), `spec.manager` (URL path segment).
-
-## listener — key API surface
-
-The listener package is used by Lifecycle Manager. Its public API:
-
-```go
-// Create and start the listener (implements controller-runtime Runnable)
-l := event.NewSKREventListener(addr, componentName)
-mgr.Add(l)
-
-// Receive events in a controller watch
-source.Channel(l.ReceivedEvents(), &handler.EnqueueRequestForOwner{...})
-```
-
-**`types.WatchEvent`** — the event payload forwarded from SKR:
-
-```go
-type WatchEvent struct {
-    Watched    ObjectKey               // {Namespace, Name} of the watched resource
-    WatchedGvk metav1.GroupVersionKind // GVK of the watched resource
-    SkrMeta    SkrMeta                 `json:"-"` // populated by listener from XFCC header
-}
-```
-
-In the `Lifecycle-Manager` the listener logic is wired to an endpoint that serves HTTP requests on `/v2/{componentName}/event`. It extracts the SKR's runtime ID from the `X-Forwarded-Client-Cert` (XFCC) header injected by Istio — this is how the KCP side identifies which SKR cluster sent the event.
-
-**listener key packages:**
-
-| Package | Purpose |
-|---|---|
-| `pkg/v2/event` | `SKREventListener`, WatchEvent unmarshaling, GenericEvent conversion |
-| `pkg/v2/types` | Core types: `WatchEvent`, `GenericEvent`, `SkrMeta`, `ObjectKey` |
-| `pkg/v2/certificate` | Extracts x509 certs from XFCC header (injected by Istio) |
-| `pkg/metrics` | Listener-side Prometheus metrics |
-
-See [Lifecycle Manager's usage](https://github.com/kyma-project/lifecycle-manager/blob/main/internal/controller/kyma/setup.go) for a concrete integration example.
-
-## runtime-watcher (SKR webhook) — key packages
-
-| Package | Purpose |
-|---|---|
-| `pkg/admissionreview` | HTTP handler: receives `AdmissionReview`, detects spec/status changes, sends `WatchEvent` to KCP via mTLS |
-| `pkg/serverconfig` | Reads all config from environment variables |
-| `pkg/cacertificatehandler` | Loads CA cert into `x509.CertPool` for mTLS |
-| `pkg/requestparser` | Deserializes `AdmissionReview` from HTTP body |
-| `pkg/watchermetrics` | Prometheus metrics (request duration, KCP requests, FIPS mode) |
-
-**Configuration via environment variables** (set by Lifecycle Manager when deploying the webhook):
-
-| Env var | Default | Purpose |
-|---|---|---|
-| `WEBHOOK_PORT` | `8443` | Webhook HTTPS port |
-| `METRICS_PORT` | `2112` | Prometheus metrics port |
-| `KCP_ADDR` | — | KCP gateway address |
-| `KCP_CONTRACT` | — | API contract path prefix |
-| `CA_CERT` / `TLS_CERT` / `TLS_KEY` | — | Certificate paths |
-
-The binary only accepts two CLI flags: `--version` and `--development`. Everything else is via environment variables.
 
 ## Security constraints
 
@@ -188,13 +80,3 @@ Key limits enforced by golangci-lint:
 - Ask what type to use when creating a PR: `deps`, `chore`, `docs`, `feat`, `fix`, `refactor`, `test`.
 - PR description should contain a short summary of the changes and, if applicable, a reference to the issue using the `closes` or `resolves` keyword.
 - Never mention Claude or any AI agent in commits or PRs (no author attribution, no `Co-Authored-By`, no references in commit messages).
-
-## Documentation
-
-When reviewing or editing documentation in `docs/`, the SAP/Kyma technical writing styleguide loads automatically — see [`.claude/rules/documentation-style.md`](.claude/rules/documentation-style.md).
-
-Detailed docs in `docs/`:
-- `architecture.md` — full system architecture with certificate rotation process
-- `listener.md` — how to integrate the listener package in a KCP operator
-- `watcher-setup-guide.md` — Watcher CR configuration and event consumption guide
-- `api.md` — Watcher CR API reference
