@@ -7,6 +7,7 @@
   ],
   "labels": ["area/dependency", "kind/chore"],
   "commitMessagePrefix": "chore(renovate):",
+  "minimumReleaseAge": "3 days",
   "gomod": {
     "postUpdateOptions": ["gomodTidy"],
     "enabled": true
@@ -15,7 +16,7 @@
     "enabled": false
   },
   "dockerfile": {
-    "enabled": true
+    "pinDigests": true
   },
   "helm-values": {
     "enabled": false
@@ -24,6 +25,20 @@
     "enabled": true
   },
   "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["kyma-project/test-infra"],
+      "matchFileNames": [
+        ".github/workflows/build-image.yml",
+        ".github/workflows/build-pr-image.yml"
+      ],
+      "pinDigests": false
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": true
+    },
     {
       "matchManagers": ["gomod"],
       "addLabels": ["go"]
@@ -64,11 +79,19 @@
     },
     {
       "matchManagers": ["gomod"],
-      "groupName": "ginkgo and gomega",
+      "groupName": "All ginkgo and gomega packages",
       "matchPackageNames": [
         "github.com/onsi/ginkgo/v2",
         "github.com/onsi/gomega"
       ]
+    },
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "Go maintenance"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "groupName": "Docker maintenance"
     }
   ],
   "customManagers": [
