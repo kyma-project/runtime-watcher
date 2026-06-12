@@ -98,11 +98,11 @@ jobs:
           path: lifecycle-manager
 
       - name: Get configuration
-        uses: kyma-project/lifecycle-manager/.github/actions/get-configuration@457a9ec91273d32d9bc2a1e64473573a6dddd9c3 # main
+        uses: kyma-project/lifecycle-manager/.github/actions/get-configuration@3ddfcf0de08917ce13ba16b2797de17f6a15c164 # main
         id: configuration
   
       - name: Setup tools
-        uses: kyma-project/lifecycle-manager/.github/actions/setup-tools@457a9ec91273d32d9bc2a1e64473573a6dddd9c3 # main
+        uses: kyma-project/lifecycle-manager/.github/actions/setup-tools@3ddfcf0de08917ce13ba16b2797de17f6a15c164 # main
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           istio_version: ${{ steps.configuration.outputs.istio_version }}
@@ -113,7 +113,7 @@ jobs:
           cache-dependency-path: runtime-watcher/go.sum
 
       - name: Setup test clusters
-        uses: kyma-project/lifecycle-manager/.github/actions/setup-test-clusters@457a9ec91273d32d9bc2a1e64473573a6dddd9c3 # main
+        uses: kyma-project/lifecycle-manager/.github/actions/setup-test-clusters@3ddfcf0de08917ce13ba16b2797de17f6a15c164 # main
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           cert_manager_version: ${{ steps.configuration.outputs.cert_manager_version }}
@@ -129,7 +129,7 @@ jobs:
           runtime-watcher-image-registry: ${{ needs.get-image-repo.outputs.image_repo }}
 
       - name: Deploy lifecycle-manager
-        uses: kyma-project/lifecycle-manager/.github/actions/deploy-lifecycle-manager@457a9ec91273d32d9bc2a1e64473573a6dddd9c3 # main
+        uses: kyma-project/lifecycle-manager/.github/actions/deploy-lifecycle-manager@3ddfcf0de08917ce13ba16b2797de17f6a15c164 # main
         with:
           klm_version_tag: latest
           klm_image_repo: prod
