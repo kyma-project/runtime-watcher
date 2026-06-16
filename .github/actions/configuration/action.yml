@@ -8,7 +8,7 @@ runs:
   using: composite
   steps:
     - name: Install yq
-      uses: kyma-project/lifecycle-manager/.github/actions/install-yq@3ddfcf0de08917ce13ba16b2797de17f6a15c164 # main
+      uses: kyma-project/lifecycle-manager/.github/actions/install-yq@ee40590e5f9a57d21931a94c693ad615d2ec008d # main
       with:
         yq_version: 4.45.1
     - name: Define variables
