@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
-	github.com/kyma-project/runtime-watcher/listener v1.4.1
+	github.com/kyma-project/runtime-watcher/listener v1.4.2
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sethgrid/pester v1.2.0
 	github.com/stretchr/testify v1.11.1
@@ -17,7 +17,7 @@ require (
 require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.yaml.in/yaml/v2 v2.4.3 // indirect
+	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
