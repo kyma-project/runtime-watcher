@@ -1,6 +1,6 @@
 module github.com/kyma-project/runtime-watcher/tests
 
-go 1.26.4
+go 1.26.5
 
 replace (
 	github.com/kyma-project/runtime-watcher/listener => ../../listener
