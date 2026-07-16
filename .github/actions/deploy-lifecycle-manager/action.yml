@@ -10,7 +10,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: .github/actions/switch-kubectl-context 
+    - uses: ./.github/actions/switch-kubectl-context 
       with:
         context_name: k3d-kcp
     - name: Deploy LM local testing kustomize
