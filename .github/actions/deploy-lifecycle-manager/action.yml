@@ -17,11 +17,7 @@ runs:
       working-directory: lifecycle-manager
       shell: bash
       run: |
-        if [[ -n "${E2E_USE_GARDENER_CERT_MANAGER}" ]]; then
-          E2E_MAKE_TARGET=local-deploy-with-watcher-gcm
-        else
-          E2E_MAKE_TARGET=local-deploy-with-watcher
-        fi
+        E2E_MAKE_TARGET=local-deploy-with-watcher
         maxRetry=5
         for retry in $(seq 1 $maxRetry)
         do
