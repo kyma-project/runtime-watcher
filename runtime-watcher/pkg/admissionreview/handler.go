@@ -108,6 +108,7 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 
 	writer.Header().Set(strictTransportSecurityHeader, strictTransportSecurityValue)
 	writer.Header().Set(contentSecurityPolicy, contentSecurityPolicyValue)
+	//nolint:gosec //https://issue-will-come-here
 	_, err = writer.Write(responseBytes)
 	if err != nil {
 		h.logger.Error(err, admissionError)
@@ -326,7 +327,6 @@ func (h *Handler) getHTTPSClient() (*http.Client, error) {
 	}
 
 	httpsClient.Timeout = HTTPTimeout
-	//nolint:gosec
 	httpsClient.Transport = &http.Transport{
 		TLSClientConfig: &tls.Config{
 			Certificates: []tls.Certificate{certificate},
