@@ -108,7 +108,8 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 
 	writer.Header().Set(strictTransportSecurityHeader, strictTransportSecurityValue)
 	writer.Header().Set(contentSecurityPolicy, contentSecurityPolicyValue)
-	//nolint:gosec //https://issue-will-come-here
+	writer.Header().Set("Content-Type", "application/json")
+	//nolint:gosec // G705 false positive: responseBytes is JSON-marshaled from a typed struct, not raw user input
 	_, err = writer.Write(responseBytes)
 	if err != nil {
 		h.logger.Error(err, admissionError)
