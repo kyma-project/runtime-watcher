@@ -13,7 +13,12 @@ import (
 	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 )
 
-const hostname = "http://localhost:8082"
+const (
+	hostname            = "http://localhost:8082"
+	watchedResourceName = "watched-resource"
+	kymaGroup           = "operator.kyma-project.io"
+	apiVersion          = "v1alpha1"
+)
 
 type unmarshalTestCase struct {
 	name               string
@@ -26,8 +31,8 @@ type unmarshalTestCase struct {
 func TestUnmarshalSKREvent(t *testing.T) {
 	t.Parallel()
 	testWatcherEvt := &types.WatchEvent{
-		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
-		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		Watched:    types.ObjectKey{Name: watchedResourceName, Namespace: v1.NamespaceDefault},
+		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: kymaGroup, Version: apiVersion},
 		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
 	}
 
@@ -77,8 +82,8 @@ func TestUnmarshalSKREvent_WhenNoCommonNameInClientCertificate_ReturnsError(t *t
 	t.Parallel()
 	// GIVEN
 	testWatcherEvt := &types.WatchEvent{
-		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
-		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		Watched:    types.ObjectKey{Name: watchedResourceName, Namespace: v1.NamespaceDefault},
+		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: kymaGroup, Version: apiVersion},
 		SkrMeta:    types.SkrMeta{RuntimeId: ""},
 	}
 	url := hostname + "/v1/kyma/event"

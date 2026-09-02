@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+//nolint: goconst // test cases are more readable with string literals
 func TestParseGodebugFips140only(t *testing.T) {
 	t.Parallel()
 

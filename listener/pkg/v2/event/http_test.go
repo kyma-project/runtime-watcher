@@ -24,6 +24,8 @@ import (
 	"github.com/kyma-project/runtime-watcher/listener/pkg/v2/types"
 )
 
+const kymaComponent = "kyma"
+
 func newTestListener(addr, component string, log logr.Logger,
 ) *listenerEvent.SKREventListener {
 	listener := listenerEvent.NewSKREventListener(addr, component)
@@ -71,15 +73,15 @@ func TestHandler(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	log := setupLogger()
-	skrEventsListener := newTestListener(":8082", "kyma", log)
+	skrEventsListener := newTestListener(":8082", kymaComponent, log)
 
 	handlerUnderTest := skrEventsListener.HandleSKREvent()
 	responseRecorder := httptest.NewRecorder()
 
 	// GIVEN
 	testWatcherEvt := &types.WatchEvent{
-		Watched:    types.ObjectKey{Name: "watched-resource", Namespace: v1.NamespaceDefault},
-		WatchedGvk: v1.GroupVersionKind{Kind: "kyma", Group: "operator.kyma-project.io", Version: "v1alpha1"},
+		Watched:    types.ObjectKey{Name: watchedResourceName, Namespace: v1.NamespaceDefault},
+		WatchedGvk: v1.GroupVersionKind{Kind: kymaComponent, Group: kymaGroup, Version: apiVersion},
 		SkrMeta:    types.SkrMeta{RuntimeId: "test-cert"},
 	}
 	pemCert, err := utils.NewPemCertificateBuilder().Build()
@@ -115,7 +117,7 @@ func TestMiddleware(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	log := setupLogger()
-	skrEventsListener := newTestListener(":8082", "kyma", log)
+	skrEventsListener := newTestListener(":8082", kymaComponent, log)
 
 	const successfulResponseString = "SUCCESS"
 	const requestSizeLimitInBytes = 16384 // 16KB
