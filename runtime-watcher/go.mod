@@ -1,11 +1,11 @@
 module github.com/kyma-project/runtime-watcher/skr
 
-go 1.27.0
+go 1.27.1
 
 require (
 	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/zapr v1.3.0
-	github.com/kyma-project/runtime-watcher/listener v1.4.3
+	github.com/kyma-project/runtime-watcher/listener v1.4.4
 	github.com/prometheus/client_golang v1.24.1
 	github.com/sethgrid/pester v1.2.0
 	github.com/stretchr/testify v1.12.1
