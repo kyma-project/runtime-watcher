@@ -21,8 +21,8 @@ github.com/klauspost/compress v1.19.1 h1:VsB4HPswih7mmZ8WleSFQ75c/Ui1M4trX5oAsJn
 github.com/klauspost/compress v1.19.1/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
-github.com/kyma-project/runtime-watcher/listener v1.4.3 h1:2VDqf1lDMB/0TsLZkeUB/peTQ7xq5pr9MA2oPm4HFKY=
-github.com/kyma-project/runtime-watcher/listener v1.4.3/go.mod h1:MZ/SRcTjsV5VHr56pi/9TMb9zsaL56K+sWTCsn+DGfM=
+github.com/kyma-project/runtime-watcher/listener v1.4.4 h1:943f8+IN7Upnc3uZkBskZocw2iOEPTumSe3setD3pGg=
+github.com/kyma-project/runtime-watcher/listener v1.4.4/go.mod h1:+W9MFHBYrSvsFka6wB3Q1IZ+3gBLotUy8ozSFaII1Kw=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
