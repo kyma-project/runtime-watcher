@@ -100,16 +100,12 @@ func (h *Handler) Handle(writer http.ResponseWriter, request *http.Request) {
 	validationMsg := h.validateResources(admissionReview.Request, moduleName)
 	h.logger.Info(validationMsg)
 
-	responseBytes := h.prepareResponse(admissionReview, validationMsg)
-	if responseBytes == nil {
-		h.logger.Info("Empty response from incoming admission review")
-		return
-	}
+	response := h.prepareResponse(admissionReview, validationMsg)
 
 	writer.Header().Set(strictTransportSecurityHeader, strictTransportSecurityValue)
 	writer.Header().Set(contentSecurityPolicy, contentSecurityPolicyValue)
-	_, err = writer.Write(responseBytes)
-	if err != nil {
+	writer.Header().Set("Content-Type", "application/json")
+	if err = json.NewEncoder(writer).Encode(response); err != nil {
 		h.logger.Error(err, admissionError)
 		return
 	}
@@ -135,13 +131,13 @@ func getModuleName(urlPath string) (string, error) {
 
 func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 	validationMessage string,
-) []byte {
+) *admissionv1.AdmissionReview {
 	h.logger.Info(fmt.Sprintf("Preparing response for AdmissionReview: %s %s %s",
 		admissionReview.Request.Kind.Kind,
 		string(admissionReview.Request.Operation),
 		validationMessage))
 
-	finalizedAdmissionReview := admissionv1.AdmissionReview{
+	return &admissionv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       admissionReview.Kind,
 			APIVersion: admissionReview.APIVersion,
@@ -155,13 +151,6 @@ func (h *Handler) prepareResponse(admissionReview *admissionv1.AdmissionReview,
 			},
 		},
 	}
-
-	admissionReviewBytes, err := json.Marshal(&finalizedAdmissionReview)
-	if err != nil {
-		h.logger.Error(err, admissionError)
-		return nil
-	}
-	return admissionReviewBytes
 }
 
 func (h *Handler) validateResources(request *admissionv1.AdmissionRequest, moduleName string,
@@ -326,7 +315,6 @@ func (h *Handler) getHTTPSClient() (*http.Client, error) {
 	}
 
 	httpsClient.Timeout = HTTPTimeout
-	//nolint:gosec
 	httpsClient.Transport = &http.Transport{
 		TLSClientConfig: &tls.Config{
 			Certificates: []tls.Certificate{certificate},
