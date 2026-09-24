@@ -98,11 +98,11 @@ jobs:
           path: lifecycle-manager
 
       - name: Get configuration
-        uses: kyma-project/lifecycle-manager/.github/actions/get-configuration@8b4978ff8e53ce5a349d445ac1e40bfc423966cd # main
+        uses: kyma-project/lifecycle-manager/.github/actions/get-configuration@f3ada2ac8b8615185907293f3ac8b7fd4b28a73a # main
         id: configuration
   
       - name: Setup tools
-        uses: kyma-project/lifecycle-manager/.github/actions/setup-tools@8b4978ff8e53ce5a349d445ac1e40bfc423966cd # main
+        uses: kyma-project/lifecycle-manager/.github/actions/setup-tools@f3ada2ac8b8615185907293f3ac8b7fd4b28a73a # main
         with:
           k8s_version: ${{ steps.configuration.outputs.k8s_version }}
           istio_version: ${{ steps.configuration.outputs.istio_version }}
