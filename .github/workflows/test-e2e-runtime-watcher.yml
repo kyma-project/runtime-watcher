@@ -57,27 +57,33 @@ jobs:
 
           echo "Using image repo: '$image_repo'"
           echo "image_repo=$image_repo" >> $GITHUB_OUTPUT
-  wait-for-image-build:
-    needs:
-      - get-custom-tags
-      - get-image-repo
-    name: Wait for image build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - name: Wait for the Docker image
-        timeout-minutes: 20
-        env:
-          ITERATIONS: 40
-          SLEEP_SECONDS: 30
-        run: ./.github/scripts/release/wait_for_image.sh ${{ needs.get-image-repo.outputs.image_repo }}/runtime-watcher:${{ needs.get-custom-tags.outputs.tags }} ${{ env.ITERATIONS }} ${{ env.SLEEP_SECONDS}}
+  # NOTE: The external image build (ADO builder) is temporarily broken. Instead of
+  # waiting for the pre-built runtime-watcher image, we build it locally in each
+  # E2E job and import it into the SKR cluster (see the "Build and import ..." and
+  # "Use local watcher image" steps below). Revert to this job once the external
+  # build is fixed (see the revert notes on those steps and in patch-lifecycle-manager).
+  # wait-for-image-build:
+  #   needs:
+  #     - get-custom-tags
+  #     - get-image-repo
+  #   name: Wait for image build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Wait for the Docker image
+  #       timeout-minutes: 20
+  #       env:
+  #         ITERATIONS: 40
+  #         SLEEP_SECONDS: 30
+  #       run: ./.github/scripts/release/wait_for_image.sh ${{ needs.get-image-repo.outputs.image_repo }}/runtime-watcher:${{ needs.get-custom-tags.outputs.tags }} ${{ env.ITERATIONS }} ${{ env.SLEEP_SECONDS}}
   e2e-integration:
     name: E2E
     needs:
-      - wait-for-image-build
+      # Temporarily not waiting for the external image build while it is broken:
+      # - wait-for-image-build
       - get-custom-tags
       - get-image-repo
     strategy:
@@ -122,11 +128,36 @@ jobs:
         run: |
           k3d cluster edit skr --port-add 9090:9090@loadbalancer
 
+      # Temporarily build the runtime-watcher image locally and import it into the
+      # SKR cluster, because the external image build (ADO builder) is broken.
+      # The SKR cluster has no registry attached, so we load the image directly
+      # into its nodes. Revert (use wait-for-image-build above) once the external
+      # build is fixed. Must match the image flags set in patch-lifecycle-manager.
+      - name: Build and import runtime-watcher image into SKR
+        working-directory: runtime-watcher/runtime-watcher
+        run: |
+          IMG=local/runtime-watcher-skr:${{ needs.get-custom-tags.outputs.tags }}
+          make docker-build IMG=$IMG
+          k3d image import "$IMG" -c skr
+
+      # The imported image is already present on the SKR nodes. KLM's SKR webhook
+      # manifest hardcodes imagePullPolicy: Always, which would try (and fail) to
+      # pull it from a registry. Relax it on the ephemeral KLM checkout only.
+      # Revert together with the local build once the external build is fixed.
+      - name: Use local watcher image (pull policy IfNotPresent)
+        run: |
+          sed -i 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/' \
+            lifecycle-manager/skr-webhook/resources.yaml
+
       - name: Patch lifecycle-manager
         uses: ./.github/actions/patch-lifecycle-manager
         with:
+          # Temporarily point KLM at the locally-built image imported into SKR.
+          # Revert to the external registry/tag (commented below) once fixed.
           runtime-watcher-tag: ${{ needs.get-custom-tags.outputs.tags }}
-          runtime-watcher-image-registry: ${{ needs.get-image-repo.outputs.image_repo }}
+          runtime-watcher-image-registry: local
+          runtime-watcher-image-name: runtime-watcher-skr
+          # runtime-watcher-image-registry: ${{ needs.get-image-repo.outputs.image_repo }}
 
       - name: Deploy lifecycle-manager
         uses: ./.github/actions/deploy-lifecycle-manager
