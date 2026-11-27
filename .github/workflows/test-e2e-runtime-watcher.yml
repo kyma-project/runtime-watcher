@@ -134,7 +134,7 @@ jobs:
       # into its nodes. Revert (use wait-for-image-build above) once the external
       # build is fixed. Must match the image flags set in patch-lifecycle-manager.
       - name: Build and import runtime-watcher image into SKR
-        working-directory: runtime-watcher/runtime-watcher
+        working-directory: runtime-watcher
         run: |
           IMG=local/runtime-watcher-skr:${{ needs.get-custom-tags.outputs.tags }}
           make docker-build IMG=$IMG
