@@ -57,27 +57,33 @@ jobs:
 
           echo "Using image repo: '$image_repo'"
           echo "image_repo=$image_repo" >> $GITHUB_OUTPUT
-  wait-for-image-build:
-    needs:
-      - get-custom-tags
-      - get-image-repo
-    name: Wait for image build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - name: Wait for the Docker image
-        timeout-minutes: 20
-        env:
-          ITERATIONS: 40
-          SLEEP_SECONDS: 30
-        run: ./.github/scripts/release/wait_for_image.sh ${{ needs.get-image-repo.outputs.image_repo }}/runtime-watcher:${{ needs.get-custom-tags.outputs.tags }} ${{ env.ITERATIONS }} ${{ env.SLEEP_SECONDS}}
+  # NOTE: The external image build (ADO builder) is temporarily broken. Instead of
+  # waiting for the pre-built runtime-watcher image, we build it locally in each
+  # E2E job and import it into the SKR cluster (see the "Build and import ..." and
+  # "Use local watcher image" steps below). Revert to this job once the external
+  # build is fixed (see the revert notes on those steps and in patch-lifecycle-manager).
+  # wait-for-image-build:
+  #   needs:
+  #     - get-custom-tags
+  #     - get-image-repo
+  #   name: Wait for image build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Wait for the Docker image
+  #       timeout-minutes: 20
+  #       env:
+  #         ITERATIONS: 40
+  #         SLEEP_SECONDS: 30
+  #       run: ./.github/scripts/release/wait_for_image.sh ${{ needs.get-image-repo.outputs.image_repo }}/runtime-watcher:${{ needs.get-custom-tags.outputs.tags }} ${{ env.ITERATIONS }} ${{ env.SLEEP_SECONDS}}
   e2e-integration:
     name: E2E
     needs:
-      - wait-for-image-build
+      # Temporarily not waiting for the external image build while it is broken:
+      # - wait-for-image-build
       - get-custom-tags
       - get-image-repo
     strategy:
@@ -86,7 +92,7 @@ jobs:
           - watcher-enqueue
           - watcher-metrics
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout runtime-watcher
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -122,11 +128,57 @@ jobs:
         run: |
           k3d cluster edit skr --port-add 9090:9090@loadbalancer
 
+      # Temporarily build the runtime-watcher image locally and push it to the
+      # k3d registry (created on the KCP cluster), because the external image
+      # build (ADO builder) is broken. KLM provisions the SKR webhook with
+      # imagePullPolicy: Always (baked into the KLM image, not overridable), so
+      # the SKR cluster must be able to pull it from a registry. The next step
+      # wires the KCP registry into the SKR network. Revert (use
+      # wait-for-image-build above) once the external build is fixed.
+      - name: Build and push runtime-watcher image to k3d registry
+        working-directory: runtime-watcher
+        env:
+          # BuildKit v0.11+ adds a provenance attestation by default, turning the
+          # output into a manifest list (OCI index) that the k3d/containerd pull
+          # path mishandles. Disable it to push a plain single-platform image.
+          BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
+        run: |
+          # Host pushes via localhost:5111; the cluster pulls via the internal
+          # name k3d-kcp-registry.localhost:5000 (same registry, see patch flags).
+          IMG=localhost:5111/runtime-watcher-skr:${{ needs.get-custom-tags.outputs.tags }}
+          make docker-build IMG=$IMG
+          make docker-push IMG=$IMG
+
+      # The k3d registry is created on the KCP cluster only. Make it reachable
+      # from the SKR cluster so the SKR webhook pod can pull the image: attach
+      # the registry container to the SKR network and register it as an insecure
+      # (http) mirror in the SKR node's containerd, then restart k3s to reload.
+      # Remove together with the local build once the external build is fixed.
+      - name: Make k3d registry reachable from SKR
+        run: |
+          docker network connect k3d-skr k3d-kcp-registry.localhost
+          printf '%s\n' \
+            'mirrors:' \
+            '  k3d-kcp-registry.localhost:5000:' \
+            '    endpoint:' \
+            '    - http://k3d-kcp-registry.localhost:5000' \
+            '  k3d-kcp-registry.localhost:5111:' \
+            '    endpoint:' \
+            '    - http://k3d-kcp-registry.localhost:5000' \
+            | docker exec -i k3d-skr-server-0 sh -c 'cat > /etc/rancher/k3s/registries.yaml'
+          docker restart k3d-skr-server-0
+          kubectl --context k3d-skr wait node --all --for condition=Ready --timeout=120s
+
       - name: Patch lifecycle-manager
         uses: ./.github/actions/patch-lifecycle-manager
         with:
+          # Temporarily point KLM at the locally-built image in the k3d registry
+          # (cluster-internal name). Revert to the external registry (commented
+          # below) once the external build is fixed.
           runtime-watcher-tag: ${{ needs.get-custom-tags.outputs.tags }}
-          runtime-watcher-image-registry: ${{ needs.get-image-repo.outputs.image_repo }}
+          runtime-watcher-image-registry: k3d-kcp-registry.localhost:5000
+          runtime-watcher-image-name: runtime-watcher-skr
+          # runtime-watcher-image-registry: ${{ needs.get-image-repo.outputs.image_repo }}
 
       - name: Deploy lifecycle-manager
         uses: ./.github/actions/deploy-lifecycle-manager
@@ -138,3 +190,8 @@ jobs:
         working-directory: runtime-watcher
         run: |
           make -C tests/e2e ${{ matrix.e2e-test }}
+
+      - name: Post debug
+        if: always()
+        run: ./lifecycle-manager/.github/scripts/debug/teardown.sh
+        continue-on-error: true

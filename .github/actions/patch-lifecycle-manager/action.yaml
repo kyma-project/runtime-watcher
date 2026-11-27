@@ -7,6 +7,10 @@ inputs:
   runtime-watcher-image-registry:
     description: Registry of runtime-watcher to use
     required: true
+  runtime-watcher-image-name:
+    description: Image name of runtime-watcher to use (overrides KLM's default)
+    required: false
+    default: runtime-watcher-skr
 runs:
   using: composite
   steps:
@@ -19,6 +23,9 @@ runs:
         "- op: add
           path: /spec/template/spec/containers/0/args/-
           value: --skr-watcher-image-registry=${{ inputs.runtime-watcher-image-registry }}
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --skr-watcher-image-name=${{ inputs.runtime-watcher-image-name }}
         - op: add
           path: /spec/template/spec/containers/0/args/-
           value: --skr-watcher-image-tag=${{ inputs.runtime-watcher-tag }}
