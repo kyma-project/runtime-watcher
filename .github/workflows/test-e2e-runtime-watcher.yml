@@ -135,6 +135,13 @@ jobs:
       # build is fixed. Must match the image flags set in patch-lifecycle-manager.
       - name: Build and import runtime-watcher image into SKR
         working-directory: runtime-watcher
+        env:
+          # BuildKit v0.11+ adds a provenance attestation by default, which turns
+          # the output into a manifest list (OCI index). k3d imports it, but the
+          # SKR node's containerd then can't resolve a runnable image under the
+          # tag and tries to pull it -> ImagePullBackOff. Disable attestations so
+          # the build produces a plain single-platform image that imports cleanly.
+          BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
         run: |
           IMG=local/runtime-watcher-skr:${{ needs.get-custom-tags.outputs.tags }}
           make docker-build IMG=$IMG
